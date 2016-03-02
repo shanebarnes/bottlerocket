@@ -12,7 +12,7 @@
  */
 bool socket_tcp_init(socket_api_t * const api)
 {
-	bool retval = false;
+    bool retval = false;
 
     if (api != NULL)
     {
