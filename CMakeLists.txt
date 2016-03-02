@@ -20,11 +20,13 @@ link_directories(${bottlerocket_SOURCE_DIR}/src)
 
 set(bottlerocket_HEADERS
 ${bottlerocket_SOURCE_DIR}/inc/socket_api.h
+${bottlerocket_SOURCE_DIR}/inc/socket_tcp.h
 ${bottlerocket_SOURCE_DIR}/inc/system_types.h
 )
 
 set(bottlerocket_SOURCES
 ${bottlerocket_SOURCE_DIR}/src/bottlerocket.c
+${bottlerocket_SOURCE_DIR}/src/socket_tcp.c
 )
 
 add_executable(bottlerocket ${bottlerocket_HEADERS} ${bottlerocket_SOURCES})
