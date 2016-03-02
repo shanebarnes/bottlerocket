@@ -19,6 +19,7 @@ include_directories(${bottlerocket_SOURCE_DIR}/inc)
 link_directories(${bottlerocket_SOURCE_DIR}/src)
 
 set(bottlerocket_HEADERS
+${bottlerocket_SOURCE_DIR}/inc/socket_api.h
 ${bottlerocket_SOURCE_DIR}/inc/system_types.h
 )
 
