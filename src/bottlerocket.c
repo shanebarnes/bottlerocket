@@ -12,18 +12,18 @@
 #include <string.h>
 #include <unistd.h>
 
-static bool m_bShutdown = false;
+static bool shutdown = false;
 
 /**
  * @brief Signal handler callback function.
  *
- * @param nSigNum The captured signal number.
+ * @param[in] signum The captured signal number.
  *
  * @return Void.
  */
-void signal_handler(int nSigNum)
+void signal_handler(int signum)
 {
-    switch (nSigNum)
+    switch (signum)
     {
         case SIGHUP:
         case SIGINT:
@@ -32,10 +32,10 @@ void signal_handler(int nSigNum)
         case SIGSTOP:
         case SIGTERM:
         default:
-            m_bShutdown = true;
+            shutdown = true;
     }
 
-    exit(nSigNum);
+    exit(signum);
 }
 
 /**
@@ -45,12 +45,11 @@ void signal_handler(int nSigNum)
  * @param argv Command-line argument vector containing the values of the
  *             command-line arguments.
  *
- * @return nRetVal - EXIT_SUCCESS is returned on success or error value is
- *                   returned on failure.
+ * @return EXIT_SUCCESS on success or error value on failure.
  */
 int32_t main(int argc, char **argv)
 {
-    int32_t nRetVal = EXIT_SUCCESS;
+    int32_t retval = EXIT_SUCCESS;
 
     // Catch and handle signals.
     signal(SIGHUP,  signal_handler);
@@ -64,7 +63,7 @@ int32_t main(int argc, char **argv)
 
     }
 
-    m_bShutdown = true;
+    shutdown = true;
 
-    return nRetVal;
+    return retval;
 }
