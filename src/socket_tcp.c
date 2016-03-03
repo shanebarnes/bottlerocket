@@ -5,6 +5,7 @@
  * @brief  TCP socket implementation.
  */
 
+#include "logger.h"
 #include "socket_tcp.h"
 
 #include <errno.h>
@@ -94,6 +95,12 @@ int32_t socket_tcp_recv(const int32_t sockfd,
     {
         retval = recv(sockfd, buf, len, flags);
 
+        logger_printf(LOGGER_LEVEL_TRACE,
+                      "%s: %d bytes received on socket %d\n",
+                      __FUNCTION__,
+                      retval,
+                      sockfd);
+
         // Check for socket errors if receive failed.
         if (retval <= 0)
         {
@@ -107,6 +114,12 @@ int32_t socket_tcp_recv(const int32_t sockfd,
                 // or receive buffer is at least partially drained.
             }
         }
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: buffer is empty\n",
+                      __FUNCTION__);
     }
 
     return retval;
@@ -130,6 +143,12 @@ int32_t socket_tcp_send(const int32_t sockfd,
     {
         retval = send(sockfd, buf, len, flags);
 
+        logger_printf(LOGGER_LEVEL_TRACE,
+                      "%s: %d bytes sent on socket %d\n",
+                      __FUNCTION__,
+                      retval,
+                      sockfd);
+
         // Check for socket errors if send failed.
         if (retval <= 0)
         {
@@ -143,6 +162,12 @@ int32_t socket_tcp_send(const int32_t sockfd,
                 // send buffer space is at least partially drained.
             }
         }
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: buffer is empty\n",
+                      __FUNCTION__);
     }
 
     return retval;
