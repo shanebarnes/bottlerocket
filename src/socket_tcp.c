@@ -7,6 +7,10 @@
 
 #include "socket_tcp.h"
 
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
 /**
  * @see See header file for interface comments.
  */
@@ -84,12 +88,24 @@ int32_t socket_tcp_recv(const int32_t sockfd,
                         const uint32_t len)
 {
     int32_t retval = -1;
+    int32_t flags  = MSG_DONTWAIT;
 
-    if ((buf !=  NULL) && (len > 0))
+    if ((buf != NULL) && (len > 0))
     {
-        if (sockfd)
-        {
+        retval = recv(sockfd, buf, len, flags);
 
+        // Check for socket errors if receive failed.
+        if (retval <= 0)
+        {
+            if (errno == EPIPE)
+            {
+                retval = -1;
+            }
+            else
+            {
+                // Socket receive buffer is full. Poll until timeout is reached
+                // or receive buffer is at least partially drained.
+            }
         }
     }
 
@@ -104,12 +120,28 @@ int32_t socket_tcp_send(const int32_t sockfd,
                         const uint32_t len)
 {
     int32_t retval = -1;
+    int32_t flags  = MSG_DONTWAIT;
 
-    if ((buf !=  NULL) && (len > 0))
+#if defined(LINUX)
+    flags |= MSG_NOSIGNAL;
+#endif
+
+    if ((buf != NULL) && (len > 0))
     {
-        if (sockfd)
-        {
+        retval = send(sockfd, buf, len, flags);
 
+        // Check for socket errors if send failed.
+        if (retval <= 0)
+        {
+            if (errno == EPIPE)
+            {
+                retval = -1;
+            }
+            else
+            {
+                // Socket send buffer is full. Poll until timeout is reached or
+                // send buffer space is at least partially drained.
+            }
         }
     }
 
