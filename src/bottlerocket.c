@@ -5,6 +5,7 @@
  * @brief  A socket benchmark utility implementation.
  */
 
+#include "logger.h"
 #include "system_types.h"
 
 #include <signal.h>
@@ -26,11 +27,17 @@ void signal_handler(int signum)
     switch (signum)
     {
         case SIGHUP:
+            logger_printf(LOGGER_LEVEL_INFO, "Caught SIGHUP\n");
         case SIGINT:
+            logger_printf(LOGGER_LEVEL_INFO, "Caught SIGINT\n");
         case SIGKILL:
+            logger_printf(LOGGER_LEVEL_INFO, "Caught SIGKILL\n");
         case SIGSEGV:
+            logger_printf(LOGGER_LEVEL_INFO, "Caught SIGSEGV\n");
         case SIGSTOP:
+            logger_printf(LOGGER_LEVEL_INFO, "Caught SIGSTOP\n");
         case SIGTERM:
+            logger_printf(LOGGER_LEVEL_INFO, "Caught SIGTERM\n");
         default:
             shutdown = true;
     }
@@ -51,6 +58,8 @@ int32_t main(int argc, char **argv)
 {
     int32_t retval = EXIT_SUCCESS;
 
+    logger_set_level(LOGGER_LEVEL_INFO);
+
     // Catch and handle signals.
     signal(SIGHUP,  signal_handler);
     signal(SIGINT,  signal_handler);
@@ -64,6 +73,8 @@ int32_t main(int argc, char **argv)
     }
 
     shutdown = true;
+
+    logger_printf(LOGGER_LEVEL_TRACE, "Exiting\n");
 
     return retval;
 }
