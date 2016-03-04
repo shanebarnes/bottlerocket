@@ -30,7 +30,7 @@ typedef struct socket_api_s
      */
     bool (*socket_api_close)(const int32_t sockfd);
 
-    /** 
+    /**
      * @brief Assign an address to a socket.
      *
      * @param[in] sockfd An open socket file descriptor.
