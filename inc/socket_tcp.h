@@ -18,7 +18,7 @@
  *
  * @return True on success.
  */
-bool socket_tcp_init(socket_api_t * const api);
+bool socket_tcp_init(struct socket_api * const api);
 
 /**
  * @see socket_api.h for interface comments.

@@ -15,7 +15,7 @@
 /**
  * @see See header file for interface comments.
  */
-bool socket_tcp_init(socket_api_t * const api)
+bool socket_tcp_init(struct socket_api * const api)
 {
     bool retval = false;
 
