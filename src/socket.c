@@ -13,35 +13,19 @@
 /**
  * @see See header file for interface comments.
  */
-bool socket_open(const int32_t sockfd)
+bool socket_open(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if (sockfd)
+    if (instance != NULL)
     {
 
-    }
-
-    return retval;
-}
-
-/**
- * @see See header file for interface comments.
- */
-bool socket_close(const int32_t sockfd)
-{
-    int32_t retval = false;
-
-    if (close(sockfd) == 0)
-    {
-        retval = true;
     }
     else
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: socket %d could not be closed\n",
-                      __FUNCTION__,
-                      sockfd);
+                      "%s: instance does not exist\n",
+                      __FUNCTION__);
     }
 
     return retval;
@@ -50,13 +34,50 @@ bool socket_close(const int32_t sockfd)
 /**
  * @see See header file for interface comments.
  */
-bool socket_bind(const int32_t sockfd)
+bool socket_close(struct socket_instance * const instance)
+{
+    int32_t retval = false;
+
+    if (instance != NULL)
+    {
+        if (close(instance->sockfd) == 0)
+        {
+            retval = true;
+        }
+        else
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: socket %d could not be closed\n",
+                          __FUNCTION__,
+                          instance->sockfd);
+        }
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: instance does not exist\n",
+                      __FUNCTION__);
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool socket_bind(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if (sockfd)
+    if (instance != NULL)
     {
 
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: instance does not exist\n",
+                      __FUNCTION__);
     }
 
     return retval;
