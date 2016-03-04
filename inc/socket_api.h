@@ -10,7 +10,7 @@
 
 #include "system_types.h"
 
-typedef struct socket_api_s
+struct socket_api
 {
     /**
      * @brief Open a socket.
@@ -98,6 +98,6 @@ typedef struct socket_api_s
     int32_t (*socket_api_send)(const int32_t sockfd,
                                void * const buf,
                                const uint32_t len);
-} socket_api_t;
+};
 
 #endif // _SOCKET_API_H_
