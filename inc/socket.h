@@ -10,19 +10,25 @@
 
 #include "system_types.h"
 
-/**
- * @see socket_api.h for interface comments.
- */
-bool socket_open(const int32_t sockfd);
+struct socket_instance
+{
+    int32_t sockfd,
+            listenfd;
+};
 
 /**
  * @see socket_api.h for interface comments.
  */
-bool socket_close(const int32_t sockfd);
+bool socket_open(struct socket_instance * const instance);
 
 /**
  * @see socket_api.h for interface comments.
  */
-bool socket_bind(const int32_t sockfd);
+bool socket_close(struct socket_instance * const instance);
+
+/**
+ * @see socket_api.h for interface comments.
+ */
+bool socket_bind(struct socket_instance * const instance);
 
 #endif // _SOCKET_H_
