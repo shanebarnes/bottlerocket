@@ -8,6 +8,7 @@
 #ifndef _SOCKET_TCP_H_
 #define _SOCKET_TCP_H_
 
+#include "socket.h"
 #include "socket_api.h"
 #include "system_types.h"
 
@@ -23,29 +24,32 @@ bool socket_tcp_init(struct socket_api * const api);
 /**
  * @see socket_api.h for interface comments.
  */
-bool socket_tcp_listen(const int32_t sockfd, const int32_t backlog);
+bool socket_tcp_listen(struct socket_instance * const instance,
+                       const int32_t backlog);
 
 /**
  * @see socket_api.h for interface comments.
  */
-int32_t socket_tcp_accept(const int32_t sockfd, const int32_t timeoutms);
+int32_t socket_tcp_accept(struct socket_instance * const instance,
+                          const int32_t timeoutms);
 
 /**
  * @see socket_api.h for interface comments.
  */
-bool socket_tcp_connect(const int32_t sockfd, const int32_t timeoutms);
+bool socket_tcp_connect(struct socket_instance * const instance,
+                        const int32_t timeoutms);
 
 /**
  * @see socket_api.h for interface comments.
  */
-int32_t socket_tcp_recv(const int32_t sockfd,
+int32_t socket_tcp_recv(struct socket_instance * const instance,
                         void * const buf,
                         const uint32_t len);
 
 /**
  * @see socket_api.h for interface comments.
  */
-int32_t socket_tcp_send(const int32_t sockfd,
+int32_t socket_tcp_send(struct socket_instance * const instance,
                         void * const buf,
                         const uint32_t len);
 

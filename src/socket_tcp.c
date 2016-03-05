@@ -21,9 +21,9 @@ bool socket_tcp_init(struct socket_api * const api)
 
     if (api != NULL)
     {
-        api->socket_api_open    = NULL;//socket_open;
-        api->socket_api_close   = NULL;//socket_close;
-        api->socket_api_bind    = NULL;//socket_bind;
+        api->socket_api_open    = socket_open;
+        api->socket_api_close   = socket_close;
+        api->socket_api_bind    = socket_bind;
         api->socket_api_listen  = socket_tcp_listen;
         api->socket_api_accept  = socket_tcp_accept;
         api->socket_api_connect = socket_tcp_connect;
@@ -39,11 +39,12 @@ bool socket_tcp_init(struct socket_api * const api)
 /**
  * @see See header file for interface comments.
  */
-bool socket_tcp_listen(const int32_t sockfd, const int32_t backlog)
+bool socket_tcp_listen(struct socket_instance * const instance,
+                       const int32_t backlog)
 {
     bool retval = false;
 
-    if ((sockfd) && (backlog))
+    if ((instance != NULL) && (backlog))
     {
 
     }
@@ -54,11 +55,12 @@ bool socket_tcp_listen(const int32_t sockfd, const int32_t backlog)
 /**
  * @see See header file for interface comments.
  */
-int32_t socket_tcp_accept(const int32_t sockfd, const int32_t timeoutms)
+int32_t socket_tcp_accept(struct socket_instance * const instance,
+                          const int32_t timeoutms)
 {
     int32_t retval = -1;
 
-    if ((sockfd) && (timeoutms))
+    if ((instance != NULL) && (timeoutms))
     {
 
     }
@@ -69,11 +71,12 @@ int32_t socket_tcp_accept(const int32_t sockfd, const int32_t timeoutms)
 /**
  * @see See header file for interface comments.
  */
-bool socket_tcp_connect(const int32_t sockfd, const int32_t timeoutms)
+bool socket_tcp_connect(struct socket_instance * const instance,
+                        const int32_t timeoutms)
 {
     bool retval = false;
 
-    if ((sockfd) && (timeoutms))
+    if ((instance != NULL) && (timeoutms))
     {
 
     }
@@ -84,22 +87,22 @@ bool socket_tcp_connect(const int32_t sockfd, const int32_t timeoutms)
 /**
  * @see See header file for interface comments.
  */
-int32_t socket_tcp_recv(const int32_t sockfd,
+int32_t socket_tcp_recv(struct socket_instance * const instance,
                         void * const buf,
                         const uint32_t len)
 {
     int32_t retval = -1;
     int32_t flags  = MSG_DONTWAIT;
 
-    if ((buf != NULL) && (len > 0))
+    if ((instance != NULL) && (buf != NULL) && (len > 0))
     {
-        retval = recv(sockfd, buf, len, flags);
+        retval = recv(instance->sockfd, buf, len, flags);
 
         logger_printf(LOGGER_LEVEL_TRACE,
                       "%s: %d bytes received on socket %d\n",
                       __FUNCTION__,
                       retval,
-                      sockfd);
+                      instance->sockfd);
 
         // Check for socket errors if receive failed.
         if (retval <= 0)
@@ -128,7 +131,7 @@ int32_t socket_tcp_recv(const int32_t sockfd,
 /**
  * @see See header file for interface comments.
  */
-int32_t socket_tcp_send(const int32_t sockfd,
+int32_t socket_tcp_send(struct socket_instance * const instance,
                         void * const buf,
                         const uint32_t len)
 {
@@ -139,15 +142,15 @@ int32_t socket_tcp_send(const int32_t sockfd,
     flags |= MSG_NOSIGNAL;
 #endif
 
-    if ((buf != NULL) && (len > 0))
+    if ((instance != NULL) && (buf != NULL) && (len > 0))
     {
-        retval = send(sockfd, buf, len, flags);
+        retval = send(instance->sockfd, buf, len, flags);
 
         logger_printf(LOGGER_LEVEL_TRACE,
                       "%s: %d bytes sent on socket %d\n",
                       __FUNCTION__,
                       retval,
-                      sockfd);
+                      instance->sockfd);
 
         // Check for socket errors if send failed.
         if (retval <= 0)
