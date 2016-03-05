@@ -11,6 +11,8 @@
 #include "socket.h"
 #include "system_types.h"
 
+struct socket_instance; // Forward declaration
+
 struct socket_api
 {
     /**
