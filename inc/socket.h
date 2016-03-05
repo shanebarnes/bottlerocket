@@ -8,12 +8,30 @@
 #ifndef _SOCKET_H_
 #define _SOCKET_H_
 
+#include "socket_api.h"
 #include "system_types.h"
+
+#include <netdb.h>
+#include <netinet/in.h>
+
+struct socket_addr_info
+{
+    struct sockaddr_in sockaddr;
+    char               ipaddr[INET_ADDRSTRLEN];
+    uint16_t           ipport;
+    char               sockaddrstr[INET_ADDRSTRLEN + 6]; // form: <addr>:<port>
+};
 
 struct socket_instance
 {
-    int32_t sockfd,
-            listenfd;
+    struct socket_api        sockapi;
+    int32_t                  socktype, // e.g.: SOCK_DGRAM, SOCK_STREAM
+                             sockfd,
+                             listenfd;
+    struct socket_addr_info  addrself,
+                             addrpeer;
+    struct addrinfo          ainfo,
+                            *alist;
 };
 
 /**
