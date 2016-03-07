@@ -10,6 +10,7 @@
 
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 
 /**
@@ -58,11 +59,62 @@ bool socket_tcp_listen(struct socket_instance * const instance,
 int32_t socket_tcp_accept(struct socket_instance * const instance,
                           const int32_t timeoutms)
 {
-    int32_t retval = -1;
+    int32_t        retval     = -1;
+    socklen_t      socklen    = 0;
+    bool           sockaccept = true;
+#if defined(LINUX)
+    int32_t        flags      = 0;
+#endif
+    fd_set         rfds;
+    struct timeval tv;
 
-    if ((instance != NULL) && (timeoutms))
+    if (instance != NULL)
     {
+        socklen = sizeof(instance->addrpeer.sockaddr);
 
+        if (timeoutms > 0)
+        {
+#if defined(LINUX)
+            flags = O_NONBLOCK;
+#endif
+            //tv.tv_sec  = dateGetTimeSecIpart((uint64_t)timeoutMs, UNIT_MSEC);
+            //tv.tv_usec = dateGetTimeSecFpart((uint64_t)timeoutMs, UNIT_MSEC) * 1000;
+            FD_ZERO(&rfds);
+            FD_SET(instance->listenfd, &rfds);
+
+            if (select(instance->listenfd + 1, &rfds, NULL, NULL, &tv) <= 0)
+            {
+                sockaccept = false;
+            }
+        }
+
+        if (sockaccept == true)
+        {
+#if defined(LINUX)
+            if ((instance->sockfd = accept4(instance->listenfd,
+                                            (struct sockaddr *)&(instance->addrpeer.sockaddr),
+                                            &socklen,
+                                            flags)) > -1)
+#else
+            if ((instance->sockfd = accept(instance->listenfd,
+                                           (struct sockaddr *)&(instance->addrpeer.sockaddr),
+                                           &socklen)) > -1)
+#endif
+            {
+                socklen = sizeof(instance->addrself.sockaddr);
+
+                //if (info->eventApi.socketIoEventApiInitialize(&(info->fdEvent), info->fdSocket) != true)
+                //{
+                //    // Nothing to do
+                //}
+                //else if (getsockname(info->fdSocket, (struct sockaddr *)&(info->addrLocal), &sockLen) == 0)
+                //{
+                //    info->sockAccept = true;
+                //    socketGetAddress(info);
+                //    retval = true;
+                //}
+            }
+        }
     }
 
     return retval;
