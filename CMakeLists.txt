@@ -20,6 +20,7 @@ link_directories(${bottlerocket_SOURCE_DIR}/src)
 
 set(bottlerocket_HEADERS
 ${bottlerocket_SOURCE_DIR}/inc/logger.h
+${bottlerocket_SOURCE_DIR}/inc/manip_string.h
 ${bottlerocket_SOURCE_DIR}/inc/socket.h
 ${bottlerocket_SOURCE_DIR}/inc/socket_api.h
 ${bottlerocket_SOURCE_DIR}/inc/socket_tcp.h
@@ -29,6 +30,7 @@ ${bottlerocket_SOURCE_DIR}/inc/system_types.h
 set(bottlerocket_SOURCES
 ${bottlerocket_SOURCE_DIR}/src/bottlerocket.c
 ${bottlerocket_SOURCE_DIR}/src/logger.c
+${bottlerocket_SOURCE_DIR}/src/manip_string.c
 ${bottlerocket_SOURCE_DIR}/src/socket.c
 ${bottlerocket_SOURCE_DIR}/src/socket_tcp.c
 )
