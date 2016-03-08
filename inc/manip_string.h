@@ -1,5 +1,5 @@
 /**
- * @file   str.h
+ * @file   manip_string.h
  * @author Shane Barnes
  * @date   07 Mar 2016
  * @brief  String manipulation interface.
