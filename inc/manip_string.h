@@ -58,6 +58,8 @@ int32_t manip_string_parse(const char * const str,
  * @brief Convert a string (must not be a literal) to lower case.
  *
  * @param[in,out] str A string to convert to lower case.
+ *
+ * @return Void.
  */
 void manip_string_to_lower(char * const str);
 
@@ -65,6 +67,8 @@ void manip_string_to_lower(char * const str);
  * @brief Convert a string (must not be a literal) to upper case.
  *
  * @param[in,out] str A string to convert to upper case.
+ *
+ * @return Void.
  */
 void manip_string_to_upper(char * const str);
 
