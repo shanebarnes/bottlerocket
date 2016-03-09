@@ -23,8 +23,8 @@ static bool manip_date_get_time_monotonic(struct timespec * const ts)
     bool retval = true;
 #if defined(__APPLE__)
     uint64_t ns = mach_absolute_time();
-    ts->tv_sec = ns / 1000000000;
-    ts->tv_nsec = ns - (ts->tv_sec * 1000000000);
+    ts->tv_sec = ns / UNIT_TIME_NSEC;
+    ts->tv_nsec = ns - (ts->tv_sec * UNIT_TIME_NSEC);
 #else
     if (clock_gettime(CLOCK_MONOTONIC, ts) != 0)
     {
