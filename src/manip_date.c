@@ -64,7 +64,7 @@ bool manip_date_get_time_mono(uint64_t * const sec, uint64_t * const nsec)
 /**
  * @see See header file for interface comments.
  */
-uint64_t manip_date_get_time_mono_units(const enum units_prefix_time prefix)
+uint64_t manip_date_get_time_mono_units(const enum unit_prefix_time prefix)
 {
     uint64_t retval = 0;
     struct timespec ts;
@@ -73,9 +73,9 @@ uint64_t manip_date_get_time_mono_units(const enum units_prefix_time prefix)
     {
         retval = (uint64_t)(ts.tv_sec * prefix);
 
-        if (prefix != UNITS_TIME_SEC)
+        if (prefix != UNIT_TIME_SEC)
         {
-            retval += (uint64_t)(ts.tv_nsec / (UNITS_TIME_NSEC / prefix));
+            retval += (uint64_t)(ts.tv_nsec / (UNIT_TIME_NSEC / prefix));
         }
     }
 
@@ -86,7 +86,7 @@ uint64_t manip_date_get_time_mono_units(const enum units_prefix_time prefix)
  * @see See header file for interface comments.
  */
 uint64_t manip_date_get_time_mono_elapsed(const uint64_t tsref,
-                                          const enum units_prefix_time prefix)
+                                          const enum unit_prefix_time prefix)
 {
     uint64_t retval = 0;
     uint64_t tsnow = manip_date_get_time_mono_units(prefix);
@@ -103,8 +103,8 @@ uint64_t manip_date_get_time_mono_elapsed(const uint64_t tsref,
  * @see See header file for interface comments.
  */
 uint64_t manip_date_convert_units(const uint64_t ts,
-                                  const enum units_prefix_time prefix,
-                                  const enum units_prefix_time newprefix)
+                                  const enum unit_prefix_time prefix,
+                                  const enum unit_prefix_time newprefix)
 {
     uint64_t retval = (ts * newprefix) / prefix;
 
@@ -115,7 +115,7 @@ uint64_t manip_date_convert_units(const uint64_t ts,
  * @see See header file for interface comments.
  */
 bool dateGetTimeFormatted(const uint64_t ts,
-                          const enum units_prefix_time prefix,
+                          const enum unit_prefix_time prefix,
                           const char * const format)
 {
     bool retval = true;
@@ -137,31 +137,31 @@ bool dateGetTimeFormatted(const uint64_t ts,
  */
 uint64_t manip_date_get_time_diff(const uint64_t ts1,
                                   const uint64_t ts2,
-                                  const enum units_prefix_time prefix,
+                                  const enum unit_prefix_time prefix,
                                   struct manip_date_diff * const diff)
 {
     uint64_t diffts = (ts1 > ts2 ? ts1 - ts2 : ts2 - ts1);
-    uint64_t diffms = manip_date_convert_units(diffts, prefix, UNITS_TIME_MSEC);
+    uint64_t diffms = manip_date_convert_units(diffts, prefix, UNIT_TIME_MSEC);
 
     if (diff != NULL)
     {
-        diff->year  = (uint16_t)(diffms / UNITS_TIME_YEAR / UNITS_TIME_MSEC);
-        diffms     -= (uint64_t)diff->year * UNITS_TIME_YEAR * UNITS_TIME_MSEC;
+        diff->year  = (uint16_t)(diffms / UNIT_TIME_YEAR / UNIT_TIME_MSEC);
+        diffms     -= (uint64_t)diff->year * UNIT_TIME_YEAR * UNIT_TIME_MSEC;
 
-        diff->week  = (uint16_t)(diffms / UNITS_TIME_WEEK / UNITS_TIME_MSEC);
-        diffms     -= (uint64_t)diff->week * UNITS_TIME_WEEK * UNITS_TIME_MSEC;
+        diff->week  = (uint16_t)(diffms / UNIT_TIME_WEEK / UNIT_TIME_MSEC);
+        diffms     -= (uint64_t)diff->week * UNIT_TIME_WEEK * UNIT_TIME_MSEC;
 
-        diff->day   = (uint16_t)(diffms / UNITS_TIME_DAY / UNITS_TIME_MSEC);
-        diffms     -= (uint64_t)diff->day * UNITS_TIME_DAY * UNITS_TIME_MSEC;
+        diff->day   = (uint16_t)(diffms / UNIT_TIME_DAY / UNIT_TIME_MSEC);
+        diffms     -= (uint64_t)diff->day * UNIT_TIME_DAY * UNIT_TIME_MSEC;
 
-        diff->hour  = (uint16_t)(diffms / UNITS_TIME_HOUR / UNITS_TIME_MSEC);
-        diffms     -= (uint64_t)diff->hour * UNITS_TIME_HOUR * UNITS_TIME_MSEC;
+        diff->hour  = (uint16_t)(diffms / UNIT_TIME_HOUR / UNIT_TIME_MSEC);
+        diffms     -= (uint64_t)diff->hour * UNIT_TIME_HOUR * UNIT_TIME_MSEC;
 
-        diff->min   = (uint16_t)(diffms / UNITS_TIME_MIN / UNITS_TIME_MSEC);
-        diffms     -= (uint64_t)diff->min * UNITS_TIME_MIN * UNITS_TIME_MSEC;
+        diff->min   = (uint16_t)(diffms / UNIT_TIME_MIN / UNIT_TIME_MSEC);
+        diffms     -= (uint64_t)diff->min * UNIT_TIME_MIN * UNIT_TIME_MSEC;
 
-        diff->sec   = (uint16_t)(diffms / UNITS_TIME_SEC / UNITS_TIME_MSEC);
-        diffms     -= (uint64_t)diff->sec * UNITS_TIME_SEC * UNITS_TIME_MSEC;
+        diff->sec   = (uint16_t)(diffms / UNIT_TIME_SEC / UNIT_TIME_MSEC);
+        diffms     -= (uint64_t)diff->sec * UNIT_TIME_SEC * UNIT_TIME_MSEC;
 
         diff->msec  = diffms;
     }
@@ -173,7 +173,7 @@ uint64_t manip_date_get_time_diff(const uint64_t ts1,
  * @see See header file for interface comments.
  */
 uint64_t manip_date_get_time_sec_parti(const uint64_t ts,
-                                       const enum units_prefix_time prefix)
+                                       const enum unit_prefix_time prefix)
 {
     uint64_t retval = ts / prefix;
 
@@ -184,7 +184,7 @@ uint64_t manip_date_get_time_sec_parti(const uint64_t ts,
  * @see See header file for interface comments.
  */
 uint64_t manip_date_get_time_sec_partf(const uint64_t ts,
-                                       const enum units_prefix_time prefix)
+                                       const enum unit_prefix_time prefix)
 {
     uint64_t retval = ts - manip_date_get_time_sec_parti(ts, prefix) * prefix;
 

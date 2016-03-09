@@ -42,7 +42,7 @@ bool manip_date_get_time_mono(uint64_t * const sec, uint64_t * const nsec);
  *
  * @return The monotonic time in the time unit specified (0 on error).
  */
-uint64_t manip_date_get_time_mono_units(const enum units_prefix_time prefix);
+uint64_t manip_date_get_time_mono_units(const enum unit_prefix_time prefix);
 
 /**
  * @brief Get the elapsed time given a monotonic start time reference.
@@ -53,7 +53,7 @@ uint64_t manip_date_get_time_mono_units(const enum units_prefix_time prefix);
  * @return The elapsed time in the specified time units (0 on error).
  */
 uint64_t manip_date_get_time_mono_elapsed(const uint64_t tsref,
-                                          const enum units_prefix_time prefix);
+                                          const enum unit_prefix_time prefix);
 
 /**
  * @brief Convert a Unix timestamp into different time units.
@@ -65,8 +65,8 @@ uint64_t manip_date_get_time_mono_elapsed(const uint64_t tsref,
  * @return The converted Unix timestamp.
  */
 uint64_t manip_date_convert_units(const uint64_t ts,
-                                  const enum units_prefix_time prefix,
-                                  const enum units_prefix_time newprefix);
+                                  const enum unit_prefix_time prefix,
+                                  const enum unit_prefix_time newprefix);
 
 /**
  * @brief Get a formatted string representation of a Unix timestamp.
@@ -78,7 +78,7 @@ uint64_t manip_date_convert_units(const uint64_t ts,
  * @return True if a formatted string representation was created.
  */
 bool dateGetTimeFormatted(const uint64_t ts,
-                          const enum units_prefix_time prefix,
+                          const enum unit_prefix_time prefix,
                           const char * const format);
 
 /**
@@ -95,7 +95,7 @@ bool dateGetTimeFormatted(const uint64_t ts,
  */
 uint64_t manip_date_get_time_diff(const uint64_t ts1,
                                   const uint64_t ts2,
-                                  const enum units_prefix_time prefix,
+                                  const enum unit_prefix_time prefix,
                                   struct manip_date_diff * const diff);
 
 /**
@@ -107,7 +107,7 @@ uint64_t manip_date_get_time_diff(const uint64_t ts1,
  * @return The integer-part of a Unix timestamp in seconds.
  */
 uint64_t manip_date_get_time_sec_parti(const uint64_t ts,
-                                       const enum units_prefix_time prefix);
+                                       const enum unit_prefix_time prefix);
 
 /**
  * @brief Get the fractional-part of a Unix timestamp.
@@ -118,6 +118,6 @@ uint64_t manip_date_get_time_sec_parti(const uint64_t ts,
  * @return The fractional-part of a Unix timestamp in the specified time unit.
  */
 uint64_t manip_date_get_time_sec_partf(const uint64_t ts,
-                                       const enum units_prefix_time prefix);
+                                       const enum unit_prefix_time prefix);
 
 #endif // _MANIP_DATE_H_
