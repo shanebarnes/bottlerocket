@@ -68,18 +68,14 @@ enum units_prefix_byte
     UNITS_BYTE_EIB = UNITS_IEC_EXBI  // EiB
 };
 
-enum units_conversion_time
+enum units_prefix_time
 {
     UNITS_TIME_SEC  = UNITS_SI_BASE, //  1 second
     UNITS_TIME_MIN  = 60,            //  1 minute =     1 second/second * 60 seconds
     UNITS_TIME_HOUR = 3600,          //  1 hour   =    60 seconds/minute * 60 minutes
     UNITS_TIME_DAY  = 86400,         //  1 day    =  3600 seconds/hour * 24 hours
     UNITS_TIME_WEEK = 604800,        //  1 week   = 86400 seconds/day * 7 days
-    UNITS_TIME_YEAR = 31557600       //  1 year   = 86400 seconds/day * 365.25 days
-};
-
-enum units_prefix_time
-{
+    UNITS_TIME_YEAR = 31557600,      //  1 year   = 86400 seconds/day * 365.25 days
     UNITS_TIME_MSEC = UNITS_TIME_SEC  * 1000,
     UNITS_TIME_USEC = UNITS_TIME_MSEC * 1000,
     UNITS_TIME_NSEC = UNITS_TIME_USEC * 1000,
@@ -124,7 +120,7 @@ uint64_t manip_unit_get_seconds(const char * const seconds);
  *
  * @param[in]     base      The base of the numbering system to be used with
  *                          decimal notation (i.e., 1000 or 1024).
- * @parami[in]    precision The number of fraction digits to include in the
+ * @param[in]     precision The number of fraction digits to include in the
  *                          decimal notation.
  * @param[in]     integer   An integer to convert to decimal notation.
  * @param[in,out] buf       A string buffer to store the decimal notation
