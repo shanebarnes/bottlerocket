@@ -35,7 +35,7 @@ static bool manip_date_get_time_monotonic(struct timespec * const ts)
 }
 
 /**
- * @see See the header file for interface comments.
+ * @see See header file for interface comments.
  */
 bool manip_date_get_time_mono(uint64_t * const sec, uint64_t * const nsec)
 {
@@ -62,7 +62,7 @@ bool manip_date_get_time_mono(uint64_t * const sec, uint64_t * const nsec)
 }
 
 /**
- * @see See the header file for interface comments.
+ * @see See header file for interface comments.
  */
 uint64_t manip_date_get_time_mono_units(const enum units_prefix_time prefix)
 {
@@ -83,7 +83,7 @@ uint64_t manip_date_get_time_mono_units(const enum units_prefix_time prefix)
 }
 
 /**
- * @see See the header file for interface comments.
+ * @see See header file for interface comments.
  */
 uint64_t manip_date_get_time_mono_elapsed(const uint64_t tsref,
                                           const enum units_prefix_time prefix)
@@ -100,7 +100,7 @@ uint64_t manip_date_get_time_mono_elapsed(const uint64_t tsref,
 }
 
 /**
- * @see See the header file for interface comments.
+ * @see See header file for interface comments.
  */
 uint64_t manip_date_convert_units(const uint64_t ts,
                                   const enum units_prefix_time prefix,
@@ -112,7 +112,7 @@ uint64_t manip_date_convert_units(const uint64_t ts,
 }
 
 /**
- * @see See the header file for interface comments.
+ * @see See header file for interface comments.
  */
 bool dateGetTimeFormatted(const uint64_t ts,
                           const enum units_prefix_time prefix,
@@ -133,7 +133,7 @@ bool dateGetTimeFormatted(const uint64_t ts,
 }
 
 /**
- * @see See the header file for interface comments.
+ * @see See header file for interface comments.
  */
 uint64_t manip_date_get_time_diff(const uint64_t ts1,
                                   const uint64_t ts2,
@@ -170,7 +170,7 @@ uint64_t manip_date_get_time_diff(const uint64_t ts1,
 }
 
 /**
- * @see See the header file for interface comments.
+ * @see See header file for interface comments.
  */
 uint64_t manip_date_get_time_sec_parti(const uint64_t ts,
                                        const enum units_prefix_time prefix)
@@ -181,7 +181,7 @@ uint64_t manip_date_get_time_sec_parti(const uint64_t ts,
 }
 
 /**
- * @see See the header file for interface comments.
+ * @see See header file for interface comments.
  */
 uint64_t manip_date_get_time_sec_partf(const uint64_t ts,
                                        const enum units_prefix_time prefix)
