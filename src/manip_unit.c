@@ -25,67 +25,67 @@ static uint64_t manip_unit_get_bitrate_prefix(const char *const prefix)
     if (manip_string_compare(prefix, "BPS", true) ||
         manip_string_compare(prefix, "", true))
     {
-        retval = UNITS_BITRATE_BPS;
+        retval = UNIT_BITRATE_BPS;
     }
     else if (manip_string_compare(prefix, "KBPS", true) ||
              manip_string_compare(prefix, "K", true))
     {
-        retval = UNITS_BITRATE_KBPS;
+        retval = UNIT_BITRATE_KBPS;
     }
     else if (manip_string_compare(prefix, "KIBPS", true) ||
              manip_string_compare(prefix, "KI", true))
     {
-        retval = UNITS_BITRATE_KIBPS;
+        retval = UNIT_BITRATE_KIBPS;
     }
     else if (manip_string_compare(prefix, "MBPS", true) ||
              manip_string_compare(prefix, "M", true))
     {
-        retval = UNITS_BITRATE_MBPS;
+        retval = UNIT_BITRATE_MBPS;
     }
     else if (manip_string_compare(prefix, "MIBPS", true) ||
              manip_string_compare(prefix, "MI", true))
     {
-        retval = UNITS_BITRATE_MIBPS;
+        retval = UNIT_BITRATE_MIBPS;
     }
     else if (manip_string_compare(prefix, "GBPS", true) ||
              manip_string_compare(prefix, "G", true))
     {
-        retval = UNITS_BITRATE_GBPS;
+        retval = UNIT_BITRATE_GBPS;
     }
     else if (manip_string_compare(prefix, "GIBPS", true) ||
              manip_string_compare(prefix, "GI", true))
     {
-        retval = UNITS_BITRATE_GIBPS;
+        retval = UNIT_BITRATE_GIBPS;
     }
     else if (manip_string_compare(prefix, "TBPS", true) ||
              manip_string_compare(prefix, "T", true))
     {
-        retval = UNITS_BITRATE_TBPS;
+        retval = UNIT_BITRATE_TBPS;
     }
     else if (manip_string_compare(prefix, "TIBPS", true) ||
              manip_string_compare(prefix, "TI", true))
     {
-        retval = UNITS_BITRATE_TIBPS;
+        retval = UNIT_BITRATE_TIBPS;
     }
     else if (manip_string_compare(prefix, "PBPS", true) ||
              manip_string_compare(prefix, "P", true))
     {
-        retval = UNITS_BITRATE_PBPS;
+        retval = UNIT_BITRATE_PBPS;
     }
     else if (manip_string_compare(prefix, "PIBPS", true) ||
              manip_string_compare(prefix, "PI", true))
     {
-        retval = UNITS_BITRATE_PIBPS;
+        retval = UNIT_BITRATE_PIBPS;
     }
     else if (manip_string_compare(prefix, "EBPS", true) ||
              manip_string_compare(prefix, "E", true))
     {
-        retval = UNITS_BITRATE_EBPS;
+        retval = UNIT_BITRATE_EBPS;
     }
     else if (manip_string_compare(prefix, "EIBPS", true) ||
              manip_string_compare(prefix, "EI", true))
     {
-        retval = UNITS_BITRATE_EIBPS;
+        retval = UNIT_BITRATE_EIBPS;
     }
 
     return retval;
@@ -106,67 +106,67 @@ static uint64_t manip_unit_get_byte_prefix(const char * const prefix)
     if (manip_string_compare(prefix, "B", true) ||
         manip_string_compare(prefix, "", true))
     {
-        retval = UNITS_BYTE_B;
+        retval = UNIT_BYTE_B;
     }
     else if (manip_string_compare(prefix, "KB", true) ||
              manip_string_compare(prefix, "K", true))
     {
-        retval = UNITS_BYTE_KB;
+        retval = UNIT_BYTE_KB;
     }
     else if (manip_string_compare(prefix, "KIB", true) ||
              manip_string_compare(prefix, "KI", true))
     {
-        retval = UNITS_BYTE_KIB;
+        retval = UNIT_BYTE_KIB;
     }
     else if (manip_string_compare(prefix, "MB", true) ||
              manip_string_compare(prefix, "M", true))
     {
-        retval = UNITS_BYTE_MB;
+        retval = UNIT_BYTE_MB;
     }
     else if (manip_string_compare(prefix, "MIB", true) ||
              manip_string_compare(prefix, "MI", true))
     {
-        retval = UNITS_BYTE_MIB;
+        retval = UNIT_BYTE_MIB;
     }
     else if (manip_string_compare(prefix, "GB", true) ||
              manip_string_compare(prefix, "G", true))
     {
-        retval = UNITS_BYTE_GB;
+        retval = UNIT_BYTE_GB;
     }
     else if (manip_string_compare(prefix, "GIB", true) ||
              manip_string_compare(prefix, "GI", true))
     {
-        retval = UNITS_BYTE_GIB;
+        retval = UNIT_BYTE_GIB;
     }
     else if (manip_string_compare(prefix, "TB", true) ||
              manip_string_compare(prefix, "T", true))
     {
-        retval = UNITS_BYTE_TB;
+        retval = UNIT_BYTE_TB;
     }
     else if (manip_string_compare(prefix, "TIB", true) ||
              manip_string_compare(prefix, "TI", true))
     {
-        retval = UNITS_BYTE_TIB;
+        retval = UNIT_BYTE_TIB;
     }
     else if (manip_string_compare(prefix, "PB", true) ||
              manip_string_compare(prefix, "P", true))
     {
-        retval = UNITS_BYTE_PB;
+        retval = UNIT_BYTE_PB;
     }
     else if (manip_string_compare(prefix, "PIB", true) ||
              manip_string_compare(prefix, "PI", true))
     {
-        retval = UNITS_BYTE_PIB;
+        retval = UNIT_BYTE_PIB;
     }
     else if (manip_string_compare(prefix, "EB", true) ||
              manip_string_compare(prefix, "E", true))
     {
-        retval = UNITS_BYTE_EB;
+        retval = UNIT_BYTE_EB;
     }
     else if (manip_string_compare(prefix, "EIB", true) ||
              manip_string_compare(prefix, "EI", true))
     {
-        retval = UNITS_BYTE_EIB;
+        retval = UNIT_BYTE_EIB;
     }
 
     return retval;
@@ -188,27 +188,27 @@ static uint64_t manip_unit_get_seconds_prefix(const char * const prefix)
     if (manip_string_compare(prefix, "S", true) ||
         manip_string_compare(prefix, "", true))
     {
-        retval = UNITS_TIME_SEC;
+        retval = UNIT_TIME_SEC;
     }
     else if (manip_string_compare(prefix, "M", true))
     {
-        retval = UNITS_TIME_MIN;
+        retval = UNIT_TIME_MIN;
     }
     else if (manip_string_compare(prefix, "H", true))
     {
-        retval = UNITS_TIME_HOUR;
+        retval = UNIT_TIME_HOUR;
     }
     else if (manip_string_compare(prefix, "D", true))
     {
-        retval = UNITS_TIME_HOUR;
+        retval = UNIT_TIME_HOUR;
     }
     else if (manip_string_compare(prefix, "W", true))
     {
-        retval = UNITS_TIME_WEEK;
+        retval = UNIT_TIME_WEEK;
     }
     else if (manip_string_compare(prefix, "Y", true))
     {
-        retval = UNITS_TIME_YEAR;
+        retval = UNIT_TIME_YEAR;
     }
 
     return retval;
@@ -311,30 +311,30 @@ static char manip_unit_get_prefix_symbol(const uint64_t prefix)
 
     switch (prefix)
     {
-        case UNITS_SI_KILO:
+        case UNIT_SI_KILO:
             retval = 'k';
             break;
-        case UNITS_IEC_KIBI:
+        case UNIT_IEC_KIBI:
             retval = 'K';
             break;
-        case UNITS_SI_MEGA:
-        case UNITS_IEC_MEBI:
+        case UNIT_SI_MEGA:
+        case UNIT_IEC_MEBI:
             retval = 'M';
             break;
-        case UNITS_SI_GIGA:
-        case UNITS_IEC_GIBI:
+        case UNIT_SI_GIGA:
+        case UNIT_IEC_GIBI:
             retval = 'G';
             break;
-        case UNITS_SI_TERA:
-        case UNITS_IEC_TEBI:
+        case UNIT_SI_TERA:
+        case UNIT_IEC_TEBI:
             retval = 'T';
             break;
-        case UNITS_SI_PETA:
-        case UNITS_IEC_PEBI:
+        case UNIT_SI_PETA:
+        case UNIT_IEC_PEBI:
             retval = 'P';
             break;
-        case UNITS_SI_EXA:
-        case UNITS_IEC_EXBI:
+        case UNIT_SI_EXA:
+        case UNIT_IEC_EXBI:
             retval = 'E';
             break;
         default:
@@ -354,8 +354,8 @@ void manip_unit_get_decimal_notation(const uint64_t base,
 {
     uint64_t parti          = integer;
     uint64_t partf          = 0;
-    uint64_t prefix         = UNITS_SI_BASE;
-    uint64_t scale          = UNITS_SI_BASE;
+    uint64_t prefix         = UNIT_SI_BASE;
+    uint64_t scale          = UNIT_SI_BASE;
     uint64_t digitcount     = 0;
     uint64_t precisionwidth = precision > 0 ? 1 : 0;
 
@@ -372,7 +372,7 @@ void manip_unit_get_decimal_notation(const uint64_t base,
                 break;
         }
 
-        while ((parti >= (prefix * scale)) && (prefix <= (uint64_t)(UNITS_SI_PETA)))
+        while ((parti >= (prefix * scale)) && (prefix <= (uint64_t)(UNIT_SI_PETA)))
         {
             if (digitcount <= precision)
             {

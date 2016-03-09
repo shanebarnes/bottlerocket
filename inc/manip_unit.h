@@ -11,75 +11,75 @@
 #include "system_types.h"
 
 // Metric (base 10) prefixes
-enum units_prefix_metric
+enum unit_prefix_metric
 {
-    UNITS_SI_BASE = 1,
-    UNITS_SI_KILO = UNITS_SI_BASE * 1000,
-    UNITS_SI_MEGA = UNITS_SI_KILO * 1000,
-    UNITS_SI_GIGA = UNITS_SI_MEGA * 1000,
-    UNITS_SI_TERA = UNITS_SI_GIGA * 1000,
-    UNITS_SI_PETA = UNITS_SI_TERA * 1000,
-    UNITS_SI_EXA  = UNITS_SI_PETA * 1000
+    UNIT_SI_BASE = 1,
+    UNIT_SI_KILO = UNIT_SI_BASE * 1000,
+    UNIT_SI_MEGA = UNIT_SI_KILO * 1000,
+    UNIT_SI_GIGA = UNIT_SI_MEGA * 1000,
+    UNIT_SI_TERA = UNIT_SI_GIGA * 1000,
+    UNIT_SI_PETA = UNIT_SI_TERA * 1000,
+    UNIT_SI_EXA  = UNIT_SI_PETA * 1000
 };
 
 // Binary (base 2) prefixes
-enum units_prefix_binary
+enum unit_prefix_binary
 {
-    UNITS_IEC_BASE = 1,
-    UNITS_IEC_KIBI = 1LL << 10,
-    UNITS_IEC_MEBI = 1LL << 20,
-    UNITS_IEC_GIBI = 1LL << 30,
-    UNITS_IEC_TEBI = 1LL << 40,
-    UNITS_IEC_PEBI = 1LL << 50,
-    UNITS_IEC_EXBI = 1LL << 60
+    UNIT_IEC_BASE = 1,
+    UNIT_IEC_KIBI = 1LL << 10,
+    UNIT_IEC_MEBI = 1LL << 20,
+    UNIT_IEC_GIBI = 1LL << 30,
+    UNIT_IEC_TEBI = 1LL << 40,
+    UNIT_IEC_PEBI = 1LL << 50,
+    UNIT_IEC_EXBI = 1LL << 60
 };
 
-enum units_prefix_bitrate
+enum unit_prefix_bitrate
 {
-    UNITS_BITRATE_BPS   = UNITS_SI_BASE,  //  bps
-    UNITS_BITRATE_KBPS  = UNITS_SI_KILO,  // kbps
-    UNITS_BITRATE_KIBPS = UNITS_IEC_KIBI, // Kibps
-    UNITS_BITRATE_MBPS  = UNITS_SI_MEGA,  // Mbps
-    UNITS_BITRATE_MIBPS = UNITS_IEC_MEBI, // Mibps
-    UNITS_BITRATE_GBPS  = UNITS_SI_GIGA,  // Gbps
-    UNITS_BITRATE_GIBPS = UNITS_IEC_GIBI, // Gibps
-    UNITS_BITRATE_TBPS  = UNITS_SI_TERA,  // Tbps
-    UNITS_BITRATE_TIBPS = UNITS_IEC_TEBI, // Tibps
-    UNITS_BITRATE_PBPS  = UNITS_SI_PETA,  // Pbps
-    UNITS_BITRATE_PIBPS = UNITS_IEC_PEBI, // Pibps
-    UNITS_BITRATE_EBPS  = UNITS_SI_EXA,   // Ebps
-    UNITS_BITRATE_EIBPS = UNITS_IEC_EXBI  // Eibps
+    UNIT_BITRATE_BPS   = UNIT_SI_BASE,  //  bps
+    UNIT_BITRATE_KBPS  = UNIT_SI_KILO,  // kbps
+    UNIT_BITRATE_KIBPS = UNIT_IEC_KIBI, // Kibps
+    UNIT_BITRATE_MBPS  = UNIT_SI_MEGA,  // Mbps
+    UNIT_BITRATE_MIBPS = UNIT_IEC_MEBI, // Mibps
+    UNIT_BITRATE_GBPS  = UNIT_SI_GIGA,  // Gbps
+    UNIT_BITRATE_GIBPS = UNIT_IEC_GIBI, // Gibps
+    UNIT_BITRATE_TBPS  = UNIT_SI_TERA,  // Tbps
+    UNIT_BITRATE_TIBPS = UNIT_IEC_TEBI, // Tibps
+    UNIT_BITRATE_PBPS  = UNIT_SI_PETA,  // Pbps
+    UNIT_BITRATE_PIBPS = UNIT_IEC_PEBI, // Pibps
+    UNIT_BITRATE_EBPS  = UNIT_SI_EXA,   // Ebps
+    UNIT_BITRATE_EIBPS = UNIT_IEC_EXBI  // Eibps
 };
 
-enum units_prefix_byte
+enum unit_prefix_byte
 {
-    UNITS_BYTE_B   = UNITS_SI_BASE,  //  B
-    UNITS_BYTE_KB  = UNITS_SI_KILO,  // KB
-    UNITS_BYTE_KIB = UNITS_IEC_KIBI, // KiB
-    UNITS_BYTE_MB  = UNITS_SI_MEGA,  // MB
-    UNITS_BYTE_MIB = UNITS_IEC_MEBI, // MiB
-    UNITS_BYTE_GB  = UNITS_SI_GIGA,  // GB
-    UNITS_BYTE_GIB = UNITS_IEC_GIBI, // GiB
-    UNITS_BYTE_TB  = UNITS_SI_TERA,  // TB
-    UNITS_BYTE_TIB = UNITS_IEC_TEBI, // TiB
-    UNITS_BYTE_PB  = UNITS_SI_PETA,  // PB
-    UNITS_BYTE_PIB = UNITS_IEC_PEBI, // PiB
-    UNITS_BYTE_EB  = UNITS_SI_EXA,   // EB
-    UNITS_BYTE_EIB = UNITS_IEC_EXBI  // EiB
+    UNIT_BYTE_B   = UNIT_SI_BASE,  //  B
+    UNIT_BYTE_KB  = UNIT_SI_KILO,  // KB
+    UNIT_BYTE_KIB = UNIT_IEC_KIBI, // KiB
+    UNIT_BYTE_MB  = UNIT_SI_MEGA,  // MB
+    UNIT_BYTE_MIB = UNIT_IEC_MEBI, // MiB
+    UNIT_BYTE_GB  = UNIT_SI_GIGA,  // GB
+    UNIT_BYTE_GIB = UNIT_IEC_GIBI, // GiB
+    UNIT_BYTE_TB  = UNIT_SI_TERA,  // TB
+    UNIT_BYTE_TIB = UNIT_IEC_TEBI, // TiB
+    UNIT_BYTE_PB  = UNIT_SI_PETA,  // PB
+    UNIT_BYTE_PIB = UNIT_IEC_PEBI, // PiB
+    UNIT_BYTE_EB  = UNIT_SI_EXA,   // EB
+    UNIT_BYTE_EIB = UNIT_IEC_EXBI  // EiB
 };
 
-enum units_prefix_time
+enum unit_prefix_time
 {
-    UNITS_TIME_SEC  = UNITS_SI_BASE, //  1 second
-    UNITS_TIME_MIN  = 60,            //  1 minute =     1 second/second * 60 seconds
-    UNITS_TIME_HOUR = 3600,          //  1 hour   =    60 seconds/minute * 60 minutes
-    UNITS_TIME_DAY  = 86400,         //  1 day    =  3600 seconds/hour * 24 hours
-    UNITS_TIME_WEEK = 604800,        //  1 week   = 86400 seconds/day * 7 days
-    UNITS_TIME_YEAR = 31557600,      //  1 year   = 86400 seconds/day * 365.25 days
-    UNITS_TIME_MSEC = UNITS_TIME_SEC  * 1000,
-    UNITS_TIME_USEC = UNITS_TIME_MSEC * 1000,
-    UNITS_TIME_NSEC = UNITS_TIME_USEC * 1000,
-    UNITS_TIME_PSEC = UNITS_TIME_NSEC * 1000
+    UNIT_TIME_SEC  = UNIT_SI_BASE, //  1 second
+    UNIT_TIME_MIN  = 60,            //  1 minute =     1 second/second * 60 seconds
+    UNIT_TIME_HOUR = 3600,          //  1 hour   =    60 seconds/minute * 60 minutes
+    UNIT_TIME_DAY  = 86400,         //  1 day    =  3600 seconds/hour * 24 hours
+    UNIT_TIME_WEEK = 604800,        //  1 week   = 86400 seconds/day * 7 days
+    UNIT_TIME_YEAR = 31557600,      //  1 year   = 86400 seconds/day * 365.25 days
+    UNIT_TIME_MSEC = UNIT_TIME_SEC  * 1000,
+    UNIT_TIME_USEC = UNIT_TIME_MSEC * 1000,
+    UNIT_TIME_NSEC = UNIT_TIME_USEC * 1000,
+    UNIT_TIME_PSEC = UNIT_TIME_NSEC * 1000
 };
 
 /**
