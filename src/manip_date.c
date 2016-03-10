@@ -9,42 +9,70 @@
 #if defined(__APPLE__)
     #include <mach/mach_time.h>
 #endif
+#include <sys/time.h>
 #include <time.h>
 
 /**
- * @brief Get the monotonic time since some (unspecified) starting point.
+ * @brief Get the monotonic or realtime clock time.
  *
- * @param[in] ts A timespec structure to set with the current monotonic time.
+ * @param[in]     clock The clock type (monotonic or realtime).
+ * @param[in,out] ts    A timespec structure to set with the current monotonic
+ *                      time.
  *
- * @return True if the timespec was set with a valid monotonic time value.
+ * @return True if the timespec was set with a valid time value.
  */
-static bool manip_date_get_time_monotonic(struct timespec * const ts)
+static bool manip_date_time_clock(const enum manip_date_clock clock,
+                                  struct timespec * const ts)
 {
     bool retval = true;
-#if defined(__APPLE__)
-    uint64_t ns = mach_absolute_time();
-    ts->tv_sec = ns / UNIT_TIME_NSEC;
-    ts->tv_nsec = ns - (ts->tv_sec * UNIT_TIME_NSEC);
-#else
-    if (clock_gettime(CLOCK_MONOTONIC, ts) != 0)
+    struct timeval tv;
+
+    if ((clock > DATE_CLOCK_UNDEFINED) && (clock < DATE_CLOCK_UNSUPPORTED))
     {
-        retval = false;
-    }
+#if defined(__APPLE__)
+        if (clock == DATE_CLOCK_MONOTONIC)
+        {
+            uint64_t ns = mach_absolute_time();
+            ts->tv_sec = ns / UNIT_TIME_NSEC;
+            ts->tv_nsec = ns - (ts->tv_sec * UNIT_TIME_NSEC);
+        }
+        else
+        {
+            if (gettimeofday(&tv, NULL) == 0)
+            {
+                ts->tv_sec  = tv.tv_sec;
+                ts->tv_nsec = tv.tv_usec * 1000;
+            }
+            else
+            {
+                retval = false;
+            }
+        }
+#else
+        if (clock_gettime(clock == DATE_CLOCK_MONOTONIC ?
+                                   CLOCK_MONOTONIC : CLOCK_REALTIME, ts) != 0)
+        {
+            retval = false;
+        }
 #endif
+    }
+
     return retval;
 }
 
 /**
  * @see See header file for interface comments.
  */
-bool manip_date_get_time_mono(uint64_t * const sec, uint64_t * const nsec)
+bool manip_date_time(const enum manip_date_clock clock,
+                     uint64_t * const sec,
+                     uint64_t * const nsec)
 {
     bool retval = false;
     struct timespec ts;
 
     if ((sec != NULL) && (nsec != NULL))
     {
-        retval = manip_date_get_time_monotonic(&ts);
+        retval = manip_date_time_clock(clock, &ts);
 
         if (retval == true)
         {
@@ -64,12 +92,13 @@ bool manip_date_get_time_mono(uint64_t * const sec, uint64_t * const nsec)
 /**
  * @see See header file for interface comments.
  */
-uint64_t manip_date_get_time_mono_units(const enum unit_prefix_time prefix)
+uint64_t manip_date_time_units(const enum manip_date_clock clock,
+                               const enum unit_prefix_time prefix)
 {
     uint64_t retval = 0;
     struct timespec ts;
 
-    if (manip_date_get_time_monotonic(&ts) == true)
+    if (manip_date_time_clock(clock, &ts) == true)
     {
         retval = (uint64_t)(ts.tv_sec * prefix);
 
@@ -85,11 +114,11 @@ uint64_t manip_date_get_time_mono_units(const enum unit_prefix_time prefix)
 /**
  * @see See header file for interface comments.
  */
-uint64_t manip_date_get_time_mono_elapsed(const uint64_t tsref,
-                                          const enum unit_prefix_time prefix)
+uint64_t manip_date_time_mono_elapsed(const uint64_t tsref,
+                                      const enum unit_prefix_time prefix)
 {
     uint64_t retval = 0;
-    uint64_t tsnow = manip_date_get_time_mono_units(prefix);
+    uint64_t tsnow = manip_date_time_units(DATE_CLOCK_MONOTONIC, prefix);
 
     if (tsnow >= tsref)
     {
@@ -114,20 +143,27 @@ uint64_t manip_date_convert_units(const uint64_t ts,
 /**
  * @see See header file for interface comments.
  */
-bool dateGetTimeFormatted(const uint64_t ts,
-                          const enum unit_prefix_time prefix,
-                          const char * const format)
+bool manip_date_time_format(const uint64_t ts,
+                            const enum unit_prefix_time prefix,
+                            const char * const format,
+                            char * const buf,
+                            uint32_t len)
 {
-    bool retval = true;
-    time_t t;
+    bool retval = false;
+    time_t time;
     struct tm *tm;
-    char buf[64];
 
-    t = ts / prefix;
+    if ((buf != NULL) && (len > 0))
+    {
+        time = ts / prefix;
 
-    tm = localtime(&t);
+        tm = localtime(&time);
 
-    strftime(buf, sizeof(buf), format, tm);
+        if (strftime(buf, len, format, tm) != 0)
+        {
+            retval = true;
+        }
+    }
 
     return retval;
 }
@@ -135,10 +171,10 @@ bool dateGetTimeFormatted(const uint64_t ts,
 /**
  * @see See header file for interface comments.
  */
-uint64_t manip_date_get_time_diff(const uint64_t ts1,
-                                  const uint64_t ts2,
-                                  const enum unit_prefix_time prefix,
-                                  struct manip_date_diff * const diff)
+uint64_t manip_date_time_diff(const uint64_t ts1,
+                              const uint64_t ts2,
+                              const enum unit_prefix_time prefix,
+                              struct manip_date_diff * const diff)
 {
     uint64_t diffts = (ts1 > ts2 ? ts1 - ts2 : ts2 - ts1);
     uint64_t diffms = manip_date_convert_units(diffts, prefix, UNIT_TIME_MSEC);
@@ -172,8 +208,8 @@ uint64_t manip_date_get_time_diff(const uint64_t ts1,
 /**
  * @see See header file for interface comments.
  */
-uint64_t manip_date_get_time_sec_parti(const uint64_t ts,
-                                       const enum unit_prefix_time prefix)
+uint64_t manip_date_time_sec_parti(const uint64_t ts,
+                                   const enum unit_prefix_time prefix)
 {
     uint64_t retval = ts / prefix;
 
@@ -183,10 +219,10 @@ uint64_t manip_date_get_time_sec_parti(const uint64_t ts,
 /**
  * @see See header file for interface comments.
  */
-uint64_t manip_date_get_time_sec_partf(const uint64_t ts,
-                                       const enum unit_prefix_time prefix)
+uint64_t manip_date_time_sec_partf(const uint64_t ts,
+                                   const enum unit_prefix_time prefix)
 {
-    uint64_t retval = ts - manip_date_get_time_sec_parti(ts, prefix) * prefix;
+    uint64_t retval = ts - manip_date_time_sec_parti(ts, prefix) * prefix;
 
     return retval;
 }
