@@ -8,8 +8,6 @@
 #include "logger.h"
 #include "pthreads_instance.h"
 
-#include <signal.h>
-#include <stdio.h>
 #include <unistd.h>
 
 /**
@@ -50,8 +48,9 @@ bool pthreads_instance_create(struct pthreads_instance * const instance)
 bool pthreads_instance_destroy(struct pthreads_instance * const instance)
 {
     bool retval = false;
+#if 0
     int error = 0;
-
+#endif
     if (instance != NULL)
     {
         //pthread_detach
