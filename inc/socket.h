@@ -32,7 +32,19 @@ struct socket_instance
                              addrpeer;
     struct addrinfo          ainfo,
                             *alist;
+    char                    *ipaddr; // User configuration
+    uint16_t                 ipport; // User configuration
 };
+
+/**
+ * @brief Get the local and remote socket addresses.
+ *
+ * @param[in,out] instance A pointer to a socket instance structure.
+ * @param[in]     client   True if the socket instance is a client socket.
+ *
+ * @return True if the local and remote socket addresses were obtained.
+ */
+bool socket_address(struct socket_instance * const instance, const bool client);
 
 /**
  * @see socket_api.h for interface comments.

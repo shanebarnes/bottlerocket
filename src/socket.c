@@ -16,6 +16,75 @@
 /**
  * @see See header file for interface comments.
  */
+bool socket_address(struct socket_instance * const instance, const bool client)
+{
+    bool      retval  = false;
+    socklen_t socklen = 0;
+
+    if (client == true)
+    {
+        socklen = sizeof(instance->addrself.sockaddr);
+
+        if (getsockname(instance->sockfd,
+                        (struct sockaddr *)&(instance->addrself.sockaddr),
+                        &socklen) == 0)
+        {
+            inet_ntop(AF_INET,
+                      &(instance->addrself.sockaddr.sin_addr),
+                      instance->addrself.ipaddr,
+                      sizeof(instance->addrself.ipaddr));
+            instance->addrself.ipport = ntohs(instance->addrself.sockaddr.sin_port);
+            memcpy(instance->addrpeer.ipaddr,
+                   instance->ipaddr,
+                   strlen(instance->ipaddr));
+            instance->addrpeer.ipport = instance->ipport;
+            snprintf(instance->addrself.sockaddrstr,
+                     sizeof(instance->addrself.sockaddrstr),
+                     "%s:%u",
+                     instance->addrself.ipaddr,
+                     instance->addrself.ipport);
+            snprintf(instance->addrpeer.sockaddrstr,
+                     sizeof(instance->addrpeer.sockaddrstr),
+                     "%s:%u",
+                     instance->addrpeer.ipaddr,
+                     instance->addrpeer.ipport);
+
+            retval = true;
+        }
+    }
+    else
+    {
+        inet_ntop(AF_INET,
+                  &(instance->addrself.sockaddr.sin_addr),
+                  instance->addrself.ipaddr,
+                  sizeof(instance->addrself.ipaddr));
+        instance->addrself.ipport = ntohs(instance->addrself.sockaddr.sin_port);
+        inet_ntop(AF_INET,
+                  &(instance->addrpeer.sockaddr.sin_addr),
+                  instance->addrpeer.ipaddr,
+                  sizeof(instance->addrpeer.ipaddr));
+        instance->addrpeer.ipport = ntohs(instance->addrpeer.sockaddr.sin_port);
+
+        snprintf(instance->addrself.sockaddrstr,
+                 sizeof(instance->addrself.sockaddrstr),
+                 "%s:%u",
+                 instance->addrself.ipaddr,
+                 instance->addrself.ipport);
+        snprintf(instance->addrpeer.sockaddrstr,
+                 sizeof(instance->addrpeer.sockaddrstr),
+                 "%s:%u",
+                 instance->addrpeer.ipaddr,
+                 instance->addrpeer.ipport);
+
+        retval = true;
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
 bool socket_open(struct socket_instance * const instance)
 {
     bool              retval   = false;
