@@ -14,12 +14,12 @@
 enum unit_prefix_metric
 {
     UNIT_SI_BASE = 1,
-    UNIT_SI_KILO = UNIT_SI_BASE * 1000,
-    UNIT_SI_MEGA = UNIT_SI_KILO * 1000,
-    UNIT_SI_GIGA = UNIT_SI_MEGA * 1000,
-    UNIT_SI_TERA = UNIT_SI_GIGA * 1000,
-    UNIT_SI_PETA = UNIT_SI_TERA * 1000,
-    UNIT_SI_EXA  = UNIT_SI_PETA * 1000
+    UNIT_SI_KILO = UNIT_SI_BASE * 1000LL,
+    UNIT_SI_MEGA = UNIT_SI_KILO * 1000LL,
+    UNIT_SI_GIGA = UNIT_SI_MEGA * 1000LL,
+    UNIT_SI_TERA = UNIT_SI_GIGA * 1000LL,
+    UNIT_SI_PETA = UNIT_SI_TERA * 1000LL,
+    UNIT_SI_EXA  = UNIT_SI_PETA * 1000LL
 };
 
 // Binary (base 2) prefixes
@@ -76,10 +76,10 @@ enum unit_prefix_time
     UNIT_TIME_DAY  = 86400,         //  1 day    =  3600 seconds/hour * 24 hours
     UNIT_TIME_WEEK = 604800,        //  1 week   = 86400 seconds/day * 7 days
     UNIT_TIME_YEAR = 31557600,      //  1 year   = 86400 seconds/day * 365.25 days
-    UNIT_TIME_MSEC = UNIT_TIME_SEC  * 1000,
-    UNIT_TIME_USEC = UNIT_TIME_MSEC * 1000,
-    UNIT_TIME_NSEC = UNIT_TIME_USEC * 1000,
-    UNIT_TIME_PSEC = UNIT_TIME_NSEC * 1000
+    UNIT_TIME_MSEC = UNIT_TIME_SEC  * 1000LL,
+    UNIT_TIME_USEC = UNIT_TIME_MSEC * 1000LL,
+    UNIT_TIME_NSEC = UNIT_TIME_USEC * 1000LL,
+    UNIT_TIME_PSEC = UNIT_TIME_NSEC * 1000LL
 };
 
 /**
