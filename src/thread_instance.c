@@ -10,6 +10,7 @@
 #include "thread_instance.h"
 
 #include <errno.h>
+#include <signal.h>
 #include <unistd.h>
 
 struct internals
