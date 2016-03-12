@@ -32,6 +32,7 @@ ${bottlerocket_SOURCE_DIR}/inc/socket_tcp.h
 ${bottlerocket_SOURCE_DIR}/inc/system_types.h
 ${bottlerocket_SOURCE_DIR}/inc/thread_instance.h
 ${bottlerocket_SOURCE_DIR}/inc/util_sysctl.h
+${bottlerocket_SOURCE_DIR}/inc/version.h
 )
 
 set(bottlerocket_SOURCES
@@ -46,6 +47,7 @@ ${bottlerocket_SOURCE_DIR}/src/socket_instance.c
 ${bottlerocket_SOURCE_DIR}/src/socket_tcp.c
 ${bottlerocket_SOURCE_DIR}/src/thread_instance.c
 ${bottlerocket_SOURCE_DIR}/src/util_sysctl.c
+${bottlerocket_SOURCE_DIR}/src/version.c
 )
 
 add_executable(bottlerocket ${bottlerocket_HEADERS} ${bottlerocket_SOURCES})
