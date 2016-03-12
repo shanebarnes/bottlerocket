@@ -125,12 +125,14 @@ uint64_t manip_unit_get_seconds(const char * const seconds);
  * @param[in]     integer   An integer to convert to decimal notation.
  * @param[in,out] buf       A string buffer to store the decimal notation
  *                          representation of a number.
+ * @param[in]     len       The size of the string buffer in bytes.
  *
  * @return Void.
  */
 void manip_unit_get_decimal_notation(const uint64_t base,
                                      const uint8_t precision,
                                      const uint64_t integer,
-                                     char * const buf);
+                                     char * const buf,
+                                     const size_t len);
 
 #endif // _MANIP_UNIT_H_

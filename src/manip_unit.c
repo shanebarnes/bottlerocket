@@ -350,7 +350,8 @@ static char manip_unit_get_prefix_symbol(const uint64_t prefix)
 void manip_unit_get_decimal_notation(const uint64_t base,
                                      const uint8_t precision,
                                      const uint64_t integer,
-                                     char * const buf)
+                                     char * const buf,
+                                     const size_t len)
 {
     uint64_t parti          = integer;
     uint64_t partf          = 0;
@@ -403,7 +404,9 @@ void manip_unit_get_decimal_notation(const uint64_t base,
 
         if ((precision > 0) && (digitcount > 0))
         {
-            manip_string_concat(buf, "%" PRIu64 ".%.*u %c%c",
+            manip_string_concat(buf,
+                                len,
+                                "%" PRIu64 ".%.*u %c%c",
                                 parti,
                                 precision > digitcount ?
                                     (uint8_t)digitcount : precision,
@@ -413,7 +416,9 @@ void manip_unit_get_decimal_notation(const uint64_t base,
         }
         else
         {
-            manip_string_concat(buf, "%" PRIu64 " %c%c",
+            manip_string_concat(buf,
+                                len,
+                                "%" PRIu64 " %c%c",
                                 parti,
                                 manip_unit_get_prefix_symbol(prefix),
                                 scale == 1024 ? 'i' : '\0');
