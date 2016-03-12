@@ -25,11 +25,12 @@ static bool manip_date_time_clock(const enum manip_date_clock clock,
                                   struct timespec * const ts)
 {
     bool retval = true;
-    struct timeval tv;
 
     if ((clock > DATE_CLOCK_UNDEFINED) && (clock < DATE_CLOCK_UNSUPPORTED))
     {
 #if defined(__APPLE__)
+        struct timeval tv;
+
         if (clock == DATE_CLOCK_MONOTONIC)
         {
             uint64_t ns = mach_absolute_time();
