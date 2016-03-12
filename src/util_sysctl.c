@@ -21,15 +21,15 @@ uint32_t util_sysctl_cpuavail(void)
     uint32_t retval = 0;
 #if defined(__APPLE__)
     size_t i = 0, len = 4;
-    int32_t hwcpu[2] = { HW_AVAILCPU, HW_NCPU };
-    int32_t nm[2];
+    int32_t component[2] = { HW_AVAILCPU, HW_NCPU };
+    int32_t mib[2];
 
     for (i = 0; i < 2; i++)
     {
-        nm[0] = CTL_HW;
-        nm[1] = hwcpu[i];
+        mib[0] = CTL_HW;
+        mib[1] = component[i];
 
-        if (sysctl(nm, 2, &retval, &len, NULL, 0) == 0)
+        if (sysctl(mib, 2, &retval, &len, NULL, 0) == 0)
         {
             break;
         }
