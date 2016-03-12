@@ -42,6 +42,7 @@ bool thread_instance_create(struct thread_instance * const instance)
                           "%s: Failed to create thread (%d)\n",
                           __FUNCTION__,
                           errno);
+            thread_instance_destroy(instance);
         }
         else if (rwlock_instance_create(&instance->internal->lock) == false)
         {
@@ -87,6 +88,7 @@ bool thread_instance_destroy(struct thread_instance * const instance)
 #endif
 
         rwlock_instance_destroy(&instance->internal->lock);
+        pthread_attr_destroy(&instance->attributes);
         free(instance->internal);
         instance->internal = NULL;
     }
