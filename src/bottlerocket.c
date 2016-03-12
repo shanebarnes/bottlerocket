@@ -5,6 +5,7 @@
  * @brief  A socket benchmark utility implementation.
  */
 
+#include "cli_options.h"
 #include "logger.h"
 #include "manip_string.h"
 #include "thread_instance.h"
@@ -109,9 +110,16 @@ void *thread_function(void * arg)
 int32_t main(int argc, char **argv)
 {
     int32_t retval = EXIT_SUCCESS;
+    struct cli_options_instance options;
     uint32_t cpucount = util_sysctl_cpuavail();
     struct thread_instance *threads = NULL;
     uint16_t i;
+
+    cli_options_decode(argc, argv, &options);
+    if (options.exit == true)
+    {
+        exit(EXIT_FAILURE);
+    }
 
     logger_create();
     logger_set_level(LOGGER_LEVEL_TRACE);
