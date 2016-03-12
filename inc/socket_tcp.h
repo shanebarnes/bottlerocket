@@ -8,8 +8,7 @@
 #ifndef _SOCKET_TCP_H_
 #define _SOCKET_TCP_H_
 
-#include "socket.h"
-#include "socket_api.h"
+#include "socket_instance.h"
 #include "system_types.h"
 
 /**

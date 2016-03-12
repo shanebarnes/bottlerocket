@@ -22,9 +22,9 @@ bool socket_tcp_init(struct socket_api * const api)
 
     if (api != NULL)
     {
-        api->socket_api_open    = socket_open;
-        api->socket_api_close   = socket_close;
-        api->socket_api_bind    = socket_bind;
+        api->socket_api_open    = socket_instance_open;
+        api->socket_api_close   = socket_instance_close;
+        api->socket_api_bind    = socket_instance_bind;
         api->socket_api_listen  = socket_tcp_listen;
         api->socket_api_accept  = socket_tcp_accept;
         api->socket_api_connect = socket_tcp_connect;
@@ -47,7 +47,11 @@ bool socket_tcp_listen(struct socket_instance * const instance,
 
     if ((instance != NULL) && (backlog))
     {
-
+        // Backlog check: SOMAXCONN
+        if (listen(instance->listenfd, backlog) == 0)
+        {
+            retval = true;
+        }
     }
 
     return retval;
