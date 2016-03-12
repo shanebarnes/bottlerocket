@@ -8,7 +8,7 @@
 #ifndef _SOCKET_API_H_
 #define _SOCKET_API_H_
 
-#include "socket.h"
+#include "socket_instance.h"
 #include "system_types.h"
 
 struct socket_instance; // Forward declaration
@@ -18,7 +18,7 @@ struct socket_api
     /**
      * @brief Open a socket.
      *
-     * @param[in,out] instance A pointer to a socket instance structure.
+     * @param[in,out] instance A pointer to a socket instance.
      *
      * @return True on success.
      */
@@ -27,7 +27,7 @@ struct socket_api
     /**
      * @brief Close a socket.
      *
-     * @param[in,out] instance A pointer to a socket instance structure.
+     * @param[in,out] instance A pointer to a socket instance.
      *
      * @return True on success.
      */
@@ -36,7 +36,7 @@ struct socket_api
     /**
      * @brief Assign an address to a socket.
      *
-     * @param[in,out] instance A pointer to a socket instance structure.
+     * @param[in,out] instance A pointer to a socket instance.
      *
      * @return True on success.
      */
@@ -45,7 +45,7 @@ struct socket_api
     /**
      * @brief Listen for connections on an open socket.
      *
-     * @param[in,out] instance A pointer to a socket instance structure.
+     * @param[in,out] instance A pointer to a socket instance.
      * @param[in]     backlog  The maximum length of the pending connection
      *                         queue for the socket.
      *
@@ -57,7 +57,7 @@ struct socket_api
     /**
      * @brief Accept a connection on a listener socket.
      *
-     * @param[in,out] instance  A pointer to a socket instance structure.
+     * @param[in,out] instance  A pointer to a socket instance.
      * @param[in]     timeoutms The accept timeout in milliseconds.
      *
      * @return A non-negative integer that is the accepted socket file
@@ -69,7 +69,7 @@ struct socket_api
     /**
      * @brief Initiate a connection on a socket.
      *
-     * @param[in,out] instance  A pointer to a socket instance structure.
+     * @param[in,out] instance  A pointer to a socket instance.
      * @param[in]     timeoutms The connect timeout in milliseconds.
      *
      * @return True on success.
@@ -80,7 +80,7 @@ struct socket_api
     /**
      * @brief Receive data from a socket.
      *
-     * @param[in,out] instance A pointer to a socket instance structure.
+     * @param[in,out] instance A pointer to a socket instance.
      * @param[in,out] buf      A pointer to a buffer to store data received from
      *                         the socket.
      * @param[in]     len      The maximum size of the receive buffer in bytes.
@@ -94,7 +94,7 @@ struct socket_api
     /**
      * @brief Send data to a socket.
      *
-     * @param[in,out] instance A pointer to a socket instance structure.
+     * @param[in,out] instance A pointer to a socket instance.
      * @param[in]     buf      A pointer to a buffer containing data to be sent
      *                         to the socket.
      * @param[in]     len      The maximum number of bytes in the send buffer.
