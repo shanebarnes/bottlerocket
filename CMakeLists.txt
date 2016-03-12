@@ -17,6 +17,7 @@ endif(${UNIX})
 include_directories(${bottlerocket_SOURCE_DIR}/inc)
 
 link_directories(${bottlerocket_SOURCE_DIR}/src)
+link_libraries(pthread)
 
 set(bottlerocket_HEADERS
 ${bottlerocket_SOURCE_DIR}/inc/logger.h
