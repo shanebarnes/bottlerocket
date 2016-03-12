@@ -24,6 +24,20 @@ enum logger_level
 };
 
 /**
+ * @brief Create a logger singleton.
+ *
+ * @return True if a logger singleton was created.
+ */
+bool logger_create(void);
+
+/**
+ * @brief Destroy a logger singleton.
+ *
+ * @return True if a logger singleton was destroyed.
+ */
+bool logger_destroy(void);
+
+/**
  * @brief Set the logger level.
  *
  * @param[in] level The new logger level.

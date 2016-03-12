@@ -7,11 +7,30 @@
 
 #include "logger.h"
 #include "manip_date.h"
+#include "rwlock_instance.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 
-static enum logger_level static_level = LOGGER_LEVEL_ALL;
+static enum logger_level      static_level = LOGGER_LEVEL_ALL;
+static struct rwlock_instance lock;
+
+
+/**
+ * @see See header file for interface comments.
+ */
+bool logger_create(void)
+{
+    return rwlock_instance_create(&lock);
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool logger_destroy(void)
+{
+    return rwlock_instance_destroy(&lock);
+}
 
 /**
  * @see See header file for interface comments.
@@ -22,7 +41,9 @@ bool logger_set_level(const enum logger_level level)
 
     if ((level >= LOGGER_LEVEL_MIN) && (level <= LOGGER_LEVEL_MAX))
     {
+        rwlock_instance_wrlock(&lock);
         static_level = level;
+        rwlock_instance_unlock(&lock);
         retval = true;
     }
 
@@ -80,9 +101,12 @@ void logger_printf(const enum logger_level level, const char *format, ...)
     char msgbuf[1024], timebuf[512];
     va_list args;
     uint64_t sec = 0, nsec = 0;
+    rwlock_instance_rdlock(&lock);
+    enum logger_level setlevel = static_level;
+    rwlock_instance_unlock(&lock);
 
-    if ((static_level != LOGGER_LEVEL_OFF) &&
-        ((level >= static_level) || (static_level == LOGGER_LEVEL_ALL)))
+    if ((setlevel != LOGGER_LEVEL_OFF) &&
+        ((level >= setlevel) || (setlevel == LOGGER_LEVEL_ALL)))
     {
         va_start(args, format);
         error = vsprintf(msgbuf, format, args);
