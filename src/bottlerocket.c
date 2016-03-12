@@ -6,15 +6,13 @@
  */
 
 #include "logger.h"
-#include "pthreads_instance.h"
+#include "thread_instance.h"
 #include "system_types.h"
 
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-
-static bool shutdown = false;
 
 /**
  * @brief Signal handler callback function.
@@ -41,6 +39,7 @@ void signal_handler(int signum)
             break;
         case SIGSEGV:
             logger_printf(LOGGER_LEVEL_INFO, "Caught SIGSEGV\n");
+            exit(signum);
             break;
         case SIGSTOP:
             logger_printf(LOGGER_LEVEL_INFO, "Caught SIGSTOP\n");
@@ -52,7 +51,6 @@ void signal_handler(int signum)
             logger_printf(LOGGER_LEVEL_INFO, "Caught signal %d\n", signum);
     }
 
-    shutdown = true;
     //exit(signum);
 }
 
@@ -65,13 +63,13 @@ void signal_handler(int signum)
  */
 void *thread_function(void * arg)
 {
-    struct pthreads_instance *instance = (struct pthreads_instance *)arg;
+    struct thread_instance *instance = (struct thread_instance *)arg;
 
     logger_printf(LOGGER_LEVEL_TRACE, "%s: Starting thread\n", __FUNCTION__);
 
     if (instance != NULL)
     {
-        while (instance->shutdown == false)
+        while (thread_instance_isrunning(instance) == false)
         {
             logger_printf(LOGGER_LEVEL_TRACE, "Thread running\n");
             usleep(1000 * 1000);
@@ -101,7 +99,7 @@ void *thread_function(void * arg)
 int32_t main(int argc, char **argv)
 {
     int32_t retval = EXIT_SUCCESS;
-    struct pthreads_instance thread;
+    struct thread_instance thread;
 
     logger_set_level(LOGGER_LEVEL_INFO);
 
@@ -118,18 +116,15 @@ int32_t main(int argc, char **argv)
     {
         thread.function = thread_function;
         thread.argument = &thread;
-        thread.shutdown = false;
 
-        pthreads_instance_create(&thread);
-        pthreads_instance_start(&thread);
+        thread_instance_create(&thread);
+        thread_instance_start(&thread);
     }
 
     pause();
 
-    pthreads_instance_stop(&thread);
-    pthreads_instance_destroy(&thread);
-
-    shutdown = true;
+    thread_instance_stop(&thread);
+    thread_instance_destroy(&thread);
 
     logger_printf(LOGGER_LEVEL_TRACE, "Exiting\n");
 
