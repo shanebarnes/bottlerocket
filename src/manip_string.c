@@ -36,13 +36,16 @@ bool manip_string_compare(const char * const str1,
 /**
  * @see See header file for interace comments.
  */
-int32_t manip_string_concat(char * const str, const char * const format, ...)
+int32_t manip_string_concat(char * const buf,
+                            const size_t len,
+                            const char * const format,
+                            ...)
 {
     int32_t retval = -1;
     va_list args;
 
     va_start(args, format);
-    retval = vsprintf(str, format, args);
+    retval = vsnprintf(buf, len, format, args);
     va_end(args);
 
     return retval;

@@ -30,15 +30,19 @@ bool manip_string_compare(const char * const str1,
 /**
  * @brief Concatenate strings, integers, etc. and copy into a string buffer.
  *
- * @param[in,out] str    A string buffer to store the concatenated strings,
+ * @param[in,out] buf    A string buffer to store the concatenated strings,
  *                       integers, etc.
+ * @param[in]     len    The size of the string buffer in bytes.
  * @param[in]     format A string containing the concatenation format.
  * @param[in]      ...   A variable size argument list.
  *
  * @return The length of the string containing the concatenated strings,
  *         integers, etc (-1 on error).
  */
-int32_t manip_string_concat(char *str, const char * const format, ...);
+int32_t manip_string_concat(char * const str,
+                            const size_t len,
+                            const char * const format,
+                            ...);
 
 /**
  * @brief Parse a string based on a string containing the match format. All
