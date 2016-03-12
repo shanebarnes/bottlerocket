@@ -6,8 +6,10 @@
  */
 
 #include "logger.h"
+#include "manip_string.h"
 #include "thread_instance.h"
 #include "system_types.h"
+#include "util_sysctl.h"
 
 #include <signal.h>
 #include <stdio.h>
@@ -65,15 +67,25 @@ void *thread_function(void * arg)
 {
     struct thread_instance *instance = (struct thread_instance *)arg;
 
-    logger_printf(LOGGER_LEVEL_TRACE, "%s: Starting thread\n", __FUNCTION__);
+    logger_printf(LOGGER_LEVEL_TRACE,
+                  "%s: Starting thread '%s'\n",
+                  __FUNCTION__,
+                  instance->name);
 
     if (instance != NULL)
     {
         while (thread_instance_isrunning(instance) == false)
         {
-            logger_printf(LOGGER_LEVEL_TRACE, "Thread running\n");
+            logger_printf(LOGGER_LEVEL_TRACE,
+                          "Thread '%s' is running\n",
+                          instance->name);
             usleep(1000 * 1000);
         }
+
+        logger_printf(LOGGER_LEVEL_TRACE,
+                      "%s: Stopping thread '%s'\n",
+                      __FUNCTION__,
+                      instance->name);
     }
     else
     {
@@ -81,8 +93,6 @@ void *thread_function(void * arg)
                       "%s: thread instance is invalid\n",
                       __FUNCTION__);
     }
-
-    logger_printf(LOGGER_LEVEL_TRACE, "%s: Stopping thread\n", __FUNCTION__);
 
     return NULL;
 }
@@ -99,9 +109,19 @@ void *thread_function(void * arg)
 int32_t main(int argc, char **argv)
 {
     int32_t retval = EXIT_SUCCESS;
-    struct thread_instance thread;
+    uint32_t cpucount = util_sysctl_cpuavail();
+    struct thread_instance *threads = NULL;
+    uint16_t i;
 
-    logger_set_level(LOGGER_LEVEL_INFO);
+    logger_create();
+    logger_set_level(LOGGER_LEVEL_TRACE);
+
+    if (cpucount < 1)
+    {
+        cpucount = 1;
+    }
+
+    threads = (struct thread_instance *)malloc(cpucount * sizeof(struct thread_instance));
 
     // Catch and handle signals.
     signal(SIGHUP,  signal_handler);
@@ -114,19 +134,30 @@ int32_t main(int argc, char **argv)
 
     if (argc > 0 && argv)
     {
-        thread.function = thread_function;
-        thread.argument = &thread;
+        for (i = 0; i < cpucount; i++)
+        {
+            manip_string_concat(threads[i].name,
+                                sizeof(threads[i].name),
+                                "t-%02d",
+                                i);
+            threads[i].function = thread_function;
+            threads[i].argument = &threads[i];
 
-        thread_instance_create(&thread);
-        thread_instance_start(&thread);
+            thread_instance_create(&threads[i]);
+            thread_instance_start(&threads[i]);
+        }
     }
 
     pause();
 
-    thread_instance_stop(&thread);
-    thread_instance_destroy(&thread);
+    for (i = 0; i < cpucount; i++)
+    {
+        thread_instance_stop(&threads[i]);
+        thread_instance_destroy(&threads[i]);
+    }
 
     logger_printf(LOGGER_LEVEL_TRACE, "Exiting\n");
+    logger_destroy();
 
     return retval;
 }
