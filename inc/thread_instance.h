@@ -16,6 +16,7 @@ struct internals;
 
 struct thread_instance
 {
+    char              name[64];
     pthread_t         handle;
     pthread_attr_t    attributes;
     void             *function;

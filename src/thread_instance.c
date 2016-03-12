@@ -6,7 +6,7 @@
  */
 
 #include "logger.h"
-#include "rwlock_instance.h"
+#include "mutex_instance.h"
 #include "thread_instance.h"
 
 #include <errno.h>
@@ -14,8 +14,8 @@
 
 struct internals
 {
-    struct rwlock_instance lock;
-    bool                   shutdown;
+    struct mutex_instance mutex;
+    bool                  shutdown;
 };
 
 /**
@@ -44,7 +44,7 @@ bool thread_instance_create(struct thread_instance * const instance)
                           errno);
             thread_instance_destroy(instance);
         }
-        else if (rwlock_instance_create(&instance->internal->lock) == false)
+        else if (mutex_instance_create(&instance->internal->mutex) == false)
         {
             thread_instance_destroy(instance);
         }
@@ -87,7 +87,7 @@ bool thread_instance_destroy(struct thread_instance * const instance)
         }
 #endif
 
-        rwlock_instance_destroy(&instance->internal->lock);
+        mutex_instance_destroy(&instance->internal->mutex);
         pthread_attr_destroy(&instance->attributes);
         free(instance->internal);
         instance->internal = NULL;
@@ -111,9 +111,9 @@ bool thread_instance_start(struct thread_instance * const instance)
 
     if (instance != NULL)
     {
-        rwlock_instance_wrlock(&instance->internal->lock);
+        mutex_instance_lock(&instance->internal->mutex);
         instance->internal->shutdown = false;
-        rwlock_instance_unlock(&instance->internal->lock);
+        mutex_instance_unlock(&instance->internal->mutex);
 
         if (pthread_create(&instance->handle,
                            &instance->attributes,
@@ -149,9 +149,9 @@ bool thread_instance_isrunning(struct thread_instance * const instance)
 
     if (instance != NULL)
     {
-        rwlock_instance_rdlock(&instance->internal->lock);
+        mutex_instance_lock(&instance->internal->mutex);
         retval = instance->internal->shutdown;
-        rwlock_instance_unlock(&instance->internal->lock);
+        mutex_instance_unlock(&instance->internal->mutex);
     }
     else
     {
@@ -172,9 +172,9 @@ bool thread_instance_stop(struct thread_instance * const instance)
 
     if (instance != NULL)
     {
-        rwlock_instance_wrlock(&instance->internal->lock);
+        mutex_instance_lock(&instance->internal->mutex);
         instance->internal->shutdown = true;
-        rwlock_instance_unlock(&instance->internal->lock);
+        mutex_instance_unlock(&instance->internal->mutex);
 
         // Wait for thread to exit.
         while (pthread_kill(instance->handle, 0) == 0)
