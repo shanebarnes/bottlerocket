@@ -23,11 +23,12 @@ ${bottlerocket_SOURCE_DIR}/inc/logger.h
 ${bottlerocket_SOURCE_DIR}/inc/manip_date.h
 ${bottlerocket_SOURCE_DIR}/inc/manip_string.h
 ${bottlerocket_SOURCE_DIR}/inc/manip_unit.h
-${bottlerocket_SOURCE_DIR}/inc/pthreads_instance.h
+${bottlerocket_SOURCE_DIR}/inc/rwlock_instance.h
 ${bottlerocket_SOURCE_DIR}/inc/socket.h
 ${bottlerocket_SOURCE_DIR}/inc/socket_api.h
 ${bottlerocket_SOURCE_DIR}/inc/socket_tcp.h
 ${bottlerocket_SOURCE_DIR}/inc/system_types.h
+${bottlerocket_SOURCE_DIR}/inc/thread_instance.h
 )
 
 set(bottlerocket_SOURCES
@@ -36,9 +37,10 @@ ${bottlerocket_SOURCE_DIR}/src/logger.c
 ${bottlerocket_SOURCE_DIR}/src/manip_date.c
 ${bottlerocket_SOURCE_DIR}/src/manip_string.c
 ${bottlerocket_SOURCE_DIR}/src/manip_unit.c
-${bottlerocket_SOURCE_DIR}/src/pthreads_instance.c
+${bottlerocket_SOURCE_DIR}/src/rwlock_instance.c
 ${bottlerocket_SOURCE_DIR}/src/socket.c
 ${bottlerocket_SOURCE_DIR}/src/socket_tcp.c
+${bottlerocket_SOURCE_DIR}/src/thread_instance.c
 )
 
 add_executable(bottlerocket ${bottlerocket_HEADERS} ${bottlerocket_SOURCES})
