@@ -14,11 +14,11 @@
 /**
  * @brief Initialize a TCP socket API structure.
  *
- * @param[in,out] api A pointer to the TCP socket APi structure.
+ * @param[in,out] api A pointer to a socket instance.
  *
  * @return True on success.
  */
-bool socket_tcp_init(struct socket_api * const api);
+bool socket_tcp_init(struct socket_instance * const instance);
 
 /**
  * @see socket_api.h for interface comments.

@@ -16,20 +16,22 @@
 /**
  * @see See header file for interface comments.
  */
-bool socket_tcp_init(struct socket_api * const api)
+bool socket_tcp_init(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if (api != NULL)
+    if (instance != NULL)
     {
-        api->socket_api_open    = socket_instance_open;
-        api->socket_api_close   = socket_instance_close;
-        api->socket_api_bind    = socket_instance_bind;
-        api->socket_api_listen  = socket_tcp_listen;
-        api->socket_api_accept  = socket_tcp_accept;
-        api->socket_api_connect = socket_tcp_connect;
-        api->socket_api_recv    = socket_tcp_recv;
-        api->socket_api_send    = socket_tcp_send;
+        instance->sockapi.socket_api_open    = socket_instance_open;
+        instance->sockapi.socket_api_close   = socket_instance_close;
+        instance->sockapi.socket_api_bind    = socket_instance_bind;
+        instance->sockapi.socket_api_listen  = socket_tcp_listen;
+        instance->sockapi.socket_api_accept  = socket_tcp_accept;
+        instance->sockapi.socket_api_connect = socket_tcp_connect;
+        instance->sockapi.socket_api_recv    = socket_tcp_recv;
+        instance->sockapi.socket_api_send    = socket_tcp_send;
+
+        instance->socktype = SOCK_STREAM;
 
         retval = true;
     }
@@ -51,6 +53,15 @@ bool socket_tcp_listen(struct socket_instance * const instance,
         if (listen(instance->listenfd, backlog) == 0)
         {
             retval = true;
+        }
+        else
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: Failed to listen on %s:%u (%d)\n",
+                          __FUNCTION__,
+                          instance->ipaddr,
+                          instance->ipport,
+                          errno);
         }
     }
 
