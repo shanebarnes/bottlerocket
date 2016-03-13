@@ -104,12 +104,12 @@ bool socket_instance_open(struct socket_instance * const instance)
         ahints.ai_addr      = NULL;
         ahints.ai_next      = NULL;
 
-        portsize = snprintf(ipport, 6, "%d", instance->addrself.ipport);
+        portsize = snprintf(ipport, 6, "%d", instance->ipport);
 
         instance->alist = NULL;
 
         if ((portsize > 0) && (portsize < 6) &&
-            (getaddrinfo(instance->addrself.ipaddr,
+            (getaddrinfo(instance->ipaddr,
                          ipport,
                          &ahints,
                          &(instance->alist)) == 0))
@@ -121,8 +121,8 @@ bool socket_instance_open(struct socket_instance * const instance)
                                                anext->ai_protocol)) != 0)
                 {
                     retval = true;
-                    instance->listenfd                = instance->sockfd;
-                    instance->ainfo                   = *anext;
+                    instance->listenfd = instance->sockfd;
+                    instance->ainfo    = *anext;
 
                     instance->addrself.sockaddr.sin_family       = anext->ai_family;
                     instance->addrself.sockaddr.sin_addr.s_addr  = inet_addr(instance->addrself.ipaddr);
