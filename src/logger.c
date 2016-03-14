@@ -109,7 +109,7 @@ void logger_printf(const enum logger_level level, const char *format, ...)
         ((level >= setlevel) || (setlevel == LOGGER_LEVEL_ALL)))
     {
         va_start(args, format);
-        error = vsprintf(msgbuf, format, args);
+        error = vsnprintf(msgbuf, sizeof(msgbuf), format, args);
         va_end(args);
 
         if (error >= 0)
