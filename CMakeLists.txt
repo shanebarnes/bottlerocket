@@ -26,6 +26,8 @@ ${bottlerocket_SOURCE_DIR}/inc/manip_date.h
 ${bottlerocket_SOURCE_DIR}/inc/manip_string.h
 ${bottlerocket_SOURCE_DIR}/inc/manip_unit.h
 ${bottlerocket_SOURCE_DIR}/inc/mutex_instance.h
+${bottlerocket_SOURCE_DIR}/inc/output_if_api.h
+${bottlerocket_SOURCE_DIR}/inc/output_if_std.h
 ${bottlerocket_SOURCE_DIR}/inc/rwlock_instance.h
 ${bottlerocket_SOURCE_DIR}/inc/socket_instance.h
 ${bottlerocket_SOURCE_DIR}/inc/socket_api.h
@@ -44,6 +46,7 @@ ${bottlerocket_SOURCE_DIR}/src/manip_date.c
 ${bottlerocket_SOURCE_DIR}/src/manip_string.c
 ${bottlerocket_SOURCE_DIR}/src/manip_unit.c
 ${bottlerocket_SOURCE_DIR}/src/mutex_instance.c
+${bottlerocket_SOURCE_DIR}/src/output_if_std.c
 ${bottlerocket_SOURCE_DIR}/src/rwlock_instance.c
 ${bottlerocket_SOURCE_DIR}/src/socket_instance.c
 ${bottlerocket_SOURCE_DIR}/src/socket_tcp.c
