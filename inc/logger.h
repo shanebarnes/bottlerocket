@@ -8,6 +8,7 @@
 #ifndef _LOGGER_H_
 #define _LOGGER_H_
 
+#include "output_if_api.h"
 #include "system_types.h"
 
 enum logger_level
@@ -36,6 +37,15 @@ bool logger_create(void);
  * @return True if a logger singleton was destroyed.
  */
 bool logger_destroy(void);
+
+/**
+ * @brief Set the logger output interface.
+ *
+ * @param[in] interface A pointer to the output interface.
+ *
+ * @return True if the new logger output interface was set.
+ */
+bool logger_set_output(struct output_if_api * const interface);
 
 /**
  * @brief Set the logger level.

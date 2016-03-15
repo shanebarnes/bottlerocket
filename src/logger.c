@@ -7,14 +7,15 @@
 
 #include "logger.h"
 #include "manip_date.h"
+#include "manip_string.h"
 #include "rwlock_instance.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 
-static enum logger_level      static_level = LOGGER_LEVEL_ALL;
-static struct rwlock_instance lock;
-
+static enum logger_level       static_level = LOGGER_LEVEL_ALL;
+static struct rwlock_instance  lock;
+static struct output_if_api   *output_if = NULL;
 
 /**
  * @see See header file for interface comments.
@@ -30,6 +31,22 @@ bool logger_create(void)
 bool logger_destroy(void)
 {
     return rwlock_instance_destroy(&lock);
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool logger_set_output(struct output_if_api * const interface)
+{
+    bool retval = false;
+
+    if (interface != NULL)
+    {
+        output_if = interface;
+        retval = true;
+    }
+
+    return retval;
 }
 
 /**
@@ -98,14 +115,14 @@ static char *logger_get_level_string(const enum logger_level level)
 void logger_printf(const enum logger_level level, const char *format, ...)
 {
     int32_t error = 0;
-    char msgbuf[1024], timebuf[512];
+    char msgbuf[128], outbuf[256], timebuf[32];
     va_list args;
     uint64_t sec = 0, nsec = 0;
     rwlock_instance_rdlock(&lock);
     enum logger_level setlevel = static_level;
     rwlock_instance_unlock(&lock);
 
-    if ((setlevel != LOGGER_LEVEL_OFF) &&
+    if ((output_if != NULL) && (setlevel != LOGGER_LEVEL_OFF) &&
         ((level >= setlevel) || (setlevel == LOGGER_LEVEL_ALL)))
     {
         va_start(args, format);
@@ -121,12 +138,15 @@ void logger_printf(const enum logger_level level, const char *format, ...)
                                    timebuf,
                                    sizeof(timebuf));
 
-            fprintf(stdout,
-                    "%s.%06u [%-5s]: %s",
-                    timebuf,
-                    (uint32_t)nsec / 1000,
-                    logger_get_level_string(level),
-                    msgbuf);
+            manip_string_concat(outbuf,
+                                sizeof(outbuf),
+                                "%s.%06u [%-5s]: %s",
+                                timebuf,
+                                (uint32_t)nsec / 1000,
+                                logger_get_level_string(level),
+                                msgbuf);
+
+            output_if->send(outbuf, sizeof(outbuf));
         }
     }
 }
