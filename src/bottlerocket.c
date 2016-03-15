@@ -8,7 +8,10 @@
 #include "cli_options.h"
 #include "logger.h"
 #include "manip_string.h"
+#include "output_if_api.h"
+#include "output_if_std.h"
 #include "thread_instance.h"
+#include "socket_tcp.h"
 #include "system_types.h"
 #include "util_sysctl.h"
 
@@ -110,6 +113,7 @@ void *thread_function(void * arg)
 int32_t main(int argc, char **argv)
 {
     int32_t retval = EXIT_SUCCESS;
+    struct output_if_api output_if;
     struct cli_options_instance options;
     uint32_t cpucount = util_sysctl_cpuavail();
     struct thread_instance *threads = NULL;
@@ -122,7 +126,26 @@ int32_t main(int argc, char **argv)
     }
 
     logger_create();
+    output_if.send = output_if_std_send;
+    logger_set_output(&output_if);
     logger_set_level(LOGGER_LEVEL_TRACE);
+
+    // Start of test
+    struct socket_instance server;
+    memset(&server, 0, sizeof(server));
+    socket_tcp_init(&server);
+    server.ipaddr = "127.0.0.1";
+    server.ipport = 5001;
+    if ((server.sockapi.socket_api_open(&server) == true) &&
+        (server.sockapi.socket_api_bind(&server) == true) &&
+        (server.sockapi.socket_api_listen(&server, 1) == true))
+    {
+        socket_instance_address(&server, true);
+        logger_printf(LOGGER_LEVEL_TRACE,
+                      "Listening on %s\n",
+                      server.addrself.sockaddrstr);
+    }
+    // End of test
 
     if (cpucount < 1)
     {
