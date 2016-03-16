@@ -21,6 +21,8 @@ link_libraries(pthread)
 
 set(bottlerocket_HEADERS
 ${bottlerocket_SOURCE_DIR}/inc/cli_options.h
+${bottlerocket_SOURCE_DIR}/inc/io_event_api.h
+${bottlerocket_SOURCE_DIR}/inc/io_event_poll.h
 ${bottlerocket_SOURCE_DIR}/inc/logger.h
 ${bottlerocket_SOURCE_DIR}/inc/manip_date.h
 ${bottlerocket_SOURCE_DIR}/inc/manip_string.h
@@ -41,6 +43,7 @@ ${bottlerocket_SOURCE_DIR}/inc/version.h
 set(bottlerocket_SOURCES
 ${bottlerocket_SOURCE_DIR}/src/bottlerocket.c
 ${bottlerocket_SOURCE_DIR}/src/cli_options.c
+${bottlerocket_SOURCE_DIR}/src/io_event_poll.c
 ${bottlerocket_SOURCE_DIR}/src/logger.c
 ${bottlerocket_SOURCE_DIR}/src/manip_date.c
 ${bottlerocket_SOURCE_DIR}/src/manip_string.c
