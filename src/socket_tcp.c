@@ -106,6 +106,8 @@ int32_t socket_tcp_accept(struct socket_instance * const instance,
                     sockaccept = true;
                 }
             }
+
+            io_event_poll_destroy(&poll);
         }
 
         if (sockaccept == true)
