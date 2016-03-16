@@ -5,12 +5,12 @@
  * @brief  TCP socket implementation.
  */
 
+#include "io_event_poll.h"
 #include "logger.h"
 #include "socket_tcp.h"
 
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/select.h>
 #include <sys/socket.h>
 
 /**
@@ -74,14 +74,13 @@ bool socket_tcp_listen(struct socket_instance * const instance,
 int32_t socket_tcp_accept(struct socket_instance * const instance,
                           const int32_t timeoutms)
 {
-    int32_t        retval     = -1;
-    socklen_t      socklen    = 0;
-    bool           sockaccept = true;
+    int32_t                  retval     = -1;
+    socklen_t                socklen    = 0;
+    bool                     sockaccept = (timeoutms == 0 ? true : false);
 #if defined(LINUX)
-    int32_t        flags      = 0;
+    int32_t                  flags      = 0;
 #endif
-    fd_set         rfds;
-    struct timeval tv;
+    struct io_event_instance poll;
 
     if (instance != NULL)
     {
@@ -92,14 +91,20 @@ int32_t socket_tcp_accept(struct socket_instance * const instance,
 #if defined(LINUX)
             flags = O_NONBLOCK;
 #endif
-            //tv.tv_sec  = dateGetTimeSecIpart((uint64_t)timeoutMs, UNIT_MSEC);
-            //tv.tv_usec = dateGetTimeSecFpart((uint64_t)timeoutMs, UNIT_MSEC) * 1000;
-            FD_ZERO(&rfds);
-            FD_SET(instance->listenfd, &rfds);
+            poll.fds       = &instance->listenfd;
+            poll.size      = 1;
+            poll.timeoutms = timeoutms;
+            poll.pevents   = IO_EVENT_POLL_IN;
+            poll.internal  = NULL;
 
-            if (select(instance->listenfd + 1, &rfds, NULL, NULL, &tv) <= 0)
+            if ((io_event_poll_create(&poll) == true) &&
+                (io_event_poll_poll(&poll) == true))
             {
-                sockaccept = false;
+                if (((poll.revents & IO_EVENT_RET_TIMEOUT) == 0) &&
+                    ((poll.revents & IO_EVENT_RET_ERROR) == 0))
+                {
+                    sockaccept = true;
+                }
             }
         }
 
@@ -122,12 +127,18 @@ int32_t socket_tcp_accept(struct socket_instance * const instance,
                 //{
                 //    // Nothing to do
                 //}
-                //else if (getsockname(info->fdSocket, (struct sockaddr *)&(info->addrLocal), &sockLen) == 0)
-                //{
-                //    info->sockAccept = true;
-                //    socketGetAddress(info);
-                //    retval = true;
-                //}
+                if (false)
+                {
+
+                }
+                else if (getsockname(instance->sockfd,
+                                     (struct sockaddr *)&(instance->addrself.sockaddr),
+                                     &socklen) == 0)
+                {
+                    //info->sockAccept = true;
+                    socket_instance_address(instance, false);
+                    retval = true;
+                }
             }
         }
     }
