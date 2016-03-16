@@ -22,14 +22,14 @@ bool socket_tcp_init(struct socket_instance * const instance)
 
     if (instance != NULL)
     {
-        instance->sockapi.socket_api_open    = socket_instance_open;
-        instance->sockapi.socket_api_close   = socket_instance_close;
-        instance->sockapi.socket_api_bind    = socket_instance_bind;
-        instance->sockapi.socket_api_listen  = socket_tcp_listen;
-        instance->sockapi.socket_api_accept  = socket_tcp_accept;
-        instance->sockapi.socket_api_connect = socket_tcp_connect;
-        instance->sockapi.socket_api_recv    = socket_tcp_recv;
-        instance->sockapi.socket_api_send    = socket_tcp_send;
+        instance->sockapi.open    = socket_instance_open;
+        instance->sockapi.close   = socket_instance_close;
+        instance->sockapi.bind    = socket_instance_bind;
+        instance->sockapi.listen  = socket_tcp_listen;
+        instance->sockapi.accept  = socket_tcp_accept;
+        instance->sockapi.connect = socket_tcp_connect;
+        instance->sockapi.recv    = socket_tcp_recv;
+        instance->sockapi.send    = socket_tcp_send;
 
         instance->socktype = SOCK_STREAM;
 
