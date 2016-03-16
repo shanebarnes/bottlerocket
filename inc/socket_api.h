@@ -22,7 +22,7 @@ struct socket_api
      *
      * @return True on success.
      */
-    bool (*socket_api_open)(struct socket_instance * const instance);
+    bool (*open)(struct socket_instance * const instance);
 
     /**
      * @brief Close a socket.
@@ -31,7 +31,7 @@ struct socket_api
      *
      * @return True on success.
      */
-    bool (*socket_api_close)(struct socket_instance * const instance);
+    bool (*close)(struct socket_instance * const instance);
 
     /**
      * @brief Assign an address to a socket.
@@ -40,7 +40,7 @@ struct socket_api
      *
      * @return True on success.
      */
-    bool (*socket_api_bind)(struct socket_instance * const instance);
+    bool (*bind)(struct socket_instance * const instance);
 
     /**
      * @brief Listen for connections on an open socket.
@@ -51,8 +51,8 @@ struct socket_api
      *
      * @return True on success.
      */
-    bool (*socket_api_listen)(struct socket_instance * const instance,
-                              const int32_t backlog);
+    bool (*listen)(struct socket_instance * const instance,
+                   const int32_t backlog);
 
     /**
      * @brief Accept a connection on a listener socket.
@@ -63,8 +63,8 @@ struct socket_api
      * @return A non-negative integer that is the accepted socket file
      *         descriptor (-1 on error).
      */
-    int32_t (*socket_api_accept)(struct socket_instance * const instance,
-                                 const int32_t timeoutms);
+    int32_t (*accept)(struct socket_instance * const instance,
+                      const int32_t timeoutms);
 
     /**
      * @brief Initiate a connection on a socket.
@@ -74,8 +74,8 @@ struct socket_api
      *
      * @return True on success.
      */
-    bool (*socket_api_connect)(struct socket_instance * const instance,
-                               const int32_t timeoutms);
+    bool (*connect)(struct socket_instance * const instance,
+                    const int32_t timeoutms);
 
     /**
      * @brief Receive data from a socket.
@@ -87,9 +87,9 @@ struct socket_api
      *
      * @return The number of bytes received from the socket (-1 on error).
      */
-    int32_t (*socket_api_recv)(struct socket_instance * const instance,
-                               void * const buf,
-                               const uint32_t len);
+    int32_t (*recv)(struct socket_instance * const instance,
+                    void * const buf,
+                    const uint32_t len);
 
     /**
      * @brief Send data to a socket.
@@ -101,9 +101,9 @@ struct socket_api
      *
      * @return The number of bytes sent to the socket (-1 on error).
      */
-    int32_t (*socket_api_send)(struct socket_instance * const instance,
-                               void * const buf,
-                               const uint32_t len);
+    int32_t (*send)(struct socket_instance * const instance,
+                    void * const buf,
+                    const uint32_t len);
 };
 
 #endif // _SOCKET_API_H_
