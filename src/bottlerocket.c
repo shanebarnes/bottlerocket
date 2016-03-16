@@ -136,9 +136,9 @@ int32_t main(int argc, char **argv)
     socket_tcp_init(&server);
     server.ipaddr = "127.0.0.1";
     server.ipport = 5001;
-    if ((server.sockapi.socket_api_open(&server) == true) &&
-        (server.sockapi.socket_api_bind(&server) == true) &&
-        (server.sockapi.socket_api_listen(&server, 1) == true))
+    if ((server.sockapi.open(&server) == true) &&
+        (server.sockapi.bind(&server) == true) &&
+        (server.sockapi.listen(&server, 1) == true))
     {
         socket_instance_address(&server, true);
 
@@ -146,7 +146,7 @@ int32_t main(int argc, char **argv)
                       "Listening on %s for 5000 ms\n",
                       server.addrself.sockaddrstr);
 
-        if (server.sockapi.socket_api_accept(&server, 5000) == true)
+        if (server.sockapi.accept(&server, 5000) == true)
         {
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: server accepted connection\n",
@@ -159,6 +159,7 @@ int32_t main(int argc, char **argv)
                           __FUNCTION__);
         }
     }
+    server.sockapi.close(&server);
     // End of test
 
     if (cpucount < 1)
