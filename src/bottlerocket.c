@@ -141,9 +141,23 @@ int32_t main(int argc, char **argv)
         (server.sockapi.socket_api_listen(&server, 1) == true))
     {
         socket_instance_address(&server, true);
+
         logger_printf(LOGGER_LEVEL_TRACE,
-                      "Listening on %s\n",
+                      "Listening on %s for 5000 ms\n",
                       server.addrself.sockaddrstr);
+
+        if (server.sockapi.socket_api_accept(&server, 5000) == true)
+        {
+            logger_printf(LOGGER_LEVEL_TRACE,
+                          "%s: server accepted connection\n",
+                          __FUNCTION__);
+        }
+        else
+        {
+            logger_printf(LOGGER_LEVEL_TRACE,
+                          "%s: accept timeout\n",
+                          __FUNCTION__);
+        }
     }
     // End of test
 
