@@ -9,6 +9,7 @@
 #include "socket_instance.h"
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -83,6 +84,7 @@ bool socket_instance_open(struct socket_instance * const instance)
     bool              retval   = false;
     int32_t           portsize = 0;
     struct addrinfo  *anext = NULL, ahints;
+    socklen_t         optval;
     char              ipport[6];
 
     if (instance != NULL)
@@ -100,7 +102,8 @@ bool socket_instance_open(struct socket_instance * const instance)
 
         instance->alist = NULL;
 
-        if ((portsize > 0) && (portsize < 6) &&
+        if ((portsize > 0) &&
+            (portsize < 6) &&
             (getaddrinfo(instance->ipaddr,
                          ipport,
                          &ahints,
@@ -112,7 +115,6 @@ bool socket_instance_open(struct socket_instance * const instance)
                                                anext->ai_socktype,
                                                anext->ai_protocol)) != 0)
                 {
-                    retval          = true;
                     instance->ainfo = *anext;
 
                     instance->addrself.sockaddr.sin_family       = anext->ai_family;
@@ -127,20 +129,38 @@ bool socket_instance_open(struct socket_instance * const instance)
                     //info->timeIdleRecvUsec           = 0;
                     //info->timeIdleSendUsec           = 0;
 
-                    // @todo - SO_REUSEPORT? SO_LINGER?
-                    //if ((retval = socketOptionSet(info->fdSocket, SOL_SOCKET, SO_REUSEADDR, 1)) == false)
-                    //{
-                    //    perror(__FUNCTION__);
-                    //}
-#if defined(__APPLE__)
-                    //if ((retval = socketOptionSet(info->fdSocket, SOL_SOCKET, SO_NOSIGPIPE, 1)) == false)
-                    //{
-                    //  perror(__FUNCTION__);
-                    //}
-#endif
-                    if (retval == false)
+                    optval = 1;
+
+                    // @todo - SO_REUSEPORT? SO_LINGER? SO_SNDBUF? SO_RCVBUF? etc
+                    if (setsockopt(instance->sockfd,
+                                   SOL_SOCKET,
+                                   SO_REUSEADDR,
+                                   &optval,
+                                   sizeof(optval)) != 0)
                     {
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: SO_REUSEADDR option failed (%d)\n",
+                                      __FUNCTION__,
+                                      errno);
                         socket_instance_close(instance);
+                    }
+#if defined(__APPLE__)
+                    else if (setsockopt(instance->sockfd,
+                             SOL_SOCKET,
+                             SO_NOSIGPIPE,
+                             &optval,
+                             sizeof(optval)) != 0)
+                    {
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: SO_NOSIGPIPE option failed (%d)\n",
+                                      __FUNCTION__,
+                                      errno);
+                        socket_instance_close(instance);
+                    }
+#endif
+                    else
+                    {
+                        retval = true;
                     }
 
                     break;
