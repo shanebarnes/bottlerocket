@@ -26,8 +26,7 @@ struct socket_instance
 {
     struct socket_api        sockapi;
     int32_t                  socktype, // e.g.: SOCK_DGRAM, SOCK_STREAM
-                             sockfd,
-                             listenfd;
+                             sockfd;
     struct socket_addr_info  addrself,
                              addrpeer;
     struct addrinfo          ainfo,
@@ -37,15 +36,22 @@ struct socket_instance
 };
 
 /**
- * @brief Get the local and remote socket addresses.
+ * @brief Get the peer (remote) socket address.
  *
  * @param[in,out] instance A pointer to a socket instance.
- * @param[in]     client   True if the socket instance is a client socket.
  *
- * @return True if the local and remote socket addresses were obtained.
+ * @return True if the peer socket address was obtained.
  */
-bool socket_instance_address(struct socket_instance * const instance,
-                             const bool client);
+bool socket_instance_getaddrpeer(struct socket_instance * const instance);
+
+/**
+ * @brief Get the self (local) socket address.
+ *
+ * @param[in,out] instance A pointer to a socket instance.
+ *
+ * @return True if the self socket address was obtained.
+ */
+bool socket_instance_getaddrself(struct socket_instance * const instance);
 
 /**
  * @see socket_api.h for interface comments.
