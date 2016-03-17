@@ -57,14 +57,16 @@ struct socket_api
     /**
      * @brief Accept a connection on a listener socket.
      *
-     * @param[in,out] instance  A pointer to a socket instance.
+     * @param[in,out] listener  A pointer to a listener socket instance.
+     * @param[in,out] instance  A pointer to a socket instance to initialize
+     *                          with a new socket if a connection was accepted.
      * @param[in]     timeoutms The accept timeout in milliseconds.
      *
-     * @return A non-negative integer that is the accepted socket file
-     *         descriptor (-1 on error).
+     * @return True if a connection was accepted on a listener socket.
      */
-    int32_t (*accept)(struct socket_instance * const instance,
-                      const int32_t timeoutms);
+    bool (*accept)(struct socket_instance * const listener,
+                   struct socket_instance * const instance,
+                   const int32_t timeoutms);
 
     /**
      * @brief Initiate a connection on a socket.
