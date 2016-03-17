@@ -203,14 +203,34 @@ int32_t socket_tcp_recv(struct socket_instance * const instance,
         // Check for socket errors if receive failed.
         if (retval <= 0)
         {
-            if (errno == EPIPE)
+            switch (errno)
             {
-                retval = -1;
-            }
-            else
-            {
-                // Socket receive buffer is full. Poll until timeout is reached
-                // or receive buffer is at least partially drained.
+                // Fatal errors.
+                case EBADF:
+                case ECONNRESET:
+                case EPIPE:
+                case ENOTSOCK:
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: fatal error (%d)\n",
+                                  __FUNCTION__,
+                                  errno);
+                    retval = -1;
+                    break;
+                // Non-fatal errors.
+                case EAGAIN:
+                case EFAULT:
+                case EINTR:
+                case EINVAL:
+                case ENOBUFS:
+                case ENOTCONN:
+                case EOPNOTSUPP:
+                case ETIMEDOUT:
+                default:
+                    logger_printf(LOGGER_LEVEL_DEBUG,
+                                  "%s: non-fatal error (%d)\n",
+                                  __FUNCTION__,
+                                  errno);
+                    retval = 0;
             }
         }
     }
@@ -251,14 +271,36 @@ int32_t socket_tcp_send(struct socket_instance * const instance,
         // Check for socket errors if send failed.
         if (retval <= 0)
         {
-            if (errno == EPIPE)
+            switch (errno)
             {
-                retval = -1;
-            }
-            else
-            {
-                // Socket send buffer is full. Poll until timeout is reached or
-                // send buffer space is at least partially drained.
+                // Fatal errors.
+                case EBADF:
+                case ECONNRESET:
+                case EHOSTUNREACH:
+                case EPIPE:
+                case ENOTSOCK:
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: fatal error (%d)\n",
+                                  __FUNCTION__,
+                                  errno);
+                    retval = -1;
+                    break;
+                // Non-fatal errors.
+                case EACCES:
+                case EAGAIN:
+                case EFAULT:
+                case EINTR:
+                case EMSGSIZE:
+                case ENETDOWN:
+                case ENETUNREACH:
+                case ENOBUFS:
+                case EOPNOTSUPP:
+                default:
+                    logger_printf(LOGGER_LEVEL_DEBUG,
+                                  "%s: non-fatal error (%d)\n",
+                                  __FUNCTION__,
+                                  errno);
+                    retval = 0;
             }
         }
     }
