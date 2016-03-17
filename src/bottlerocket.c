@@ -132,6 +132,7 @@ int32_t main(int argc, char **argv)
 
     // Start of test
     struct socket_instance server;
+    struct socket_instance socket;
     memset(&server, 0, sizeof(server));
     socket_tcp_init(&server);
     server.ipaddr = "127.0.0.1";
@@ -140,13 +141,13 @@ int32_t main(int argc, char **argv)
         (server.sockapi.bind(&server) == true) &&
         (server.sockapi.listen(&server, 1) == true))
     {
-        socket_instance_address(&server, true);
+        socket_instance_getaddrself(&server);
 
         logger_printf(LOGGER_LEVEL_TRACE,
                       "Listening on %s for 5000 ms\n",
                       server.addrself.sockaddrstr);
 
-        if (server.sockapi.accept(&server, 5000) == true)
+        if (server.sockapi.accept(&server, &socket, 150000) == true)
         {
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: server accepted connection\n",
@@ -159,6 +160,7 @@ int32_t main(int argc, char **argv)
                           __FUNCTION__);
         }
     }
+    socket.sockapi.close(&socket);
     server.sockapi.close(&server);
     // End of test
 
