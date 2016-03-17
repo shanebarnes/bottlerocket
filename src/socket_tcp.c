@@ -50,7 +50,7 @@ bool socket_tcp_listen(struct socket_instance * const instance,
     if ((instance != NULL) && (backlog))
     {
         // Backlog check: SOMAXCONN
-        if (listen(instance->listenfd, backlog) == 0)
+        if (listen(instance->sockfd, backlog) == 0)
         {
             retval = true;
         }
@@ -71,10 +71,11 @@ bool socket_tcp_listen(struct socket_instance * const instance,
 /**
  * @see See header file for interface comments.
  */
-int32_t socket_tcp_accept(struct socket_instance * const instance,
-                          const int32_t timeoutms)
+bool socket_tcp_accept(struct socket_instance * const listener,
+                       struct socket_instance * const instance,
+                       const int32_t timeoutms)
 {
-    int32_t                  retval     = -1;
+    bool                     retval     = false;
     socklen_t                socklen    = 0;
     bool                     sockaccept = (timeoutms == 0 ? true : false);
 #if defined(LINUX)
@@ -82,16 +83,16 @@ int32_t socket_tcp_accept(struct socket_instance * const instance,
 #endif
     struct io_event_instance poll;
 
-    if (instance != NULL)
+    if ((listener != NULL) && (instance != NULL))
     {
-        socklen = sizeof(instance->addrpeer.sockaddr);
+        socklen = sizeof(listener->addrpeer.sockaddr);
 
         if (timeoutms > 0)
         {
 #if defined(LINUX)
             flags = O_NONBLOCK;
 #endif
-            poll.fds       = &instance->listenfd;
+            poll.fds       = &listener->sockfd;
             poll.size      = 1;
             poll.timeoutms = timeoutms;
             poll.pevents   = IO_EVENT_POLL_IN;
@@ -113,13 +114,13 @@ int32_t socket_tcp_accept(struct socket_instance * const instance,
         if (sockaccept == true)
         {
 #if defined(LINUX)
-            if ((instance->sockfd = accept4(instance->listenfd,
-                                            (struct sockaddr *)&(instance->addrpeer.sockaddr),
+            if ((instance->sockfd = accept4(listener->sockfd,
+                                            (struct sockaddr *)&(listener->addrpeer.sockaddr),
                                             &socklen,
                                             flags)) > -1)
 #else
-            if ((instance->sockfd = accept(instance->listenfd,
-                                           (struct sockaddr *)&(instance->addrpeer.sockaddr),
+            if ((instance->sockfd = accept(listener->sockfd,
+                                           (struct sockaddr *)&(listener->addrpeer.sockaddr),
                                            &socklen)) > -1)
 #endif
             {
@@ -129,16 +130,31 @@ int32_t socket_tcp_accept(struct socket_instance * const instance,
                 //{
                 //    // Nothing to do
                 //}
-                if (false)
+                if (socket_tcp_init(instance) == false)
                 {
-
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: accepted socket initialization failed\n",
+                                  __FUNCTION__);
                 }
-                else if (getsockname(instance->sockfd,
-                                     (struct sockaddr *)&(instance->addrself.sockaddr),
-                                     &socklen) == 0)
+                else if (socket_instance_getaddrself(instance) == false)
                 {
-                    //info->sockAccept = true;
-                    socket_instance_address(instance, false);
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: self socket information is unavailable\n",
+                                  __FUNCTION__);
+                }
+                else if (socket_instance_getaddrpeer(instance) == false)
+                {
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: peer socket information is unavailable\n",
+                                  __FUNCTION__);
+                }
+                else
+                {
+                    logger_printf(LOGGER_LEVEL_TRACE,
+                                  "%s: accepted connection on %s from %s\n",
+                                  __FUNCTION__,
+                                  instance->addrself.sockaddrstr,
+                                  instance->addrpeer.sockaddrstr);
                     retval = true;
                 }
             }

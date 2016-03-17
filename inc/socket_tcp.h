@@ -29,8 +29,9 @@ bool socket_tcp_listen(struct socket_instance * const instance,
 /**
  * @see socket_api.h for interface comments.
  */
-int32_t socket_tcp_accept(struct socket_instance * const instance,
-                          const int32_t timeoutms);
+bool socket_tcp_accept(struct socket_instance * const listener,
+                       struct socket_instance * const instance,
+                       const int32_t timeoutms);
 
 /**
  * @see socket_api.h for interface comments.
