@@ -87,7 +87,7 @@ void manip_string_to_lower(char * const str)
 /**
  * @see See header file for interace comments.
  */
-void stringToUpper(char * const str)
+void manip_string_to_upper(char * const str)
 {
     uint32_t i = 0;
 
