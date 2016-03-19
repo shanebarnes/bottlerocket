@@ -13,7 +13,8 @@ if (${UNIX})
     endif (CMAKE_COMPILER_IS_GNUCC)
 endif(${UNIX})
 
-include_directories(${BR_LIB_INCLUDE_DIR} ${BR_LIB_SOURCE_DIR}
+include_directories(${BR_LIB_INCLUDE_DIR}
+                    ${BR_LIB_SOURCE_DIR}
                     ${gtest_SOURCE_DIR}/include)
 
 link_directories(${BR_LIB_INCLUDE_DIR})
