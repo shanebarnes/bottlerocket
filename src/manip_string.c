@@ -47,9 +47,12 @@ int32_t manip_string_concat(char * const buf,
     int32_t retval = -1;
     va_list args;
 
-    va_start(args, format);
-    retval = vsnprintf(buf, len, format, args);
-    va_end(args);
+    if ((buf != NULL) && (len > 0) && (format != NULL))
+    {
+        va_start(args, format);
+        retval = vsnprintf(buf, len, format, args);
+        va_end(args);
+    }
 
     return retval;
 }
