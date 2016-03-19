@@ -1,7 +1,7 @@
 /**
  * @file   gtest_brutil.cpp
  * @author Shane Barnes
- * @date   01 Mar 2016
+ * @date   18 Mar 2016
  * @brief  Bottlerocket utility Google unit tests.
  */
 
