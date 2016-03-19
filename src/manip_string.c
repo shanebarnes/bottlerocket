@@ -21,13 +21,16 @@ bool manip_string_compare(const char * const str1,
 {
     bool retval = false;
 
-    if (ignorecase == true)
+    if ((str1 != NULL) && (str2 != NULL))
     {
-        retval = (strcasecmp(str1, str2) == 0);
-    }
-    else
-    {
-        retval = (strcmp(str1, str2) == 0);
+        if (ignorecase == true)
+        {
+            retval = (strcasecmp(str1, str2) == 0);
+        }
+        else
+        {
+            retval = (strcmp(str1, str2) == 0);
+        }
     }
 
     return retval;
