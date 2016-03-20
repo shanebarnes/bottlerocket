@@ -25,16 +25,7 @@ enum io_event_ret
 };
 
 struct internals;
-
-struct io_event_instance
-{
-    int32_t          *fds;
-    int32_t           size;
-    uint32_t          timeoutms;
-    uint32_t          pevents;
-    uint32_t          revents;
-    struct internals *internal;
-};
+struct io_event_instance;
 
 struct io_event_ops
 {
@@ -67,6 +58,17 @@ struct io_event_ops
      * @return True if the I/O event instance was polled.
      */
     bool (*ieo_poll)(struct io_event_instance * const instance);
+};
+
+struct io_event_instance
+{
+    struct io_event_ops  ops;
+    int32_t             *fds;
+    int32_t              size;
+    uint32_t             timeoutms;
+    uint32_t             pevents;
+    uint32_t             revents;
+    struct internals    *internal;
 };
 
 #endif // _IO_EVENT_INSTANCE_H_
