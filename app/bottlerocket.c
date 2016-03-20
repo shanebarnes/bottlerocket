@@ -134,7 +134,7 @@ int32_t main(int argc, char **argv)
     struct socket_instance server;
     struct socket_instance socket;
     memset(&server, 0, sizeof(server));
-    socket_tcp_init(&server);
+    socket_tcp_create(&server);
     server.ipaddr = "127.0.0.1";
     server.ipport = 5001;
     if ((server.ops.sio_open(&server) == true) &&
