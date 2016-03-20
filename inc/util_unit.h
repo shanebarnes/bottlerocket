@@ -1,12 +1,12 @@
 /**
- * @file   manip_unit.h
+ * @file   util_unit.h
  * @author Shane Barnes
  * @date   06 Mar 2016
- * @brief  Unit manipulation interface.
+ * @brief  Unit utility interface.
  */
 
-#ifndef _MANIP_UNIT_H_
-#define _MANIP_UNIT_H_
+#ifndef _UTIL_UNIT_H_
+#define _UTIL_UNIT_H_
 
 #include "system_types.h"
 
@@ -70,7 +70,7 @@ enum unit_prefix_byte
 
 enum unit_prefix_time
 {
-    UNIT_TIME_SEC  = UNIT_SI_BASE, //  1 second
+    UNIT_TIME_SEC  = UNIT_SI_BASE,  //  1 second
     UNIT_TIME_MIN  = 60,            //  1 minute =     1 second/second * 60 seconds
     UNIT_TIME_HOUR = 3600,          //  1 hour   =    60 seconds/minute * 60 minutes
     UNIT_TIME_DAY  = 86400,         //  1 day    =  3600 seconds/hour * 24 hours
@@ -91,7 +91,7 @@ enum unit_prefix_time
  * @return An integer value equivalent to the string representation of a bit
  *         rate count (0 on error).
  */
-uint64_t manip_unit_get_bitrate(const char * const bitrate);
+uint64_t util_unit_get_bitrate(const char * const bitrate);
 
 /**
  * @brief Convert a string representation of a byte count to a numeric
@@ -102,7 +102,7 @@ uint64_t manip_unit_get_bitrate(const char * const bitrate);
  * @return An integer value equivalent to the string representation of a byte
  *         count (0 on error).
  */
-uint64_t manip_unit_get_bytes(const char * const bytes);
+uint64_t util_unit_get_bytes(const char * const bytes);
 
 /**
  * @brief Convert a string representation of a seconds count to a numeric
@@ -113,7 +113,7 @@ uint64_t manip_unit_get_bytes(const char * const bytes);
  * @return An integer value equivalent to the string representation of a seconds
  *         (0 on error).
  */
-uint64_t manip_unit_get_seconds(const char * const seconds);
+uint64_t util_unit_get_seconds(const char * const seconds);
 
 /**
  * @brief Convert a number to decimal notation (e.g., 1200 bytes = 1.200 KB).
@@ -129,10 +129,10 @@ uint64_t manip_unit_get_seconds(const char * const seconds);
  *
  * @return Void.
  */
-void manip_unit_get_decimal_notation(const uint64_t base,
-                                     const uint8_t precision,
-                                     const uint64_t integer,
-                                     char * const buf,
-                                     const size_t len);
+void util_unit_get_decimal_notation(const uint64_t base,
+                                    const uint8_t precision,
+                                    const uint64_t integer,
+                                    char * const buf,
+                                    const size_t len);
 
-#endif // _MANIP_UNIT_H_
+#endif // _UTIL_UNIT_H_

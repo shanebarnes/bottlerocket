@@ -1,12 +1,12 @@
 /**
- * @file   manip_unit.c
+ * @file   util_unit.c
  * @author Shane Barnes
  * @date   07 Mar 2016
- * @brief  Unit manipulation implementation.
+ * @brief  Unit utility implementation.
  */
 
-#include "manip_string.h"
-#include "manip_unit.h"
+#include "util_string.h"
+#include "util_unit.h"
 #include <stdio.h>
 
 /**
@@ -18,72 +18,72 @@
  * @return Return an integer value equivalent to the string representation of a
  *         bit rate prefix (0 on error).
  */
-static uint64_t manip_unit_get_bitrate_prefix(const char *const prefix)
+static uint64_t util_unit_get_bitrate_prefix(const char *const prefix)
 {
     uint64_t retval = 0;
 
-    if (manip_string_compare(prefix, "BPS", true) ||
-        manip_string_compare(prefix, "", true))
+    if (util_string_compare(prefix, "BPS", true) ||
+        util_string_compare(prefix, "", true))
     {
         retval = UNIT_BITRATE_BPS;
     }
-    else if (manip_string_compare(prefix, "KBPS", true) ||
-             manip_string_compare(prefix, "K", true))
+    else if (util_string_compare(prefix, "KBPS", true) ||
+             util_string_compare(prefix, "K", true))
     {
         retval = UNIT_BITRATE_KBPS;
     }
-    else if (manip_string_compare(prefix, "KIBPS", true) ||
-             manip_string_compare(prefix, "KI", true))
+    else if (util_string_compare(prefix, "KIBPS", true) ||
+             util_string_compare(prefix, "KI", true))
     {
         retval = UNIT_BITRATE_KIBPS;
     }
-    else if (manip_string_compare(prefix, "MBPS", true) ||
-             manip_string_compare(prefix, "M", true))
+    else if (util_string_compare(prefix, "MBPS", true) ||
+             util_string_compare(prefix, "M", true))
     {
         retval = UNIT_BITRATE_MBPS;
     }
-    else if (manip_string_compare(prefix, "MIBPS", true) ||
-             manip_string_compare(prefix, "MI", true))
+    else if (util_string_compare(prefix, "MIBPS", true) ||
+             util_string_compare(prefix, "MI", true))
     {
         retval = UNIT_BITRATE_MIBPS;
     }
-    else if (manip_string_compare(prefix, "GBPS", true) ||
-             manip_string_compare(prefix, "G", true))
+    else if (util_string_compare(prefix, "GBPS", true) ||
+             util_string_compare(prefix, "G", true))
     {
         retval = UNIT_BITRATE_GBPS;
     }
-    else if (manip_string_compare(prefix, "GIBPS", true) ||
-             manip_string_compare(prefix, "GI", true))
+    else if (util_string_compare(prefix, "GIBPS", true) ||
+             util_string_compare(prefix, "GI", true))
     {
         retval = UNIT_BITRATE_GIBPS;
     }
-    else if (manip_string_compare(prefix, "TBPS", true) ||
-             manip_string_compare(prefix, "T", true))
+    else if (util_string_compare(prefix, "TBPS", true) ||
+             util_string_compare(prefix, "T", true))
     {
         retval = UNIT_BITRATE_TBPS;
     }
-    else if (manip_string_compare(prefix, "TIBPS", true) ||
-             manip_string_compare(prefix, "TI", true))
+    else if (util_string_compare(prefix, "TIBPS", true) ||
+             util_string_compare(prefix, "TI", true))
     {
         retval = UNIT_BITRATE_TIBPS;
     }
-    else if (manip_string_compare(prefix, "PBPS", true) ||
-             manip_string_compare(prefix, "P", true))
+    else if (util_string_compare(prefix, "PBPS", true) ||
+             util_string_compare(prefix, "P", true))
     {
         retval = UNIT_BITRATE_PBPS;
     }
-    else if (manip_string_compare(prefix, "PIBPS", true) ||
-             manip_string_compare(prefix, "PI", true))
+    else if (util_string_compare(prefix, "PIBPS", true) ||
+             util_string_compare(prefix, "PI", true))
     {
         retval = UNIT_BITRATE_PIBPS;
     }
-    else if (manip_string_compare(prefix, "EBPS", true) ||
-             manip_string_compare(prefix, "E", true))
+    else if (util_string_compare(prefix, "EBPS", true) ||
+             util_string_compare(prefix, "E", true))
     {
         retval = UNIT_BITRATE_EBPS;
     }
-    else if (manip_string_compare(prefix, "EIBPS", true) ||
-             manip_string_compare(prefix, "EI", true))
+    else if (util_string_compare(prefix, "EIBPS", true) ||
+             util_string_compare(prefix, "EI", true))
     {
         retval = UNIT_BITRATE_EIBPS;
     }
@@ -99,72 +99,72 @@ static uint64_t manip_unit_get_bitrate_prefix(const char *const prefix)
  * @return Return an integer value equivalent to the string representation of a
  *         byte prefix (0 on error).
  */
-static uint64_t manip_unit_get_byte_prefix(const char * const prefix)
+static uint64_t util_unit_get_byte_prefix(const char * const prefix)
 {
     uint64_t retval = 0;
 
-    if (manip_string_compare(prefix, "B", true) ||
-        manip_string_compare(prefix, "", true))
+    if (util_string_compare(prefix, "B", true) ||
+        util_string_compare(prefix, "", true))
     {
         retval = UNIT_BYTE_B;
     }
-    else if (manip_string_compare(prefix, "KB", true) ||
-             manip_string_compare(prefix, "K", true))
+    else if (util_string_compare(prefix, "KB", true) ||
+             util_string_compare(prefix, "K", true))
     {
         retval = UNIT_BYTE_KB;
     }
-    else if (manip_string_compare(prefix, "KIB", true) ||
-             manip_string_compare(prefix, "KI", true))
+    else if (util_string_compare(prefix, "KIB", true) ||
+             util_string_compare(prefix, "KI", true))
     {
         retval = UNIT_BYTE_KIB;
     }
-    else if (manip_string_compare(prefix, "MB", true) ||
-             manip_string_compare(prefix, "M", true))
+    else if (util_string_compare(prefix, "MB", true) ||
+             util_string_compare(prefix, "M", true))
     {
         retval = UNIT_BYTE_MB;
     }
-    else if (manip_string_compare(prefix, "MIB", true) ||
-             manip_string_compare(prefix, "MI", true))
+    else if (util_string_compare(prefix, "MIB", true) ||
+             util_string_compare(prefix, "MI", true))
     {
         retval = UNIT_BYTE_MIB;
     }
-    else if (manip_string_compare(prefix, "GB", true) ||
-             manip_string_compare(prefix, "G", true))
+    else if (util_string_compare(prefix, "GB", true) ||
+             util_string_compare(prefix, "G", true))
     {
         retval = UNIT_BYTE_GB;
     }
-    else if (manip_string_compare(prefix, "GIB", true) ||
-             manip_string_compare(prefix, "GI", true))
+    else if (util_string_compare(prefix, "GIB", true) ||
+             util_string_compare(prefix, "GI", true))
     {
         retval = UNIT_BYTE_GIB;
     }
-    else if (manip_string_compare(prefix, "TB", true) ||
-             manip_string_compare(prefix, "T", true))
+    else if (util_string_compare(prefix, "TB", true) ||
+             util_string_compare(prefix, "T", true))
     {
         retval = UNIT_BYTE_TB;
     }
-    else if (manip_string_compare(prefix, "TIB", true) ||
-             manip_string_compare(prefix, "TI", true))
+    else if (util_string_compare(prefix, "TIB", true) ||
+             util_string_compare(prefix, "TI", true))
     {
         retval = UNIT_BYTE_TIB;
     }
-    else if (manip_string_compare(prefix, "PB", true) ||
-             manip_string_compare(prefix, "P", true))
+    else if (util_string_compare(prefix, "PB", true) ||
+             util_string_compare(prefix, "P", true))
     {
         retval = UNIT_BYTE_PB;
     }
-    else if (manip_string_compare(prefix, "PIB", true) ||
-             manip_string_compare(prefix, "PI", true))
+    else if (util_string_compare(prefix, "PIB", true) ||
+             util_string_compare(prefix, "PI", true))
     {
         retval = UNIT_BYTE_PIB;
     }
-    else if (manip_string_compare(prefix, "EB", true) ||
-             manip_string_compare(prefix, "E", true))
+    else if (util_string_compare(prefix, "EB", true) ||
+             util_string_compare(prefix, "E", true))
     {
         retval = UNIT_BYTE_EB;
     }
-    else if (manip_string_compare(prefix, "EIB", true) ||
-             manip_string_compare(prefix, "EI", true))
+    else if (util_string_compare(prefix, "EIB", true) ||
+             util_string_compare(prefix, "EI", true))
     {
         retval = UNIT_BYTE_EIB;
     }
@@ -181,32 +181,32 @@ static uint64_t manip_unit_get_byte_prefix(const char * const prefix)
  * @return Return an integer value equivalent to the string representation of a
  *         seconds prefix (0 on error).
  */
-static uint64_t manip_unit_get_seconds_prefix(const char * const prefix)
+static uint64_t util_unit_get_seconds_prefix(const char * const prefix)
 {
     uint64_t retval = 0;
 
-    if (manip_string_compare(prefix, "S", true) ||
-        manip_string_compare(prefix, "", true))
+    if (util_string_compare(prefix, "S", true) ||
+        util_string_compare(prefix, "", true))
     {
         retval = UNIT_TIME_SEC;
     }
-    else if (manip_string_compare(prefix, "M", true))
+    else if (util_string_compare(prefix, "M", true))
     {
         retval = UNIT_TIME_MIN;
     }
-    else if (manip_string_compare(prefix, "H", true))
+    else if (util_string_compare(prefix, "H", true))
     {
         retval = UNIT_TIME_HOUR;
     }
-    else if (manip_string_compare(prefix, "D", true))
+    else if (util_string_compare(prefix, "D", true))
     {
         retval = UNIT_TIME_HOUR;
     }
-    else if (manip_string_compare(prefix, "W", true))
+    else if (util_string_compare(prefix, "W", true))
     {
         retval = UNIT_TIME_WEEK;
     }
-    else if (manip_string_compare(prefix, "Y", true))
+    else if (util_string_compare(prefix, "Y", true))
     {
         retval = UNIT_TIME_YEAR;
     }
@@ -217,13 +217,13 @@ static uint64_t manip_unit_get_seconds_prefix(const char * const prefix)
 /**
  * @see See header file for interace comments.
  */
-uint64_t manip_unit_get_bitrate(const char * const bitrate)
+uint64_t util_unit_get_bitrate(const char * const bitrate)
 {
     uint64_t retval = 0;
     int32_t  matchcount = 0;
     char     prefix[80];
 
-    matchcount = manip_string_parse(bitrate, "%" PRIu64 "%s", &retval, prefix);
+    matchcount = util_string_parse(bitrate, "%" PRIu64 "%s", &retval, prefix);
 
     switch (matchcount)
     {
@@ -232,7 +232,7 @@ uint64_t manip_unit_get_bitrate(const char * const bitrate)
            break;
         case 2:
             // @todo Protect against overflow.
-            retval = retval * manip_unit_get_bitrate_prefix(prefix);
+            retval = retval * util_unit_get_bitrate_prefix(prefix);
             break;
         default:
             // Nothing to do.
@@ -245,13 +245,13 @@ uint64_t manip_unit_get_bitrate(const char * const bitrate)
 /**
  * @see See header file for interace comments.
  */
-uint64_t manip_unit_get_bytes(const char * const bytes)
+uint64_t util_unit_get_bytes(const char * const bytes)
 {
     uint64_t retval = 0;
     int32_t  matchcount = 0;
     char     prefix[80];
 
-    matchcount = manip_string_parse(bytes, "%" PRIu64 "%s", &retval, prefix);
+    matchcount = util_string_parse(bytes, "%" PRIu64 "%s", &retval, prefix);
 
     switch (matchcount)
     {
@@ -260,7 +260,7 @@ uint64_t manip_unit_get_bytes(const char * const bytes)
            break;
         case 2:
             // @todo Protect against overflow.
-            retval = retval * manip_unit_get_byte_prefix(prefix);
+            retval = retval * util_unit_get_byte_prefix(prefix);
             break;
         default:
             // Nothing to do.
@@ -273,13 +273,13 @@ uint64_t manip_unit_get_bytes(const char * const bytes)
 /**
  * @see See header file for interace comments.
  */
-uint64_t manip_unit_get_seconds(const char * const seconds)
+uint64_t util_unit_get_seconds(const char * const seconds)
 {
     uint64_t retval = 0;
     int32_t  matchcount = 0;
     char     prefix[80];
 
-    matchcount = manip_string_parse(seconds, "%" PRIu64 "%s", &retval, prefix);
+    matchcount = util_string_parse(seconds, "%" PRIu64 "%s", &retval, prefix);
 
     switch (matchcount)
     {
@@ -288,7 +288,7 @@ uint64_t manip_unit_get_seconds(const char * const seconds)
            break;
         case 2:
             // @todo Protect against overflow.
-            retval = retval * manip_unit_get_seconds_prefix(prefix);
+            retval = retval * util_unit_get_seconds_prefix(prefix);
             break;
         default:
             // Nothing to do.
@@ -305,7 +305,7 @@ uint64_t manip_unit_get_seconds(const char * const seconds)
  *
  * @return A character representing the prefix value (null character on error).
  */
-static char manip_unit_get_prefix_symbol(const uint64_t prefix)
+static char util_unit_get_prefix_symbol(const uint64_t prefix)
 {
     char retval = '\0';
 
@@ -347,11 +347,11 @@ static char manip_unit_get_prefix_symbol(const uint64_t prefix)
 /**
  * @see See header file for interace comments.
  */
-void manip_unit_get_decimal_notation(const uint64_t base,
-                                     const uint8_t precision,
-                                     const uint64_t integer,
-                                     char * const buf,
-                                     const size_t len)
+void util_unit_get_decimal_notation(const uint64_t base,
+                                    const uint8_t precision,
+                                    const uint64_t integer,
+                                    char * const buf,
+                                    const size_t len)
 {
     uint64_t parti          = integer;
     uint64_t partf          = 0;
@@ -404,24 +404,24 @@ void manip_unit_get_decimal_notation(const uint64_t base,
 
         if ((precision > 0) && (digitcount > 0))
         {
-            manip_string_concat(buf,
-                                len,
-                                "%" PRIu64 ".%.*u %c%c",
-                                parti,
-                                precision > digitcount ?
-                                    (uint8_t)digitcount : precision,
-                                (uint32_t)partf,
-                                manip_unit_get_prefix_symbol(prefix),
-                                scale == 1024 ? 'i' : '\0');
+            util_string_concat(buf,
+                               len,
+                               "%" PRIu64 ".%.*u %c%c",
+                               parti,
+                               precision > digitcount ?
+                                   (uint8_t)digitcount : precision,
+                               (uint32_t)partf,
+                               util_unit_get_prefix_symbol(prefix),
+                               scale == 1024 ? 'i' : '\0');
         }
         else
         {
-            manip_string_concat(buf,
-                                len,
-                                "%" PRIu64 " %c%c",
-                                parti,
-                                manip_unit_get_prefix_symbol(prefix),
-                                scale == 1024 ? 'i' : '\0');
+            util_string_concat(buf,
+                               len,
+                               "%" PRIu64 " %c%c",
+                               parti,
+                               util_unit_get_prefix_symbol(prefix),
+                               scale == 1024 ? 'i' : '\0');
         }
     }
 }
