@@ -193,7 +193,7 @@ bool socket_tcp_connect(struct socket_instance * const instance,
                 {
                     // Block.
                 }
-                else if (timeout > 0)
+                else if (timeoutms > 0)
                 {
                     //retval = socketWaitForConnect(info, timeoutMs, sigShutdown);
                 }
