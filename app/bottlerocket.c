@@ -7,7 +7,7 @@
 
 #include "cli_options.h"
 #include "logger.h"
-#include "manip_string.h"
+#include "util_string.h"
 #include "output_if_instance.h"
 #include "output_if_std.h"
 #include "thread_instance.h"
@@ -194,10 +194,10 @@ fprintf(stderr, "recv error %d\n", error);
     {
         for (i = 0; i < cpucount; i++)
         {
-            manip_string_concat(threads[i].name,
-                                sizeof(threads[i].name),
-                                "t-%02d",
-                                i);
+            util_string_concat(threads[i].name,
+                               sizeof(threads[i].name),
+                               "t-%02d",
+                               i);
             threads[i].function = thread_function;
             threads[i].argument = &threads[i];
 
