@@ -11,7 +11,7 @@
 #include "system_types.h"
 
 /**
- * @see output_if_api.h for interface comments.
+ * @see oio_send() for interface comments.
  */
 int32_t output_if_std_send(void * const buf, const uint32_t len);
 
