@@ -1,16 +1,16 @@
 /**
- * @file   output_if_api.h
+ * @file   output_if_instance.h
  * @author Shane Barnes
  * @date   13 Mar 2016
- * @brief  Output interface API interface.
+ * @brief  Output interface instance interface.
  */
 
-#ifndef _OUTPUT_IF_API_H_
-#define _OUTPUT_IF_API_H_
+#ifndef _OUTPUT_IF_INSTANCE_H_
+#define _OUTPUT_IF_INSTANCE_H_
 
 #include "system_types.h"
 
-struct output_if_api
+struct output_if_ops
 {
     // @todo: JSON formatted buffers for the data plane.
 
@@ -23,7 +23,7 @@ struct output_if_api
      *
      * @return The number of bytes sent to an output interface (-1 on error).
      */
-    int32_t (*send)(void * const buf, const uint32_t len);
+    int32_t (*oio_send)(void * const buf, const uint32_t len);
 };
 
-#endif // _OUTPUT_IF_API_H_
+#endif // _OUTPUT_IF_INSTANCE_H_
