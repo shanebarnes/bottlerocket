@@ -8,7 +8,7 @@
 #include "cli_options.h"
 #include "logger.h"
 #include "manip_string.h"
-#include "output_if_api.h"
+#include "output_if_instance.h"
 #include "output_if_std.h"
 #include "thread_instance.h"
 #include "socket_tcp.h"
@@ -113,7 +113,7 @@ void *thread_function(void * arg)
 int32_t main(int argc, char **argv)
 {
     int32_t retval = EXIT_SUCCESS;
-    struct output_if_api output_if;
+    struct output_if_ops output_if;
     struct cli_options_instance options;
     uint32_t cpucount = util_sysctl_cpuavail();
     struct thread_instance *threads = NULL;
@@ -126,7 +126,7 @@ int32_t main(int argc, char **argv)
     }
 
     logger_create();
-    output_if.send = output_if_std_send;
+    output_if.oio_send = output_if_std_send;
     logger_set_output(&output_if);
     logger_set_level(LOGGER_LEVEL_TRACE);
 
