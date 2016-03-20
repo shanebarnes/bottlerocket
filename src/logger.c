@@ -6,8 +6,8 @@
  */
 
 #include "logger.h"
-#include "manip_date.h"
-#include "manip_string.h"
+#include "util_date.h"
+#include "util_string.h"
 #include "rwlock_instance.h"
 
 #include <stdarg.h>
@@ -131,20 +131,20 @@ void logger_printf(const enum logger_level level, const char *format, ...)
 
         if (error >= 0)
         {
-            manip_date_time(DATE_CLOCK_REALTIME, &sec, &nsec);
-            manip_date_time_format(sec,
-                                   UNIT_TIME_SEC,
-                                   "%Y-%m-%dT%H:%M:%S",
-                                   timebuf,
-                                   sizeof(timebuf));
+            util_date_time(DATE_CLOCK_REALTIME, &sec, &nsec);
+            util_date_time_format(sec,
+                                  UNIT_TIME_SEC,
+                                  "%Y-%m-%dT%H:%M:%S",
+                                  timebuf,
+                                  sizeof(timebuf));
 
-            manip_string_concat(outbuf,
-                                sizeof(outbuf),
-                                "%s.%06u [%-5s]: %s",
-                                timebuf,
-                                (uint32_t)nsec / 1000,
-                                logger_get_level_string(level),
-                                msgbuf);
+            util_string_concat(outbuf,
+                               sizeof(outbuf),
+                               "%s.%06u [%-5s]: %s",
+                               timebuf,
+                               (uint32_t)nsec / 1000,
+                               logger_get_level_string(level),
+                               msgbuf);
 
             output_if->oio_send(outbuf, sizeof(outbuf));
         }
