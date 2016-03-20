@@ -1,17 +1,14 @@
 /**
- * @file   manip_string.h
+ * @file   util_string.h
  * @author Shane Barnes
  * @date   07 Mar 2016
- * @brief  String manipulation interface.
+ * @brief  String utility interface.
  */
 
-#ifndef _MANIP_STRING_H_
-#define _MANIP_STRING_H_
+#ifndef _UTIL_STRING_H_
+#define _UTIL_STRING_H_
 
 #include "system_types.h"
-
-#define STRINGIZER(arg) #arg
-#define STRINGIFY(arg)  STRINGIZER(arg)
 
 /**
  * @brief Compare two strings.
@@ -23,9 +20,9 @@
  *
  * @return True if the strings match.
  */
-bool manip_string_compare(const char * const str1,
-                          const char * const str2,
-                          const bool ignorecase);
+bool util_string_compare(const char * const str1,
+                         const char * const str2,
+                         const bool ignorecase);
 
 /**
  * @brief Concatenate strings, integers, etc. and copy into a string buffer.
@@ -39,10 +36,10 @@ bool manip_string_compare(const char * const str1,
  * @return The length of the string (if the buffer had been sufficiently large)
  *         containing the concatenated strings, integers, etc (-1 on error).
  */
-int32_t manip_string_concat(char * const str,
-                            const size_t len,
-                            const char * const format,
-                            ...);
+int32_t util_string_concat(char * const str,
+                           const size_t len,
+                           const char * const format,
+                           ...);
 
 /**
  * @brief Parse a string based on a string containing the match format. All
@@ -54,9 +51,9 @@ int32_t manip_string_concat(char * const str,
  *
  * @return The number of matches found (-1 on error).
  */
-int32_t manip_string_parse(const char * const str,
-                           const char * const format,
-                           ...);
+int32_t util_string_parse(const char * const str,
+                          const char * const format,
+                          ...);
 
 /**
  * @brief Convert a string (must not be a literal) to lower case.
@@ -65,7 +62,7 @@ int32_t manip_string_parse(const char * const str,
  *
  * @return Void.
  */
-void manip_string_to_lower(char * const str);
+void util_string_to_lower(char * const str);
 
 /**
  * @brief Convert a string (must not be a literal) to upper case.
@@ -74,6 +71,6 @@ void manip_string_to_lower(char * const str);
  *
  * @return Void.
  */
-void manip_string_to_upper(char * const str);
+void util_string_to_upper(char * const str);
 
-#endif // _MANIP_STRING_H_
+#endif // _UTIL_STRING_H_

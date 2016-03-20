@@ -1,11 +1,11 @@
 /**
- * @file   manip_string.c
+ * @file   util_string.c
  * @author Shane Barnes
  * @date   07 Mar 2016
- * @brief  String manipulation implementation.
+ * @brief  String utility implementation.
  */
 
-#include "manip_string.h"
+#include "util_string.h"
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -15,9 +15,9 @@
 /**
  * @see See header file for interace comments.
  */
-bool manip_string_compare(const char * const str1,
-                          const char * const str2,
-                          bool ignorecase)
+bool util_string_compare(const char * const str1,
+                         const char * const str2,
+                         bool ignorecase)
 {
     bool retval = false;
 
@@ -39,10 +39,10 @@ bool manip_string_compare(const char * const str1,
 /**
  * @see See header file for interace comments.
  */
-int32_t manip_string_concat(char * const buf,
-                            const size_t len,
-                            const char * const format,
-                            ...)
+int32_t util_string_concat(char * const buf,
+                           const size_t len,
+                           const char * const format,
+                           ...)
 {
     int32_t retval = -1;
     va_list args;
@@ -60,9 +60,9 @@ int32_t manip_string_concat(char * const buf,
 /**
  * @see See header file for interace comments.
  */
-int32_t manip_string_parse(const char * const str,
-                           const char * const format,
-                           ...)
+int32_t util_string_parse(const char * const str,
+                          const char * const format,
+                          ...)
 {
     int32_t retval = -1;
     va_list args;
@@ -77,7 +77,7 @@ int32_t manip_string_parse(const char * const str,
 /**
  * @see See header file for interace comments.
  */
-void manip_string_to_lower(char * const str)
+void util_string_to_lower(char * const str)
 {
     uint32_t i = 0;
 
@@ -93,7 +93,7 @@ void manip_string_to_lower(char * const str)
 /**
  * @see See header file for interace comments.
  */
-void manip_string_to_upper(char * const str)
+void util_string_to_upper(char * const str)
 {
     uint32_t i = 0;
 
