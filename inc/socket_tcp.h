@@ -12,42 +12,42 @@
 #include "system_types.h"
 
 /**
- * @brief Initialize a TCP socket API structure.
+ * @brief Initialize a TCP socket instance operations structure.
  *
- * @param[in,out] api A pointer to a socket instance.
+ * @param[in,out] instance A pointer to a socket instance.
  *
  * @return True on success.
  */
 bool socket_tcp_init(struct socket_instance * const instance);
 
 /**
- * @see socket_api.h for interface comments.
+ * @see sio_listen() for interface comments.
  */
 bool socket_tcp_listen(struct socket_instance * const instance,
                        const int32_t backlog);
 
 /**
- * @see socket_api.h for interface comments.
+ * @see sio_accept() for interface comments.
  */
 bool socket_tcp_accept(struct socket_instance * const listener,
                        struct socket_instance * const instance,
                        const int32_t timeoutms);
 
 /**
- * @see socket_api.h for interface comments.
+ * @see sio_connect() for interface comments.
  */
 bool socket_tcp_connect(struct socket_instance * const instance,
                         const int32_t timeoutms);
 
 /**
- * @see socket_api.h for interface comments.
+ * @see sio_recv() for interface comments.
  */
 int32_t socket_tcp_recv(struct socket_instance * const instance,
                         void * const buf,
                         const uint32_t len);
 
 /**
- * @see socket_api.h for interface comments.
+ * @see sio_send() for interface comments.
  */
 int32_t socket_tcp_send(struct socket_instance * const instance,
                         void * const buf,

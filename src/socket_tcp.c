@@ -22,14 +22,14 @@ bool socket_tcp_init(struct socket_instance * const instance)
 
     if (instance != NULL)
     {
-        instance->sockapi.open    = socket_instance_open;
-        instance->sockapi.close   = socket_instance_close;
-        instance->sockapi.bind    = socket_instance_bind;
-        instance->sockapi.listen  = socket_tcp_listen;
-        instance->sockapi.accept  = socket_tcp_accept;
-        instance->sockapi.connect = socket_tcp_connect;
-        instance->sockapi.recv    = socket_tcp_recv;
-        instance->sockapi.send    = socket_tcp_send;
+        instance->ops.sio_open    = socket_instance_open;
+        instance->ops.sio_close   = socket_instance_close;
+        instance->ops.sio_bind    = socket_instance_bind;
+        instance->ops.sio_listen  = socket_tcp_listen;
+        instance->ops.sio_accept  = socket_tcp_accept;
+        instance->ops.sio_connect = socket_tcp_connect;
+        instance->ops.sio_recv    = socket_tcp_recv;
+        instance->ops.sio_send    = socket_tcp_send;
 
         instance->socktype = SOCK_STREAM;
 
@@ -57,8 +57,9 @@ bool socket_tcp_listen(struct socket_instance * const instance,
         else
         {
             logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: Failed to listen on %s:%u (%d)\n",
+                          "%s: socked %d failed to listen on %s:%u (%d)\n",
                           __FUNCTION__,
+                          instance->sockfd,
                           instance->ipaddr,
                           instance->ipport,
                           errno);
@@ -133,26 +134,30 @@ bool socket_tcp_accept(struct socket_instance * const listener,
                 if (socket_tcp_init(instance) == false)
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: accepted socket initialization failed\n",
-                                  __FUNCTION__);
+                                  "%s: socket %d accept initialization failed\n",
+                                  __FUNCTION__,
+                                  instance->sockfd);
                 }
                 else if (socket_instance_getaddrself(instance) == false)
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: self socket information is unavailable\n",
+                                  "%s: socket %d self information is unavailable\n",
+                                  instance->sockfd,
                                   __FUNCTION__);
                 }
                 else if (socket_instance_getaddrpeer(instance) == false)
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: peer socket information is unavailable\n",
-                                  __FUNCTION__);
+                                  "%s: socket %d peer information is unavailable\n",
+                                  __FUNCTION__,
+                                  instance->sockfd);
                 }
                 else
                 {
                     logger_printf(LOGGER_LEVEL_TRACE,
-                                  "%s: accepted connection on %s from %s\n",
+                                  "%s: new socket %d accepted on %s from %s\n",
                                   __FUNCTION__,
+                                  instance->sockfd,
                                   instance->addrself.sockaddrstr,
                                   instance->addrpeer.sockaddrstr);
                     retval = true;
@@ -172,9 +177,56 @@ bool socket_tcp_connect(struct socket_instance * const instance,
 {
     bool retval = false;
 
-    if ((instance != NULL) && (timeoutms))
+    if (instance != NULL)
     {
+        if (connect(instance->sockfd,
+                    instance->ainfo.ai_addr,
+                    instance->ainfo.ai_addrlen) == 0)
+        {
+            retval = true;
+        }
+        else
+        {
+            if (errno == EINPROGRESS)
+            {
+                if (timeoutms < 0)
+                {
+                    // Block.
+                }
+                else if (timeout > 0)
+                {
+                    //retval = socketWaitForConnect(info, timeoutMs, sigShutdown);
+                }
+                else
+                {
+                    retval = true;
+                }
+            }
+            else
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d connect error (%d)\n",
+                              instance->sockfd,
+                              errno);
+            }
+        }
 
+        if (retval == true)
+        {
+            if (socket_instance_getaddrpeer(instance) == false)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d peer information is unavailable\n",
+                              instance->sockfd,
+                               __FUNCTION__);
+            }
+        }
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: socket instance is not ready to connect\n",
+                      __FUNCTION__);
     }
 
     return retval;
@@ -195,10 +247,10 @@ int32_t socket_tcp_recv(struct socket_instance * const instance,
         retval = recv(instance->sockfd, buf, len, flags);
 
         logger_printf(LOGGER_LEVEL_TRACE,
-                      "%s: %d bytes received on socket %d\n",
+                      "%s: socket %d received %d bytes\n",
                       __FUNCTION__,
-                      retval,
-                      instance->sockfd);
+                      instance->sockfd,
+                      retval);
 
         // Check for socket errors if receive failed.
         if (retval <= 0)
@@ -211,8 +263,9 @@ int32_t socket_tcp_recv(struct socket_instance * const instance,
                 case EPIPE:
                 case ENOTSOCK:
                     logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: fatal error (%d)\n",
+                                  "%s: socket %d fatal error (%d)\n",
                                   __FUNCTION__,
+                                  instance->sockfd,
                                   errno);
                     retval = -1;
                     break;
@@ -227,8 +280,9 @@ int32_t socket_tcp_recv(struct socket_instance * const instance,
                 case ETIMEDOUT:
                 default:
                     logger_printf(LOGGER_LEVEL_DEBUG,
-                                  "%s: non-fatal error (%d)\n",
+                                  "%s: socket %d non-fatal error (%d)\n",
                                   __FUNCTION__,
+                                  instance->sockfd,
                                   errno);
                     retval = 0;
             }
@@ -263,10 +317,10 @@ int32_t socket_tcp_send(struct socket_instance * const instance,
         retval = send(instance->sockfd, buf, len, flags);
 
         logger_printf(LOGGER_LEVEL_TRACE,
-                      "%s: %d bytes sent on socket %d\n",
+                      "%s: socket %d sent %d bytes\n",
                       __FUNCTION__,
-                      retval,
-                      instance->sockfd);
+                      instance->sockfd,
+                      retval);
 
         // Check for socket errors if send failed.
         if (retval <= 0)
@@ -280,8 +334,9 @@ int32_t socket_tcp_send(struct socket_instance * const instance,
                 case EPIPE:
                 case ENOTSOCK:
                     logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: fatal error (%d)\n",
+                                  "%s: socket %d fatal error (%d)\n",
                                   __FUNCTION__,
+                                  instance->sockfd,
                                   errno);
                     retval = -1;
                     break;
@@ -297,8 +352,9 @@ int32_t socket_tcp_send(struct socket_instance * const instance,
                 case EOPNOTSUPP:
                 default:
                     logger_printf(LOGGER_LEVEL_DEBUG,
-                                  "%s: non-fatal error (%d)\n",
+                                  "%s: socket %d non-fatal error (%d)\n",
                                   __FUNCTION__,
+                                  instance->sockfd,
                                   errno);
                     retval = 0;
             }
