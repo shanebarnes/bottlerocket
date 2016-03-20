@@ -8,6 +8,7 @@
 #ifndef _SOCKET_INSTANCE_H_
 #define _SOCKET_INSTANCE_H_
 
+#include "io_event_instance.h"
 #include "system_types.h"
 
 #include <netdb.h>
@@ -17,6 +18,24 @@ struct socket_instance;
 
 struct socket_instance_ops
 {
+    /**
+     * @brief Create a socket instance.
+     *
+     * @param[in,out] instance A pointer to a socket instance.
+     *
+     * @return True if a socket instance was created.
+     */
+    bool (*sio_create)(struct socket_instance * const instance);
+
+    /**
+     * brief Destroy a socket instance.
+     *
+     * @param[in,out] instance A pointer to a socket instance.
+     *
+     * @return True if a socket instance was destroyed.
+     */
+    bool (*sio_destroy)(struct socket_instance * const instance);
+
     /**
      * @brief Open a socket.
      *
@@ -123,6 +142,7 @@ struct socket_addr_info
 struct socket_instance
 {
     struct socket_instance_ops  ops;
+    struct io_event_instance    event;
     int32_t                     socktype, // e.g.: SOCK_DGRAM, SOCK_STREAM
                                 sockfd;
     struct socket_addr_info     addrself,
@@ -132,7 +152,6 @@ struct socket_instance
     char                       *ipaddr; // User configuration
     uint16_t                    ipport; // User configuration
 };
-
 
 /**
  * @brief Get the peer (remote) socket address.
@@ -151,6 +170,16 @@ bool socket_instance_getaddrpeer(struct socket_instance * const instance);
  * @return True if the self socket address was obtained.
  */
 bool socket_instance_getaddrself(struct socket_instance * const instance);
+
+/**
+ * @see sio_create() for interface comments.
+ */
+bool socket_instance_create(struct socket_instance * const instance);
+
+/**
+ * @see sio_destroy() for interface comments.
+ */
+bool socket_instance_destroy(struct socket_instance * const instance);
 
 /**
  * @see sio_open() for interface comments.

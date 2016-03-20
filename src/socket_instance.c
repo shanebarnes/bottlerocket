@@ -5,6 +5,7 @@
  * @brief  Network socket instance implementation.
  */
 
+#include "io_event_poll.h"
 #include "logger.h"
 #include "socket_instance.h"
 
@@ -77,6 +78,58 @@ bool socket_instance_getaddrself(struct socket_instance * const instance)
 }
 
 /**
+ * @see See sio_create() for interface comments.
+ */
+bool socket_instance_create(struct socket_instance * const instance)
+{
+    bool retval = false;
+
+    if (instance != NULL)
+    {
+        instance->event.fds       = &instance->sockfd;
+        instance->event.size      = 1;
+        instance->event.timeoutms = 0;
+        instance->event.pevents   = IO_EVENT_POLL_IN;
+        instance->event.internal  = NULL;
+
+        instance->event.ops.ieo_create  = io_event_poll_create;
+        instance->event.ops.ieo_destroy = io_event_poll_destroy;
+        instance->event.ops.ieo_poll    = io_event_poll_poll;
+
+        retval = instance->event.ops.ieo_create(&instance->event);
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: instance pointer is null\n",
+                      __FUNCTION__);
+    }
+
+    return retval;
+}
+
+/**
+ * @see See sio_destroy() for interface comments.
+ */
+bool socket_instance_destroy(struct socket_instance * const instance)
+{
+    bool retval = false;
+
+    if (instance != NULL)
+    {
+        retval = instance->event.ops.ieo_destroy(&instance->event);
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: instance pointer is null\n",
+                      __FUNCTION__);
+    }
+
+    return retval;
+}
+
+/**
  * @see See header file for interface comments.
  */
 bool socket_instance_open(struct socket_instance * const instance)
@@ -131,16 +184,25 @@ bool socket_instance_open(struct socket_instance * const instance)
 
                     optval = 1;
 
-                    // @todo - SO_REUSEPORT? SO_LINGER? SO_SNDBUF? SO_RCVBUF? etc
-                    if (setsockopt(instance->sockfd,
-                                   SOL_SOCKET,
-                                   SO_REUSEADDR,
-                                   &optval,
-                                   sizeof(optval)) != 0)
+                    if (socket_instance_create(instance) == false)
                     {
                         logger_printf(LOGGER_LEVEL_ERROR,
-                                      "%s: SO_REUSEADDR option failed (%d)\n",
+                                      "%s: socket %d event creation failed\n",
                                       __FUNCTION__,
+                                      instance->sockfd,
+                                      errno);
+                    }
+                    // @todo - SO_REUSEPORT? SO_LINGER? SO_SNDBUF? SO_RCVBUF? etc
+                    else if (setsockopt(instance->sockfd,
+                                        SOL_SOCKET,
+                                        SO_REUSEADDR,
+                                        &optval,
+                                        sizeof(optval)) != 0)
+                    {
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: socket %d SO_REUSEADDR option failed (%d)\n",
+                                      __FUNCTION__,
+                                      instance->sockfd,
                                       errno);
                         socket_instance_close(instance);
                     }
@@ -152,8 +214,9 @@ bool socket_instance_open(struct socket_instance * const instance)
                              sizeof(optval)) != 0)
                     {
                         logger_printf(LOGGER_LEVEL_ERROR,
-                                      "%s: SO_NOSIGPIPE option failed (%d)\n",
+                                      "%s: socket %d SO_NOSIGPIPE option failed (%d)\n",
                                       __FUNCTION__,
+                                      instance->sockfd,
                                       errno);
                         socket_instance_close(instance);
                     }
@@ -171,7 +234,7 @@ bool socket_instance_open(struct socket_instance * const instance)
     else
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: instance does not exist\n",
+                      "%s: instance pointer is null\n",
                       __FUNCTION__);
     }
 
@@ -187,16 +250,24 @@ bool socket_instance_close(struct socket_instance * const instance)
 
     if (instance != NULL)
     {
-        if (close(instance->sockfd) == 0)
-        {
-            retval = true;
-        }
-        else
+        if (close(instance->sockfd) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: socket %d could not be closed\n",
                           __FUNCTION__,
                           instance->sockfd);
+        }
+        else if (socket_instance_destroy(instance) == false)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: socket %d event desruction failed\n",
+                          __FUNCTION__,
+                          instance->sockfd,
+                          errno);
+        }
+        else
+        {
+            retval = true;
         }
 
         if (instance->alist != NULL)
@@ -208,7 +279,7 @@ bool socket_instance_close(struct socket_instance * const instance)
     else
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: instance does not exist\n",
+                      "%s: instance pointer is null\n",
                       __FUNCTION__);
     }
 
@@ -240,7 +311,7 @@ bool socket_instance_bind(struct socket_instance * const instance)
     else
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: instance does not exist\n",
+                      "%s: instance pointer is null\n",
                       __FUNCTION__);
     }
 
