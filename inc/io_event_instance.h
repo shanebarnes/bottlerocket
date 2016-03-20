@@ -1,12 +1,12 @@
 /**
- * @file   io_event_api.h
+ * @file   io_event_instance.h
  * @author Shane Barnes
  * @date   15 Mar 2016
- * @brief  I/O event notification API interface.
+ * @brief  I/O event notification instance interface.
  */
 
-#ifndef _IO_EVENT_API_H_
-#define _IO_EVENT_API_H_
+#ifndef _IO_EVENT_INSTANCE_H_
+#define _IO_EVENT_INSTANCE_H_
 
 #include "system_types.h"
 
@@ -36,7 +36,7 @@ struct io_event_instance
     struct internals *internal;
 };
 
-struct io_event_api
+struct io_event_ops
 {
     /**
      * @brief Create an I/O event notification instance.
@@ -45,7 +45,7 @@ struct io_event_api
      *
      * @return True on success.
      */
-    bool (*create)(struct io_event_instance * const instance);
+    bool (*ieo_create)(struct io_event_instance * const instance);
 
     /**
      * @brief Destroy an I/O event notification instance.
@@ -54,7 +54,7 @@ struct io_event_api
      *
      * @return True on success.
      */
-    bool (*destroy)(struct io_event_instance * const instance);
+    bool (*ieo_destroy)(struct io_event_instance * const instance);
 
     /**
      * @brief Check an I/O event instance for events of interest. The instance
@@ -66,7 +66,7 @@ struct io_event_api
      *
      * @return True if the I/O event instance was polled.
      */
-    bool (*poll)(struct io_event_instance * const instance);
+    bool (*ieo_poll)(struct io_event_instance * const instance);
 };
 
-#endif // _IO_EVENT_API_H_
+#endif // _IO_EVENT_INSTANCE_H_
