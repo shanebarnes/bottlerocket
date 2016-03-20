@@ -15,7 +15,7 @@
 
 static enum logger_level       static_level = LOGGER_LEVEL_ALL;
 static struct rwlock_instance  lock;
-static struct output_if_api   *output_if = NULL;
+static struct output_if_ops   *output_if = NULL;
 
 /**
  * @see See header file for interface comments.
@@ -36,13 +36,13 @@ bool logger_destroy(void)
 /**
  * @see See header file for interface comments.
  */
-bool logger_set_output(struct output_if_api * const interface)
+bool logger_set_output(struct output_if_ops * const instance)
 {
     bool retval = false;
 
-    if (interface != NULL)
+    if (instance != NULL)
     {
-        output_if = interface;
+        output_if = instance;
         retval = true;
     }
 
@@ -146,7 +146,7 @@ void logger_printf(const enum logger_level level, const char *format, ...)
                                 logger_get_level_string(level),
                                 msgbuf);
 
-            output_if->send(outbuf, sizeof(outbuf));
+            output_if->oio_send(outbuf, sizeof(outbuf));
         }
     }
 }
