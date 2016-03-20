@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 set(BR_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/cli_options.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/io_event_api.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/io_event_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/io_event_poll.h
     ${CMAKE_CURRENT_SOURCE_DIR}/logger.h
     ${CMAKE_CURRENT_SOURCE_DIR}/manip_date.h
