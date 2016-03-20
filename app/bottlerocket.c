@@ -137,9 +137,9 @@ int32_t main(int argc, char **argv)
     socket_tcp_init(&server);
     server.ipaddr = "127.0.0.1";
     server.ipport = 5001;
-    if ((server.sockapi.open(&server) == true) &&
-        (server.sockapi.bind(&server) == true) &&
-        (server.sockapi.listen(&server, 1) == true))
+    if ((server.ops.sio_open(&server) == true) &&
+        (server.ops.sio_bind(&server) == true) &&
+        (server.ops.sio_listen(&server, 1) == true))
     {
         socket_instance_getaddrself(&server);
 
@@ -147,7 +147,7 @@ int32_t main(int argc, char **argv)
                       "Listening on %s for 5000 ms\n",
                       server.addrself.sockaddrstr);
 
-        if (server.sockapi.accept(&server, &socket, 150000) == true)
+        if (server.ops.sio_accept(&server, &socket, 150000) == true)
         {
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: server accepted connection\n",
@@ -156,7 +156,7 @@ int32_t main(int argc, char **argv)
             char buf[2048];
             int error;
 //usleep(5000 * 1000);
-            while ((error = socket.sockapi.recv(&socket, buf, 2048)) >= 0)
+            while ((error = socket.ops.sio_recv(&socket, buf, 2048)) >= 0)
             {
 fprintf(stderr, "recv\n");
                 usleep(10000);
@@ -170,8 +170,8 @@ fprintf(stderr, "recv error %d\n", error);
                           __FUNCTION__);
         }
     }
-    socket.sockapi.close(&socket);
-    server.sockapi.close(&server);
+    socket.ops.sio_close(&socket);
+    server.ops.sio_close(&server);
     // End of test
 
     if (cpucount < 1)
