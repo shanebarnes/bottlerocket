@@ -9,7 +9,7 @@ set(BR_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/manip_string.h
     ${CMAKE_CURRENT_SOURCE_DIR}/manip_unit.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mutex_instance.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/output_if_api.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/output_if_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_std.h
     ${CMAKE_CURRENT_SOURCE_DIR}/rwlock_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/socket_instance.h
