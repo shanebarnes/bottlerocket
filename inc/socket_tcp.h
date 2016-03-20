@@ -12,13 +12,14 @@
 #include "system_types.h"
 
 /**
- * @brief Initialize a TCP socket instance operations structure.
- *
- * @param[in,out] instance A pointer to a socket instance.
- *
- * @return True on success.
+ * @see sio_create() for interface comments.
  */
-bool socket_tcp_init(struct socket_instance * const instance);
+bool socket_tcp_create(struct socket_instance * const instance);
+
+/**
+ * @see sio_destroy() for interface comments.
+ */
+bool socket_tcp_destroy(struct socket_instance * const instance);
 
 /**
  * @see sio_listen() for interface comments.

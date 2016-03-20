@@ -5,7 +5,6 @@
  * @brief  TCP socket implementation.
  */
 
-#include "io_event_poll.h"
 #include "logger.h"
 #include "socket_tcp.h"
 
@@ -16,12 +15,14 @@
 /**
  * @see See header file for interface comments.
  */
-bool socket_tcp_init(struct socket_instance * const instance)
+bool socket_tcp_create(struct socket_instance * const instance)
 {
     bool retval = false;
 
     if (instance != NULL)
     {
+        instance->ops.sio_create  = socket_tcp_create;
+        instance->ops.sio_destroy = socket_tcp_destroy;
         instance->ops.sio_open    = socket_instance_open;
         instance->ops.sio_close   = socket_instance_close;
         instance->ops.sio_bind    = socket_instance_bind;
@@ -32,6 +33,32 @@ bool socket_tcp_init(struct socket_instance * const instance)
         instance->ops.sio_send    = socket_tcp_send;
 
         instance->socktype = SOCK_STREAM;
+
+        retval = true;
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool socket_tcp_destroy(struct socket_instance * const instance)
+{
+    bool retval = false;
+
+    if ((instance != NULL) && (instance->socktype == SOCK_STREAM))
+    {
+        instance->ops.sio_create  = NULL;
+        instance->ops.sio_destroy = NULL;
+        instance->ops.sio_open    = NULL;
+        instance->ops.sio_close   = NULL;
+        instance->ops.sio_bind    = NULL;
+        instance->ops.sio_listen  = NULL;
+        instance->ops.sio_accept  = NULL;
+        instance->ops.sio_connect = NULL;
+        instance->ops.sio_recv    = NULL;
+        instance->ops.sio_send    = NULL;
 
         retval = true;
     }
@@ -82,7 +109,6 @@ bool socket_tcp_accept(struct socket_instance * const listener,
 #if defined(LINUX)
     int32_t                  flags      = 0;
 #endif
-    struct io_event_instance poll;
 
     if ((listener != NULL) && (instance != NULL))
     {
@@ -93,23 +119,17 @@ bool socket_tcp_accept(struct socket_instance * const listener,
 #if defined(LINUX)
             flags = O_NONBLOCK;
 #endif
-            poll.fds       = &listener->sockfd;
-            poll.size      = 1;
-            poll.timeoutms = timeoutms;
-            poll.pevents   = IO_EVENT_POLL_IN;
-            poll.internal  = NULL;
+            listener->event.timeoutms = timeoutms;
+            listener->event.pevents   = IO_EVENT_POLL_IN;
 
-            if ((io_event_poll_create(&poll) == true) &&
-                (io_event_poll_poll(&poll) == true))
+            if (listener->event.ops.ieo_poll(&listener->event) == true)
             {
-                if (((poll.revents & IO_EVENT_RET_TIMEOUT) == 0) &&
-                    ((poll.revents & IO_EVENT_RET_ERROR) == 0))
+                if (((listener->event.revents & IO_EVENT_RET_TIMEOUT) == 0) &&
+                    ((listener->event.revents & IO_EVENT_RET_ERROR) == 0))
                 {
                     sockaccept = true;
                 }
             }
-
-            io_event_poll_destroy(&poll);
         }
 
         if (sockaccept == true)
@@ -127,11 +147,8 @@ bool socket_tcp_accept(struct socket_instance * const listener,
             {
                 socklen = sizeof(instance->addrself.sockaddr);
 
-                //if (info->eventApi.socketIoEventApiInitialize(&(info->fdEvent), info->fdSocket) != true)
-                //{
-                //    // Nothing to do
-                //}
-                if (socket_tcp_init(instance) == false)
+                if ((socket_tcp_create(instance) == false) ||
+                    (socket_instance_create(instance)) == false)
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %d accept initialization failed\n",
