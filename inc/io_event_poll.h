@@ -22,6 +22,11 @@ bool io_event_poll_create(struct io_event_instance * const instance);
 bool io_event_poll_destroy(struct io_event_instance * const instance);
 
 /**
+ * @see ieo_setflags() for interface comments.
+ */
+bool io_event_poll_setflags(struct io_event_instance * const instance);
+
+/**
  * @see ieo_poll() for interface comments.
  */
 bool io_event_poll_poll(struct io_event_instance * const instance);

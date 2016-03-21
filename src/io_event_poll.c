@@ -23,7 +23,6 @@ struct internals
 bool io_event_poll_create(struct io_event_instance * const instance)
 {
     bool retval = false;
-    int32_t i;
 
     if ((instance != NULL) &&
         (instance->internal == NULL) &&
@@ -34,37 +33,7 @@ bool io_event_poll_create(struct io_event_instance * const instance)
 
         if (instance->internal->pfds != NULL)
         {
-            for (i = 0; i < instance->size; i++)
-            {
-                instance->internal->pfds[i].fd = instance->fds[i];
-                instance->internal->pfds[i].events = POLLPRI |
-#if defined(LINUX)
-                                                     POLLRDHUP |
-#endif
-                                                     POLLERR |
-                                                     POLLHUP |
-                                                     POLLNVAL;
-
-                if (instance->pevents & IO_EVENT_POLL_IN)
-                {
-                    instance->internal->pfds[i].events |= POLLIN;
-                }
-
-                if (instance->pevents & IO_EVENT_POLL_OUT)
-                {
-                    instance->internal->pfds[i].events |= POLLOUT;
-                }
-
-                if (fcntl(instance->fds[i], F_SETFL, O_NONBLOCK) != 0)
-                {
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: setting non-blocking flag failed (%d)\n",
-                                  __FUNCTION__,
-                                  errno);
-                }
-            }
-
-            retval = true;
+            retval = io_event_poll_setflags(instance);
         }
         else
         {
@@ -97,6 +66,57 @@ bool io_event_poll_destroy(struct io_event_instance * const instance)
 
         free(instance->internal);
         instance->internal = NULL;
+        retval = true;
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interace comments.
+ */
+bool io_event_poll_setflags(struct io_event_instance * const instance)
+{
+    bool retval = false;
+    int32_t i, flags;
+
+    if ((instance != NULL) &&
+        (instance->internal != NULL) &&
+        (instance->size > 0))
+    {
+        for (i = 0; i < instance->size; i++)
+        {
+            instance->internal->pfds[i].fd = instance->fds[i];
+            instance->internal->pfds[i].events = POLLPRI |
+#if defined(LINUX)
+                                                 POLLRDHUP |
+#endif
+                                                 POLLERR |
+                                                 POLLHUP |
+                                                 POLLNVAL;
+
+            if (instance->pevents & IO_EVENT_POLL_IN)
+            {
+                instance->internal->pfds[i].events |= POLLIN;
+            }
+
+            if (instance->pevents & IO_EVENT_POLL_OUT)
+            {
+                instance->internal->pfds[i].events |= POLLOUT;
+            }
+
+            flags = fcntl(instance->fds[i], F_GETFL, 0);
+
+            if (fcntl(instance->fds[i], F_SETFL, flags | O_NONBLOCK) != 0)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d non-blocking option failed (%d)\n",
+                              __FUNCTION__,
+                              instance->fds[i],
+                              errno);
+            }
+        }
+
         retval = true;
     }
 
