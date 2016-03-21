@@ -81,9 +81,6 @@ static char *logger_get_level_string(const enum logger_level level)
 
     switch (level)
     {
-        case LOGGER_LEVEL_OFF:
-            retval = "OFF";
-            break;
         case LOGGER_LEVEL_ALL:
             retval = "ALL";
             break;
@@ -101,6 +98,9 @@ static char *logger_get_level_string(const enum logger_level level)
             break;
         case LOGGER_LEVEL_ERROR:
             retval = "ERROR";
+            break;
+        case LOGGER_LEVEL_OFF:
+            retval = "OFF";
             break;
         default:
             retval = NULL;
@@ -122,8 +122,9 @@ void logger_printf(const enum logger_level level, const char *format, ...)
     enum logger_level setlevel = static_level;
     rwlock_instance_unlock(&lock);
 
-    if ((output_if != NULL) && (setlevel != LOGGER_LEVEL_OFF) &&
-        ((level >= setlevel) || (setlevel == LOGGER_LEVEL_ALL)))
+    if ((output_if != NULL) &&
+        (level >= setlevel) &&
+        (level < LOGGER_LEVEL_OFF))
     {
         va_start(args, format);
         error = vsnprintf(msgbuf, sizeof(msgbuf), format, args);
