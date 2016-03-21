@@ -92,9 +92,10 @@ bool socket_instance_create(struct socket_instance * const instance)
         instance->event.pevents   = IO_EVENT_POLL_IN;
         instance->event.internal  = NULL;
 
-        instance->event.ops.ieo_create  = io_event_poll_create;
-        instance->event.ops.ieo_destroy = io_event_poll_destroy;
-        instance->event.ops.ieo_poll    = io_event_poll_poll;
+        instance->event.ops.ieo_create   = io_event_poll_create;
+        instance->event.ops.ieo_destroy  = io_event_poll_destroy;
+        instance->event.ops.ieo_setflags = io_event_poll_setflags;
+        instance->event.ops.ieo_poll     = io_event_poll_poll;
 
         retval = instance->event.ops.ieo_create(&instance->event);
     }
@@ -304,8 +305,10 @@ bool socket_instance_bind(struct socket_instance * const instance)
         else
         {
             logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s; bind failed\n",
-                          __FUNCTION__);
+                          "%s: socket %d bind failed (%d)\n",
+                          __FUNCTION__,
+                          instance->sockfd,
+                          errno);
         }
     }
     else

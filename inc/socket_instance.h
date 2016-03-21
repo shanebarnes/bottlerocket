@@ -81,26 +81,20 @@ struct socket_instance_ops
      * @param[in,out] listener  A pointer to a listener socket instance.
      * @param[in,out] instance  A pointer to a socket instance to initialize
      *                          with a new socket if a connection was accepted.
-     * @param[in]     timeoutms The accept timeout in milliseconds.
      *
      * @return True if a connection was accepted on a listener socket.
      */
     bool (*sio_accept)(struct socket_instance * const listener,
-                       struct socket_instance * const instance,
-                       const int32_t timeoutms);
+                       struct socket_instance * const instance);
 
     /**
      * @brief Initiate a connection on a socket.
      *
      * @param[in,out] instance  A pointer to a socket instance.
-     * @param[in]     timeoutms The connect timeout in milliseconds (-1 to wait
-     *                          indefinitey, or block, until the connection is
-     *                          established or an error occurs).
      *
      * @return True on success.
      */
-    bool (*sio_connect)(struct socket_instance * const instance,
-                        const int32_t timeoutms);
+    bool (*sio_connect)(struct socket_instance * const instance);
 
     /**
      * @brief Receive data from a socket.
