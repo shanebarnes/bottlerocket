@@ -15,6 +15,8 @@
 #include "system_types.h"
 #include "util_sysctl.h"
 
+#include <errno.h>
+#include <execinfo.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -29,6 +31,10 @@
  */
 void signal_handler(int signum)
 {
+    void *callstack[128];
+    int32_t i, frames;
+    char **strs = NULL;
+
     switch (signum)
     {
         case SIGHUP:
@@ -44,7 +50,14 @@ void signal_handler(int signum)
             logger_printf(LOGGER_LEVEL_INFO, "Caught SIGQUIT\n");
             break;
         case SIGSEGV:
+            frames = backtrace(callstack, 128);
+            strs = backtrace_symbols(callstack, frames);
             logger_printf(LOGGER_LEVEL_INFO, "Caught SIGSEGV\n");
+            for (i = 0; i < frames; ++i)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR, "%s\n", strs[i]);
+            }
+            free(strs);
             exit(signum);
             break;
         case SIGSTOP:
@@ -61,33 +74,165 @@ void signal_handler(int signum)
 }
 
 /**
- * @brief Thread worker function.
+ * @brief Client thread function.
  *
  * @param[in] arg Thread input argument.
  *
  * @return NULL.
  */
-void *thread_function(void * arg)
+void *thread_client(void * arg)
 {
     struct thread_instance *instance = (struct thread_instance *)arg;
+    char buf[2048];
+    int32_t error;
+    struct socket_instance client;
 
-    logger_printf(LOGGER_LEVEL_TRACE,
-                  "%s: Starting thread '%s'\n",
+    logger_printf(LOGGER_LEVEL_DEBUG,
+                  "%s: starting thread '%s'\n",
                   __FUNCTION__,
                   instance->name);
 
     if (instance != NULL)
     {
-        while (thread_instance_isrunning(instance) == false)
+        memset(&client, 0, sizeof(client));
+        socket_tcp_create(&client);
+        client.ipaddr = "127.0.0.1";
+        client.ipport = 5001;
+
+        if ((client.ops.sio_open(&client) == true) &&
+            ((client.event.timeoutms = 1000) > 0) &&
+            /*(client.ops.sio_bind(&client) == true) &&*/
+            (client.ops.sio_connect(&client) == true))
         {
-            logger_printf(LOGGER_LEVEL_TRACE,
-                          "Thread '%s' is running\n",
-                          instance->name);
-            usleep(1000 * 1000);
+            logger_printf(LOGGER_LEVEL_DEBUG,
+                          "%s: connected to %s\n",
+                          __FUNCTION__,
+                          client.addrpeer.sockaddrstr);
+
+            client.event.timeoutms = 500;
+
+            while (thread_instance_isrunning(instance) == false)
+            {
+                error = client.ops.sio_send(&client, buf, sizeof(buf));
+
+                if (error < 0)
+                {
+                    client.ops.sio_close(&client);
+                    break;
+                }
+                else
+                {
+                    client.ops.sio_recv(&client, buf, sizeof(buf));
+                }
+            }
+        }
+        else
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: connection to %s:%u failed (%d)\n",
+                          __FUNCTION__,
+                          client.ipaddr,
+                          client.ipport,
+                          errno);
         }
 
-        logger_printf(LOGGER_LEVEL_TRACE,
-                      "%s: Stopping thread '%s'\n",
+        logger_printf(LOGGER_LEVEL_DEBUG,
+                      "%s: stopping thread '%s'\n",
+                      __FUNCTION__,
+                      instance->name);
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: thread instance is invalid\n",
+                      __FUNCTION__);
+    }
+
+    return NULL;
+}
+
+/**
+ * @brief Server thread function.
+ *
+ * @param[in] arg Thread input argument.
+ *
+ * @return NULL.
+ */
+void *thread_server(void * arg)
+{
+    struct thread_instance *instance = (struct thread_instance *)arg;
+    char buf[2048];
+    int32_t error;
+    int32_t count = 0;
+    struct socket_instance server, socket;
+
+    logger_printf(LOGGER_LEVEL_DEBUG,
+                  "%s: starting thread '%s'\n",
+                  __FUNCTION__,
+                  instance->name);
+
+    if (instance != NULL)
+    {
+        memset(&server, 0, sizeof(server));
+        socket_tcp_create(&server);
+        server.ipaddr = "127.0.0.1";
+        server.ipport = 5001;
+
+        if ((server.ops.sio_open(&server) == true) &&
+            (server.ops.sio_bind(&server) == true) &&
+            (server.ops.sio_listen(&server, 1) == true))
+        {
+            server.event.timeoutms = 500;
+
+            logger_printf(LOGGER_LEVEL_DEBUG,
+                          "%s: listening on %s\n",
+                          __FUNCTION__,
+                          server.addrself.sockaddrstr);
+
+            while (thread_instance_isrunning(instance) == false)
+            {
+                if (count <= 0)
+                {
+                    if (server.ops.sio_accept(&server, &socket) == true)
+                    {
+                        logger_printf(LOGGER_LEVEL_DEBUG,
+                                      "%s: server accepted connection on %s\n",
+                                      __FUNCTION__,
+                                      server.addrself.sockaddrstr);
+
+                        socket.event.timeoutms = 1000;
+                        count++;
+                    }
+                }
+                else
+                {
+                    error = socket.ops.sio_recv(&socket, buf, sizeof(buf));
+
+                    if (error > 0)
+                    {
+                        logger_printf(LOGGER_LEVEL_DEBUG,
+                                      "%s: read %d bytes from %s\n",
+                                      __FUNCTION__,
+                                      error,
+                                      socket.addrself.sockaddrstr);
+                    }
+                    else if (error < 0)
+                    {
+                        socket.ops.sio_close(&socket);
+                        count--;
+                    }
+                }
+            }
+
+            if (count > 0)
+            {
+                socket.ops.sio_close(&socket);
+                count--;
+            }
+        }
+
+        logger_printf(LOGGER_LEVEL_DEBUG,
+                      "%s: stopping thread '%s'\n",
                       __FUNCTION__,
                       instance->name);
     }
@@ -113,10 +258,10 @@ void *thread_function(void * arg)
 int32_t main(int argc, char **argv)
 {
     int32_t retval = EXIT_SUCCESS;
+    uint32_t threadcount = util_sysctl_cpuavail();
+    struct thread_instance *threads = NULL;
     struct output_if_ops output_if;
     struct cli_options_instance options;
-    uint32_t cpucount = util_sysctl_cpuavail();
-    struct thread_instance *threads = NULL;
     uint16_t i;
 
     cli_options_decode(argc, argv, &options);
@@ -128,58 +273,7 @@ int32_t main(int argc, char **argv)
     logger_create();
     output_if.oio_send = output_if_std_send;
     logger_set_output(&output_if);
-    logger_set_level(LOGGER_LEVEL_TRACE);
-
-    // Start of test
-    struct socket_instance server;
-    struct socket_instance socket;
-    memset(&server, 0, sizeof(server));
-    socket_tcp_create(&server);
-    server.ipaddr = "127.0.0.1";
-    server.ipport = 5001;
-    if ((server.ops.sio_open(&server) == true) &&
-        (server.ops.sio_bind(&server) == true) &&
-        (server.ops.sio_listen(&server, 1) == true))
-    {
-        socket_instance_getaddrself(&server);
-
-        logger_printf(LOGGER_LEVEL_TRACE,
-                      "Listening on %s for 5000 ms\n",
-                      server.addrself.sockaddrstr);
-
-        if (server.ops.sio_accept(&server, &socket, 150000) == true)
-        {
-            logger_printf(LOGGER_LEVEL_TRACE,
-                          "%s: server accepted connection\n",
-                          __FUNCTION__);
-
-            char buf[2048];
-            int error;
-//usleep(5000 * 1000);
-            while ((error = socket.ops.sio_recv(&socket, buf, 2048)) >= 0)
-            {
-fprintf(stderr, "recv\n");
-                usleep(10000);
-            }
-fprintf(stderr, "recv error %d\n", error);
-        }
-        else
-        {
-            logger_printf(LOGGER_LEVEL_TRACE,
-                          "%s: accept timeout\n",
-                          __FUNCTION__);
-        }
-    }
-    socket.ops.sio_close(&socket);
-    server.ops.sio_close(&server);
-    // End of test
-
-    if (cpucount < 1)
-    {
-        cpucount = 1;
-    }
-
-    threads = (struct thread_instance *)malloc(cpucount * sizeof(struct thread_instance));
+    logger_set_level(LOGGER_LEVEL_DEBUG);
 
     // Catch and handle signals.
     signal(SIGHUP,  signal_handler);
@@ -190,15 +284,22 @@ fprintf(stderr, "recv error %d\n", error);
     signal(SIGSTOP, signal_handler);
     signal(SIGTERM, signal_handler);
 
+    if (threadcount != 2)
+    {
+        threadcount = 2;
+    }
+
+    threads = (struct thread_instance *)malloc(threadcount * sizeof(struct thread_instance));
+
     if (argc > 0 && argv)
     {
-        for (i = 0; i < cpucount; i++)
+        for (i = 0; i < threadcount; i++)
         {
             util_string_concat(threads[i].name,
                                sizeof(threads[i].name),
                                "t-%02d",
                                i);
-            threads[i].function = thread_function;
+            threads[i].function = (i == 0 ? thread_server : thread_client);
             threads[i].argument = &threads[i];
 
             thread_instance_create(&threads[i]);
@@ -208,13 +309,13 @@ fprintf(stderr, "recv error %d\n", error);
 
     pause();
 
-    for (i = 0; i < cpucount; i++)
+    for (i = 0; i < threadcount; i++)
     {
         thread_instance_stop(&threads[i]);
         thread_instance_destroy(&threads[i]);
     }
 
-    logger_printf(LOGGER_LEVEL_TRACE, "Exiting\n");
+    logger_printf(LOGGER_LEVEL_TRACE, "%s: exiting\n", __FUNCTION__);
     logger_destroy();
 
     return retval;
