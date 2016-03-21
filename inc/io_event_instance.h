@@ -48,6 +48,15 @@ struct io_event_ops
     bool (*ieo_destroy)(struct io_event_instance * const instance);
 
     /**
+     * @brief Set the I/O event flags to handle.
+     *
+     * @param[in,out] instance A pointer to an I/O event notification instance.
+     *
+     * @return True on sucess.
+     */
+    bool (*ieo_setflags)(struct io_event_instance * const instance);
+
+    /**
      * @brief Check an I/O event instance for events of interest. The instance
      *        will be polled until the I/O event instance timeout is reached or
      *        will block until an event occurs if the I/O event instance timeout
@@ -65,7 +74,7 @@ struct io_event_instance
     struct io_event_ops  ops;
     int32_t             *fds;
     int32_t              size;
-    uint32_t             timeoutms;
+    int32_t              timeoutms;
     uint32_t             pevents;
     uint32_t             revents;
     struct internals    *internal;
