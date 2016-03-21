@@ -31,14 +31,12 @@ bool socket_tcp_listen(struct socket_instance * const instance,
  * @see sio_accept() for interface comments.
  */
 bool socket_tcp_accept(struct socket_instance * const listener,
-                       struct socket_instance * const instance,
-                       const int32_t timeoutms);
+                       struct socket_instance * const instance);
 
 /**
  * @see sio_connect() for interface comments.
  */
-bool socket_tcp_connect(struct socket_instance * const instance,
-                        const int32_t timeoutms);
+bool socket_tcp_connect(struct socket_instance * const instance);
 
 /**
  * @see sio_recv() for interface comments.

@@ -79,7 +79,7 @@ bool socket_tcp_listen(struct socket_instance * const instance,
         // Backlog check: SOMAXCONN
         if (listen(instance->sockfd, backlog) == 0)
         {
-            retval = true;
+            retval = socket_instance_getaddrself(instance);
         }
         else
         {
@@ -100,35 +100,31 @@ bool socket_tcp_listen(struct socket_instance * const instance,
  * @see See header file for interface comments.
  */
 bool socket_tcp_accept(struct socket_instance * const listener,
-                       struct socket_instance * const instance,
-                       const int32_t timeoutms)
+                       struct socket_instance * const instance)
 {
-    bool                     retval     = false;
-    socklen_t                socklen    = 0;
-    bool                     sockaccept = (timeoutms == 0 ? true : false);
+    bool      retval     = false;
+    socklen_t socklen    = 0;
+    bool      sockaccept = false;
 #if defined(LINUX)
-    int32_t                  flags      = 0;
+    int32_t   flags      = 0;
 #endif
 
     if ((listener != NULL) && (instance != NULL))
     {
         socklen = sizeof(listener->addrpeer.sockaddr);
-
-        if (timeoutms > 0)
-        {
 #if defined(LINUX)
-            flags = O_NONBLOCK;
+        flags = (listener->event.timeoutms > -1 ? O_NONBLOCK : 0);
 #endif
-            listener->event.timeoutms = timeoutms;
-            listener->event.pevents   = IO_EVENT_POLL_IN;
+        // @todo If timeout is -1 (blocking), then the poll should occur in a
+        //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
+        //       for signaling shutdown events, etc.
 
-            if (listener->event.ops.ieo_poll(&listener->event) == true)
+        if (listener->event.ops.ieo_poll(&listener->event) == true)
+        {
+            if (((listener->event.revents & IO_EVENT_RET_TIMEOUT) == 0) &&
+                ((listener->event.revents & IO_EVENT_RET_ERROR) == 0))
             {
-                if (((listener->event.revents & IO_EVENT_RET_TIMEOUT) == 0) &&
-                    ((listener->event.revents & IO_EVENT_RET_ERROR) == 0))
-                {
-                    sockaccept = true;
-                }
+                sockaccept = true;
             }
         }
 
@@ -180,6 +176,14 @@ bool socket_tcp_accept(struct socket_instance * const listener,
                     retval = true;
                 }
             }
+            else
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d accept failed (%d)\n",
+                              __FUNCTION__,
+                              listener->sockfd,
+                              errno);
+            }
         }
     }
 
@@ -189,8 +193,7 @@ bool socket_tcp_accept(struct socket_instance * const listener,
 /**
  * @see See header file for interface comments.
  */
-bool socket_tcp_connect(struct socket_instance * const instance,
-                        const int32_t timeoutms)
+bool socket_tcp_connect(struct socket_instance * const instance)
 {
     bool retval = false;
 
@@ -206,23 +209,30 @@ bool socket_tcp_connect(struct socket_instance * const instance,
         {
             if (errno == EINPROGRESS)
             {
-                if (timeoutms < 0)
+                instance->event.pevents = IO_EVENT_POLL_IN | IO_EVENT_POLL_OUT;
+                instance->event.ops.ieo_setflags(&instance->event);
+
+                // @todo If timeout is -1 (blocking), then the poll should occur
+                //       in a loop with a small timeout (e.g., 100 ms) or maybe
+                //       a self-pipe for signaling shutdown events, etc.
+
+                if (instance->event.ops.ieo_poll(&instance->event) == true)
                 {
-                    // Block.
+                    if (((instance->event.revents & IO_EVENT_RET_ERROR) == 0) &&
+                        (instance->event.revents & IO_EVENT_RET_OUTREADY))
+                    {
+                        retval = true;
+                    }
                 }
-                else if (timeoutms > 0)
-                {
-                    //retval = socketWaitForConnect(info, timeoutMs, sigShutdown);
-                }
-                else
-                {
-                    retval = true;
-                }
+
+                instance->event.pevents = IO_EVENT_POLL_IN;
+                instance->event.ops.ieo_setflags(&instance->event);
             }
             else
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %d connect error (%d)\n",
+                              __FUNCTION__,
                               instance->sockfd,
                               errno);
             }
@@ -234,8 +244,8 @@ bool socket_tcp_connect(struct socket_instance * const instance,
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %d peer information is unavailable\n",
-                              instance->sockfd,
-                               __FUNCTION__);
+                               __FUNCTION__,
+                              instance->sockfd);
             }
         }
     }
@@ -263,14 +273,16 @@ int32_t socket_tcp_recv(struct socket_instance * const instance,
     {
         retval = recv(instance->sockfd, buf, len, flags);
 
-        logger_printf(LOGGER_LEVEL_TRACE,
-                      "%s: socket %d received %d bytes\n",
-                      __FUNCTION__,
-                      instance->sockfd,
-                      retval);
-
+        if (retval > 0)
+        {
+            logger_printf(LOGGER_LEVEL_TRACE,
+                          "%s: socket %d received %d bytes\n",
+                          __FUNCTION__,
+                          instance->sockfd,
+                          retval);
+        }
         // Check for socket errors if receive failed.
-        if (retval <= 0)
+        else
         {
             switch (errno)
             {
@@ -296,12 +308,24 @@ int32_t socket_tcp_recv(struct socket_instance * const instance,
                 case EOPNOTSUPP:
                 case ETIMEDOUT:
                 default:
-                    logger_printf(LOGGER_LEVEL_DEBUG,
+                    logger_printf(LOGGER_LEVEL_TRACE,
                                   "%s: socket %d non-fatal error (%d)\n",
                                   __FUNCTION__,
                                   instance->sockfd,
                                   errno);
                     retval = 0;
+            }
+
+            if (retval == 0)
+            {
+                if (instance->event.ops.ieo_poll(&instance->event) == false)
+                {
+                    retval = -1;
+                }
+                else if (instance->event.revents & IO_EVENT_RET_ERROR)
+                {
+                    retval = -1;
+                }
             }
         }
     }
@@ -333,14 +357,16 @@ int32_t socket_tcp_send(struct socket_instance * const instance,
     {
         retval = send(instance->sockfd, buf, len, flags);
 
-        logger_printf(LOGGER_LEVEL_TRACE,
-                      "%s: socket %d sent %d bytes\n",
-                      __FUNCTION__,
-                      instance->sockfd,
-                      retval);
-
+        if (retval > 0)
+        {
+            logger_printf(LOGGER_LEVEL_TRACE,
+                          "%s: socket %d sent %d bytes\n",
+                          __FUNCTION__,
+                          instance->sockfd,
+                          retval);
+        }
         // Check for socket errors if send failed.
-        if (retval <= 0)
+        else
         {
             switch (errno)
             {
@@ -368,12 +394,24 @@ int32_t socket_tcp_send(struct socket_instance * const instance,
                 case ENOBUFS:
                 case EOPNOTSUPP:
                 default:
-                    logger_printf(LOGGER_LEVEL_DEBUG,
+                    logger_printf(LOGGER_LEVEL_TRACE,
                                   "%s: socket %d non-fatal error (%d)\n",
                                   __FUNCTION__,
                                   instance->sockfd,
                                   errno);
                     retval = 0;
+            }
+
+            if (retval == 0)
+            {
+                if (instance->event.ops.ieo_poll(&instance->event) == false)
+                {
+                    retval = -1;
+                }
+                else if (instance->event.revents & IO_EVENT_RET_ERROR)
+                {
+                    retval = -1;
+                }
             }
         }
     }
