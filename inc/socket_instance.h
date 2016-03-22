@@ -128,9 +128,9 @@ struct socket_instance_ops
 struct socket_addr_info
 {
     struct sockaddr_in sockaddr;
-    char               ipaddr[INET_ADDRSTRLEN];
+    char               ipaddr[INET6_ADDRSTRLEN];
     uint16_t           ipport;
-    char               sockaddrstr[INET_ADDRSTRLEN + 6]; // form: <addr>:<port>
+    char               sockaddrstr[INET6_ADDRSTRLEN + 6]; // form: <addr>:<port>
 };
 
 struct socket_instance
