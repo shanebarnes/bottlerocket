@@ -15,6 +15,26 @@
 #include <string.h>
 #include <unistd.h>
 
+//#include <sys/ioctl.h>
+//static int32_t socket_instance_availbytes(struct socket_instance * const instance)
+//{
+//    int32_t retval = 0;
+//
+//    if (instance != NULL)
+//    {
+//        if ((ioctl(instance->sockfd, FIONREAD, &retval) != -1) && (retval > 0))
+//        {
+//            logger_printf(LOGGER_LEVEL_TRACE,
+//                          "%s: socket %d has %d bytes available\n",
+//                          __FUNCTION__,
+//                          instance->sockfd,
+//                          retval);
+//        }
+//    }
+//
+//    return retval;
+//}
+
 /**
  * @see See header file for interface comments.
  */
@@ -171,17 +191,13 @@ bool socket_instance_open(struct socket_instance * const instance)
                 {
                     instance->ainfo = *anext;
 
-                    instance->addrself.sockaddr.sin_family       = anext->ai_family;
-                    instance->addrself.sockaddr.sin_addr.s_addr  = inet_addr(instance->addrself.ipaddr);
-                    instance->addrself.sockaddr.sin_port         = htons(instance->addrself.ipport);
+                    instance->addrself.sockaddr.sin_family      = anext->ai_family;
+                    instance->addrself.sockaddr.sin_addr.s_addr = inet_addr(instance->ipaddr);
+                    instance->addrself.sockaddr.sin_port        = htons(instance->ipport);
 
                     instance->addrpeer.sockaddr.sin_family      = anext->ai_family;
-                    instance->addrpeer.sockaddr.sin_addr.s_addr = inet_addr(instance->addrself.ipaddr);
-                    instance->addrpeer.sockaddr.sin_port        = htons(instance->addrself.ipport);
-
-                    //info->timeConnectUsec            = 0;
-                    //info->timeIdleRecvUsec           = 0;
-                    //info->timeIdleSendUsec           = 0;
+                    instance->addrpeer.sockaddr.sin_addr.s_addr = inet_addr(instance->ipaddr);
+                    instance->addrpeer.sockaddr.sin_port        = htons(instance->ipport);
 
                     optval = 1;
 
