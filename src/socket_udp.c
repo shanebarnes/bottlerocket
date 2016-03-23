@@ -129,13 +129,20 @@ bool socket_udp_connect(struct socket_instance * const instance)
 
     if (instance != NULL)
     {
+        // There are a number of benefits to calling connect() on a UDP socket:
+        //    1. the local IP port can be retrieved,
+        //    2. send() can be used instead of sendto(), and
+        //    3. the socket will only accept datagrams from the "connected" peer.
+        // The socket can be disconnected by calling connect() again with the
+        // socket family set AF_UNSPEC.
         if (connect(instance->sockfd,
                     instance->ainfo.ai_addr,
                     instance->ainfo.ai_addrlen) == 0)
         {
             retval = true;
+            instance->state |= SOCKET_STATE_CONNECT;
 
-            if (socket_instance_getaddrpeer(instance) == false)
+            if (socket_instance_getaddrself(instance) == false)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %d peer information is unavailable\n",
@@ -175,13 +182,20 @@ int32_t socket_udp_recv(struct socket_instance * const instance,
 
     if ((instance != NULL) && (buf != NULL) && (len > 0))
     {
-        socklen  = sizeof(instance->addrpeer.sockaddr);
-        retval = recvfrom(instance->sockfd,
-                          buf,
-                          len,
-                          flags,
-                          (struct sockaddr *)&(instance->addrpeer.sockaddr),
-                          &socklen);
+        if (instance->state & SOCKET_STATE_CONNECT)
+        {
+            retval = recv(instance->sockfd, buf, len, flags);
+        }
+        else
+        {
+            socklen  = sizeof(instance->addrpeer.sockaddr);
+            retval = recvfrom(instance->sockfd,
+                              buf,
+                              len,
+                              flags,
+                              (struct sockaddr *)&(instance->addrpeer.sockaddr),
+                              &socklen);
+        }
 
         if (retval > 0)
         {
@@ -274,12 +288,21 @@ int32_t socket_udp_send(struct socket_instance * const instance,
 
     if ((instance != NULL) && (buf != NULL) && (len > 0))
     {
-        retval = sendto(instance->sockfd,
-                        buf,
-                        len,
-                        flags,
-                        (struct sockaddr *)&(instance->addrpeer.sockaddr),
-                        sizeof(instance->addrpeer.sockaddr));
+        if (instance->state & SOCKET_STATE_CONNECT)
+        {
+            // sendto() could be used if the last two arguments were set to NULL
+            // and 0, respectively.
+            retval = send(instance->sockfd, buf, len, flags);
+        }
+        else
+        {
+            retval = sendto(instance->sockfd,
+                            buf,
+                            len,
+                            flags,
+                            (struct sockaddr *)&(instance->addrpeer.sockaddr),
+                            sizeof(instance->addrpeer.sockaddr));
+        }
 
         if (retval > 0)
         {
