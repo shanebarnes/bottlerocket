@@ -12,6 +12,7 @@
 #include "output_if_std.h"
 #include "thread_instance.h"
 #include "socket_tcp.h"
+#include "socket_udp.h"
 #include "system_types.h"
 #include "util_sysctl.h"
 
@@ -74,17 +75,17 @@ void signal_handler(int signum)
 }
 
 /**
- * @brief Client thread function.
+ * @brief TCP client thread function.
  *
  * @param[in] arg Thread input argument.
  *
  * @return NULL.
  */
-void *thread_client(void * arg)
+void *thread_client_tcp(void * arg)
 {
     struct thread_instance *instance = (struct thread_instance *)arg;
     char buf[2048];
-    int32_t error;
+    int32_t error, sendcount;
     struct socket_instance client;
 
     logger_printf(LOGGER_LEVEL_DEBUG,
@@ -109,22 +110,27 @@ void *thread_client(void * arg)
                           __FUNCTION__,
                           client.addrpeer.sockaddrstr);
 
-            client.event.timeoutms = 500;
+            client.event.timeoutms = 1000;
+            sendcount = 0;
 
-            while (thread_instance_isrunning(instance) == false)
+            while ((thread_instance_isrunning(instance) == false) &&
+                   (sendcount < 5))
             {
                 error = client.ops.sio_send(&client, buf, sizeof(buf));
 
-                if (error < 0)
+                if (error > 0)
                 {
-                    client.ops.sio_close(&client);
+                    sendcount++;
+                }
+                else if (error < 0)
+                {
                     break;
                 }
-                else
-                {
-                    client.ops.sio_recv(&client, buf, sizeof(buf));
-                }
+
+                client.ops.sio_recv(&client, buf, sizeof(buf));
             }
+
+            client.ops.sio_close(&client);
         }
         else
         {
@@ -152,13 +158,13 @@ void *thread_client(void * arg)
 }
 
 /**
- * @brief Server thread function.
+ * @brief TCP server thread function.
  *
  * @param[in] arg Thread input argument.
  *
  * @return NULL.
  */
-void *thread_server(void * arg)
+void *thread_server_tcp(void * arg)
 {
     struct thread_instance *instance = (struct thread_instance *)arg;
     char buf[2048];
@@ -182,7 +188,7 @@ void *thread_server(void * arg)
             (server.ops.sio_bind(&server) == true) &&
             (server.ops.sio_listen(&server, 1) == true))
         {
-            server.event.timeoutms = 500;
+            server.event.timeoutms = 1000;
 
             logger_printf(LOGGER_LEVEL_DEBUG,
                           "%s: listening on %s\n",
@@ -229,6 +235,165 @@ void *thread_server(void * arg)
                 socket.ops.sio_close(&socket);
                 count--;
             }
+        }
+
+        logger_printf(LOGGER_LEVEL_DEBUG,
+                      "%s: stopping thread '%s'\n",
+                      __FUNCTION__,
+                      instance->name);
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: thread instance is invalid\n",
+                      __FUNCTION__);
+    }
+
+    return NULL;
+}
+
+/**
+ * @brief UDP server thread function.
+ *
+ * @param[in] arg Thread input argument.
+ *
+ * @return NULL.
+ */
+void *thread_server_udp(void * arg)
+{
+    struct thread_instance *instance = (struct thread_instance *)arg;
+    char buf[2048];
+    int32_t error;
+    struct socket_instance server;
+
+    logger_printf(LOGGER_LEVEL_DEBUG,
+                  "%s: starting thread '%s'\n",
+                  __FUNCTION__,
+                  instance->name);
+
+    if (instance != NULL)
+    {
+        memset(&server, 0, sizeof(server));
+        socket_udp_create(&server);
+        server.ipaddr = "127.0.0.1";
+        server.ipport = 5001;
+
+        if ((server.ops.sio_open(&server) == true) &&
+            (server.ops.sio_bind(&server) == true))
+        {
+            server.event.timeoutms = 1000;
+
+            logger_printf(LOGGER_LEVEL_DEBUG,
+                          "%s: listening on %s\n",
+                          __FUNCTION__,
+                          server.addrself.sockaddrstr);
+
+            while (thread_instance_isrunning(instance) == false)
+            {
+                error = server.ops.sio_recv(&server, buf, sizeof(buf));
+
+                if (error >= 0)
+                {
+                    if (error > 0)
+                    {
+                        logger_printf(LOGGER_LEVEL_DEBUG,
+                                      "%s: read %d bytes from %s:%u\n",
+                                      __FUNCTION__,
+                                      error,
+                                      server.addrpeer.ipaddr,
+                                      server.addrpeer.ipport);
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            server.ops.sio_close(&server);
+        }
+
+        logger_printf(LOGGER_LEVEL_DEBUG,
+                      "%s: stopping thread '%s'\n",
+                      __FUNCTION__,
+                      instance->name);
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: thread instance is invalid\n",
+                      __FUNCTION__);
+    }
+
+    return NULL;
+}
+
+/**
+ * @brief UDP client thread function.
+ *
+ * @param[in] arg Thread input argument.
+ *
+ * @return NULL.
+ */
+void *thread_client_udp(void * arg)
+{
+    struct thread_instance *instance = (struct thread_instance *)arg;
+    char buf[248];
+    int32_t error, sendcount;
+    struct socket_instance client;
+
+    logger_printf(LOGGER_LEVEL_DEBUG,
+                  "%s: starting thread '%s'\n",
+                  __FUNCTION__,
+                  instance->name);
+
+    if (instance != NULL)
+    {
+        memset(&client, 0, sizeof(client));
+        socket_udp_create(&client);
+        client.ipaddr = "127.0.0.1";
+        client.ipport = 5001;
+
+        if ((client.ops.sio_open(&client) == true) &&
+            ((client.event.timeoutms = 1000) > 0) /*&&
+            (client.ops.sio_bind(&client) == true)*/ &&
+            (client.ops.sio_connect(&client) == true))
+        {
+            logger_printf(LOGGER_LEVEL_DEBUG,
+                          "%s: connected to %s\n",
+                          __FUNCTION__,
+                          client.addrpeer.sockaddrstr);
+
+            client.event.timeoutms = 1000;
+            sendcount = 0;
+
+            while ((thread_instance_isrunning(instance) == false) &&
+                   (sendcount < 5))
+            {
+                error = client.ops.sio_send(&client, buf, sizeof(buf));
+logger_printf(LOGGER_LEVEL_ERROR, "%s: sending\n", __FUNCTION__); //??
+                if (error > 0)
+                {
+                    sendcount++;
+                }
+                else if (error < 0)
+                {
+                    break;
+                }
+
+                client.ops.sio_recv(&client, buf, sizeof(buf));
+            }
+
+            client.ops.sio_close(&client);
+        }
+        else
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: connection to %s:%u failed (%d)\n",
+                          __FUNCTION__,
+                          client.ipaddr,
+                          client.ipport,
+                          errno);
         }
 
         logger_printf(LOGGER_LEVEL_DEBUG,
@@ -299,7 +464,23 @@ int32_t main(int argc, char **argv)
                                sizeof(threads[i].name),
                                "t-%02d",
                                i);
-            threads[i].function = (i == 0 ? thread_server : thread_client);
+            switch (i)
+            {
+                case 0:
+                    threads[i].function = thread_server_tcp;
+                    break;
+                case 1:
+                    threads[i].function = thread_server_udp;
+                    break;
+                case 2:
+                    threads[i].function = thread_client_tcp;
+                    break;
+                case 3:
+                    threads[i].function = thread_client_udp;
+                    break;
+                default:
+                    break;
+            }
             threads[i].argument = &threads[i];
 
             thread_instance_create(&threads[i]);
