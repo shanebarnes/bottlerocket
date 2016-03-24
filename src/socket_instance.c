@@ -41,11 +41,18 @@
 bool socket_instance_getaddrpeer(struct socket_instance * const instance)
 {
     bool      retval  = false;
-    socklen_t socklen = sizeof(instance->addrpeer.sockaddr);
+    socklen_t socklen = 0;
 
-    if (getpeername(instance->sockfd,
-                    (struct sockaddr *)&(instance->addrpeer.sockaddr),
-                    &socklen) == 0)
+    if ((instance == NULL) ||
+        ((socklen = sizeof(instance->addrpeer.sockaddr)) == 0))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (getpeername(instance->sockfd,
+                         (struct sockaddr *)&(instance->addrpeer.sockaddr),
+                         &socklen) == 0)
     {
         inet_ntop(AF_INET,
                   &(instance->addrpeer.sockaddr.sin_addr),
@@ -62,6 +69,14 @@ bool socket_instance_getaddrpeer(struct socket_instance * const instance)
 
         retval = true;
     }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: socket %d getpeername failed (%d)\n",
+                      __FUNCTION__,
+                      instance->sockfd,
+                      errno);
+    }
 
     return retval;
 }
@@ -72,11 +87,18 @@ bool socket_instance_getaddrpeer(struct socket_instance * const instance)
 bool socket_instance_getaddrself(struct socket_instance * const instance)
 {
     bool      retval  = false;
-    socklen_t socklen = sizeof(instance->addrself.sockaddr);
+    socklen_t socklen = 0;
 
-    if (getsockname(instance->sockfd,
-                    (struct sockaddr *)&(instance->addrself.sockaddr),
-                    &socklen) == 0)
+    if ((instance == NULL) ||
+        ((socklen = sizeof(instance->addrself.sockaddr)) == 0))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (getsockname(instance->sockfd,
+                         (struct sockaddr *)&(instance->addrself.sockaddr),
+                         &socklen) == 0)
     {
         inet_ntop(AF_INET,
                   &(instance->addrself.sockaddr.sin_addr),
@@ -93,6 +115,14 @@ bool socket_instance_getaddrself(struct socket_instance * const instance)
 
         retval = true;
     }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: socket %d getsockname failed (%d)\n",
+                      __FUNCTION__,
+                      instance->sockfd,
+                      errno);
+    }
 
     return retval;
 }
@@ -104,7 +134,13 @@ bool socket_instance_create(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if (instance != NULL)
+    if (instance == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         instance->event.fds       = &instance->sockfd;
         instance->event.size      = 1;
@@ -119,12 +155,6 @@ bool socket_instance_create(struct socket_instance * const instance)
 
         retval = instance->event.ops.ieo_create(&instance->event);
     }
-    else
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: instance pointer is null\n",
-                      __FUNCTION__);
-    }
 
     return retval;
 }
@@ -136,15 +166,15 @@ bool socket_instance_destroy(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if (instance != NULL)
+    if (instance == NULL)
     {
-        retval = instance->event.ops.ieo_destroy(&instance->event);
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
     }
     else
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: instance pointer is null\n",
-                      __FUNCTION__);
+        retval = instance->event.ops.ieo_destroy(&instance->event);
     }
 
     return retval;
@@ -161,7 +191,13 @@ bool socket_instance_open(struct socket_instance * const instance)
     socklen_t         optval;
     char              ipport[6];
 
-    if (instance != NULL)
+    if (instance == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         memset(&ahints, 0, sizeof(struct addrinfo));
         ahints.ai_family    = AF_UNSPEC;          // IPv4 or IPv6
@@ -240,6 +276,7 @@ bool socket_instance_open(struct socket_instance * const instance)
 #endif
                     else
                     {
+                        instance->state = SOCKET_STATE_OPEN;
                         retval = true;
                     }
 
@@ -247,12 +284,6 @@ bool socket_instance_open(struct socket_instance * const instance)
                 }
             }
         }
-    }
-    else
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: instance pointer is null\n",
-                      __FUNCTION__);
     }
 
     return retval;
@@ -265,14 +296,21 @@ bool socket_instance_close(struct socket_instance * const instance)
 {
     int32_t retval = false;
 
-    if (instance != NULL)
+    if (instance == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         if (close(instance->sockfd) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: socket %d could not be closed\n",
+                          "%s: socket %d could not be closed (%d)\n",
                           __FUNCTION__,
-                          instance->sockfd);
+                          instance->sockfd,
+                          errno);
         }
         else if (socket_instance_destroy(instance) == false)
         {
@@ -292,12 +330,8 @@ bool socket_instance_close(struct socket_instance * const instance)
             freeaddrinfo(instance->alist);
             instance->alist = NULL;
         }
-    }
-    else
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: instance pointer is null\n",
-                      __FUNCTION__);
+
+        instance->state = SOCKET_STATE_CLOSE;
     }
 
     return retval;
@@ -310,28 +344,27 @@ bool socket_instance_bind(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if (instance != NULL)
+    if (instance == NULL)
     {
-        if (bind(instance->sockfd,
-                 instance->ainfo.ai_addr,
-                 instance->ainfo.ai_addrlen) == 0)
-        {
-            retval = true;
-        }
-        else
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: socket %d bind failed (%d)\n",
-                          __FUNCTION__,
-                          instance->sockfd,
-                          errno);
-        }
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (bind(instance->sockfd,
+                  instance->ainfo.ai_addr,
+                  instance->ainfo.ai_addrlen) == 0)
+    {
+        socket_instance_getaddrself(instance);
+        instance->state |= SOCKET_STATE_BIND;
+        retval = true;
     }
     else
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: instance pointer is null\n",
-                      __FUNCTION__);
+                      "%s: socket %d bind failed (%d)\n",
+                      __FUNCTION__,
+                      instance->sockfd,
+                      errno);
     }
 
     return retval;
