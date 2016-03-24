@@ -24,7 +24,13 @@ bool socket_udp_create(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if (instance != NULL)
+    if (instance == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         instance->ops.sio_create  = socket_udp_create;
         instance->ops.sio_destroy = socket_udp_destroy;
@@ -52,7 +58,13 @@ bool socket_udp_destroy(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if ((instance != NULL) && (instance->socktype == SOCK_DGRAM))
+    if ((instance == NULL) || (instance->socktype != SOCK_DGRAM))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         instance->ops.sio_create  = NULL;
         instance->ops.sio_destroy = NULL;
@@ -82,8 +94,11 @@ bool socket_udp_listen(struct socket_instance * const instance,
     // @todo Consider using this API to create the size of the UDP "connection"
     //       poll.
 
-    if ((instance != NULL) && (backlog > 0))
+    if ((instance == NULL) || (instance->socktype != SOCK_DGRAM) || (backlog == 0))
     {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
     }
 
     return retval;
@@ -101,7 +116,15 @@ bool socket_udp_accept(struct socket_instance * const listener,
     //       Once read, the datagrams could be filtered and associated with the
     //       appropriate socket instance in the "connection" backlog.
 
-    if ((listener != NULL) && (instance != NULL))
+    if ((listener == NULL) ||
+        (instance == NULL) ||
+        (listener->socktype != SOCK_DGRAM))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         // @todo If timeout is -1 (blocking), then the poll should occur in a
         //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
@@ -127,43 +150,40 @@ bool socket_udp_connect(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if (instance != NULL)
+    if ((instance == NULL) || (instance->socktype != SOCK_DGRAM))
     {
-        // There are a number of benefits to calling connect() on a UDP socket:
-        //    1. the local IP port can be retrieved,
-        //    2. send() can be used instead of sendto(), and
-        //    3. the socket will only accept datagrams from the "connected" peer.
-        // The socket can be disconnected by calling connect() again with the
-        // socket family set AF_UNSPEC.
-        if (connect(instance->sockfd,
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    // There are a number of benefits to calling connect() on a UDP socket:
+    //    1. the local IP port can be retrieved,
+    //    2. send() can be used instead of sendto(), and
+    //    3. the socket will only accept datagrams from the "connected" peer.
+    // The socket can be disconnected by calling connect() again with the socket
+    // family set AF_UNSPEC.
+    else if (connect(instance->sockfd,
                     instance->ainfo.ai_addr,
                     instance->ainfo.ai_addrlen) == 0)
-        {
-            retval = true;
-            instance->state |= SOCKET_STATE_CONNECT;
+    {
+        instance->state |= SOCKET_STATE_CONNECT;
+        retval = true;
 
-            if (socket_instance_getaddrself(instance) == false)
-            {
-                logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %d peer information is unavailable\n",
-                               __FUNCTION__,
-                              instance->sockfd);
-            }
-        }
-        else
+        if (socket_instance_getaddrself(instance) == false)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: socket %d connect error (%d)\n",
-                          __FUNCTION__,
-                          instance->sockfd,
-                          errno);
+                          "%s: socket %d peer information is unavailable\n",
+                           __FUNCTION__,
+                          instance->sockfd);
         }
     }
     else
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: socket instance is not ready to connect\n",
-                      __FUNCTION__);
+                      "%s: socket %d connect error (%d)\n",
+                      __FUNCTION__,
+                      instance->sockfd,
+                      errno);
     }
 
     return retval;
@@ -180,7 +200,13 @@ int32_t socket_udp_recv(struct socket_instance * const instance,
     int32_t   flags   = MSG_DONTWAIT;
     socklen_t socklen = 0;
 
-    if ((instance != NULL) && (buf != NULL) && (len > 0))
+    if ((instance == NULL) || (buf == NULL) || (len == 0))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         if (instance->state & SOCKET_STATE_CONNECT)
         {
@@ -199,12 +225,15 @@ int32_t socket_udp_recv(struct socket_instance * const instance,
 
         if (retval > 0)
         {
-            inet_ntop(AF_INET,
-                      &(instance->addrpeer.sockaddr.sin_addr),
-                      instance->addrpeer.ipaddr,
-                      sizeof(instance->addrpeer.ipaddr));
+            if ((instance->state & SOCKET_STATE_CONNECT) == 0)
+            {
+                inet_ntop(AF_INET,
+                          &(instance->addrpeer.sockaddr.sin_addr),
+                          instance->addrpeer.ipaddr,
+                          sizeof(instance->addrpeer.ipaddr));
 
-            instance->addrpeer.ipport = ntohs(instance->addrpeer.sockaddr.sin_port);
+                instance->addrpeer.ipport = ntohs(instance->addrpeer.sockaddr.sin_port);
+            }
 
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %d received %d bytes from %s:%u\n",
@@ -214,7 +243,6 @@ int32_t socket_udp_recv(struct socket_instance * const instance,
                           instance->addrpeer.ipaddr,
                           instance->addrpeer.ipport);
         }
-        // Check for socket errors if receive failed.
         else
         {
             switch (errno)
@@ -262,12 +290,6 @@ int32_t socket_udp_recv(struct socket_instance * const instance,
             }
         }
     }
-    else
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: buffer is empty\n",
-                      __FUNCTION__);
-    }
 
     return retval;
 }
@@ -281,12 +303,17 @@ int32_t socket_udp_send(struct socket_instance * const instance,
 {
     int32_t retval = -1;
     int32_t flags  = MSG_DONTWAIT;
-
 #if defined(LINUX)
     flags |= MSG_NOSIGNAL;
 #endif
 
-    if ((instance != NULL) && (buf != NULL) && (len > 0))
+    if ((instance == NULL) || (buf == NULL) || (len == 0))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         if (instance->state & SOCKET_STATE_CONNECT)
         {
@@ -312,7 +339,6 @@ int32_t socket_udp_send(struct socket_instance * const instance,
                           instance->sockfd,
                           retval);
         }
-        // Check for socket errors if send failed.
         else
         {
             switch (errno)
@@ -361,12 +387,6 @@ int32_t socket_udp_send(struct socket_instance * const instance,
                 }
             }
         }
-    }
-    else
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: buffer is empty\n",
-                      __FUNCTION__);
     }
 
     return retval;
