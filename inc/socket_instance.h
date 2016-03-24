@@ -135,11 +135,12 @@ struct socket_addr_info
 
 enum socket_state
 {
-    SOCKET_STATE_CLOSE   = 0x00,
-    SOCKET_STATE_OPEN    = 0x01,
-    SOCKET_STATE_BIND    = 0x02,
-    SOCKET_STATE_LISTEN  = 0x04,
-    SOCKET_STATE_CONNECT = 0x08,
+    SOCKET_STATE_NULL    = 0x00,
+    SOCKET_STATE_CLOSE   = 0x01,
+    SOCKET_STATE_OPEN    = 0x02,
+    SOCKET_STATE_BIND    = 0x04,
+    SOCKET_STATE_LISTEN  = 0x08,
+    SOCKET_STATE_CONNECT = 0x10,
 };
 
 struct socket_instance
