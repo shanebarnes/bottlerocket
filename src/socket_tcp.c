@@ -19,7 +19,13 @@ bool socket_tcp_create(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if (instance != NULL)
+    if (instance == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         instance->ops.sio_create  = socket_tcp_create;
         instance->ops.sio_destroy = socket_tcp_destroy;
@@ -47,7 +53,13 @@ bool socket_tcp_destroy(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if ((instance != NULL) && (instance->socktype == SOCK_STREAM))
+    if ((instance == NULL) || (instance->socktype != SOCK_STREAM))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         instance->ops.sio_create  = NULL;
         instance->ops.sio_destroy = NULL;
@@ -74,23 +86,28 @@ bool socket_tcp_listen(struct socket_instance * const instance,
 {
     bool retval = false;
 
-    if ((instance != NULL) && (backlog))
+    if ((instance == NULL) || (instance->socktype != SOCK_STREAM))
     {
-        // Backlog check: SOMAXCONN
-        if (listen(instance->sockfd, backlog) == 0)
-        {
-            retval = socket_instance_getaddrself(instance);
-        }
-        else
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: socked %d failed to listen on %s:%u (%d)\n",
-                          __FUNCTION__,
-                          instance->sockfd,
-                          instance->ipaddr,
-                          instance->ipport,
-                          errno);
-        }
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    // Backlog check: SOMAXCONN
+    else if (listen(instance->sockfd, backlog) == 0)
+    {
+        instance->state |= SOCKET_STATE_LISTEN;
+        socket_instance_getaddrself(instance);
+        retval = true;
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: socked %d failed to listen on %s:%u (%d)\n",
+                      __FUNCTION__,
+                      instance->sockfd,
+                      instance->ipaddr,
+                      instance->ipport,
+                      errno);
     }
 
     return retval;
@@ -109,7 +126,15 @@ bool socket_tcp_accept(struct socket_instance * const listener,
     int32_t   flags      = 0;
 #endif
 
-    if ((listener != NULL) && (instance != NULL))
+    if ((listener == NULL) ||
+        (instance == NULL) ||
+        (listener->socktype != SOCK_STREAM))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         socklen = sizeof(listener->addrpeer.sockaddr);
 #if defined(LINUX)
@@ -173,6 +198,7 @@ bool socket_tcp_accept(struct socket_instance * const listener,
                                   instance->sockfd,
                                   instance->addrself.sockaddrstr,
                                   instance->addrpeer.sockaddrstr);
+                    instance->state = SOCKET_STATE_OPEN | SOCKET_STATE_CONNECT;
                     retval = true;
                 }
             }
@@ -197,7 +223,13 @@ bool socket_tcp_connect(struct socket_instance * const instance)
 {
     bool retval = false;
 
-    if (instance != NULL)
+    if ((instance == NULL) || (instance->socktype != SOCK_STREAM))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         if (connect(instance->sockfd,
                     instance->ainfo.ai_addr,
@@ -240,6 +272,8 @@ bool socket_tcp_connect(struct socket_instance * const instance)
 
         if (retval == true)
         {
+            instance->state |= SOCKET_STATE_CONNECT;
+
             if (socket_instance_getaddrpeer(instance) == false)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
@@ -248,12 +282,6 @@ bool socket_tcp_connect(struct socket_instance * const instance)
                               instance->sockfd);
             }
         }
-    }
-    else
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: socket instance is not ready to connect\n",
-                      __FUNCTION__);
     }
 
     return retval;
@@ -269,7 +297,13 @@ int32_t socket_tcp_recv(struct socket_instance * const instance,
     int32_t retval = -1;
     int32_t flags  = MSG_DONTWAIT;
 
-    if ((instance != NULL) && (buf != NULL) && (len > 0))
+    if ((instance == NULL) || (buf == NULL) || (len == 0))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         retval = recv(instance->sockfd, buf, len, flags);
 
@@ -281,7 +315,6 @@ int32_t socket_tcp_recv(struct socket_instance * const instance,
                           instance->sockfd,
                           retval);
         }
-        // Check for socket errors if receive failed.
         else
         {
             switch (errno)
@@ -329,12 +362,6 @@ int32_t socket_tcp_recv(struct socket_instance * const instance,
             }
         }
     }
-    else
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: buffer is empty\n",
-                      __FUNCTION__);
-    }
 
     return retval;
 }
@@ -353,7 +380,13 @@ int32_t socket_tcp_send(struct socket_instance * const instance,
     flags |= MSG_NOSIGNAL;
 #endif
 
-    if ((instance != NULL) && (buf != NULL) && (len > 0))
+    if ((instance == NULL) || (buf == NULL) || (len == 0))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         retval = send(instance->sockfd, buf, len, flags);
 
@@ -414,12 +447,6 @@ int32_t socket_tcp_send(struct socket_instance * const instance,
                 }
             }
         }
-    }
-    else
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: buffer is empty\n",
-                      __FUNCTION__);
     }
 
     return retval;
