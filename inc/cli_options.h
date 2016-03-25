@@ -1,8 +1,10 @@
 /**
- * @file   cli_options.h
- * @author Shane Barnes
- * @date   12 Mar 2016
- * @brief  Command-line interface options interface.
+ * @file      cli_options.h
+ * @brief     Command-line interface options interface.
+ * @author    Shane Barnes
+ * @date      12 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _CLI_OPTIONS_H_
