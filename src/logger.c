@@ -1,8 +1,10 @@
 /**
- * @file   logger.c
- * @author Shane Barnes
- * @date   02 Mar 2016
- * @brief  Logger implementation.
+ * @file      logger.c
+ * @brief     Logger implementation.
+ * @author    Shane Barnes
+ * @date      02 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "logger.h"
