@@ -162,7 +162,13 @@ bool io_event_poll_poll(struct io_event_instance * const instance)
                     instance->revents |= IO_EVENT_RET_ERROR;
                 }
 
-                // Check for out event.
+                // Check for input event.
+                if (instance->internal->pfds[i].revents & POLLIN)
+                {
+                    instance->revents |= IO_EVENT_RET_INREADY;
+                }
+
+                // Check for output event.
                 if (instance->internal->pfds[i].revents & POLLOUT)
                 {
                     instance->revents |= IO_EVENT_RET_OUTREADY;
