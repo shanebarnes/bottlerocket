@@ -132,12 +132,12 @@ void logger_printf(const enum logger_level level, const char *format, ...)
 
         if (error >= 0)
         {
-            util_date_time(DATE_CLOCK_REALTIME, &sec, &nsec);
-            util_date_time_format(sec,
-                                  UNIT_TIME_SEC,
-                                  "%Y-%m-%dT%H:%M:%S",
-                                  timebuf,
-                                  sizeof(timebuf));
+            utildate_gettvtime(DATE_CLOCK_REALTIME, &sec, &nsec);
+            utildate_gettsformat(sec,
+                                 UNIT_TIME_SEC,
+                                 "%Y-%m-%dT%H:%M:%S",
+                                 timebuf,
+                                 sizeof(timebuf));
 
             util_string_concat(outbuf,
                                sizeof(outbuf),
