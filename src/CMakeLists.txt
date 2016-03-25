@@ -8,9 +8,9 @@ set(BR_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/mutex_instance.c
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_std.c
     ${CMAKE_CURRENT_SOURCE_DIR}/rwlock_instance.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/socket_instance.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/socket_tcp.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/socket_udp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sock_obj.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sock_tcp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sock_udp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/thread_instance.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_date.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_ioctl.c

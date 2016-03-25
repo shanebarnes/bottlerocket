@@ -11,9 +11,9 @@ set(BR_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_std.h
     ${CMAKE_CURRENT_SOURCE_DIR}/rwlock_instance.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/socket_instance.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/socket_tcp.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/socket_udp.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/sock_obj.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/sock_tcp.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/sock_udp.h
     ${CMAKE_CURRENT_SOURCE_DIR}/system_types.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thread_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_date.h
