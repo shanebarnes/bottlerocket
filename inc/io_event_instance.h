@@ -1,8 +1,10 @@
 /**
- * @file   io_event_instance.h
- * @author Shane Barnes
- * @date   15 Mar 2016
- * @brief  I/O event notification instance interface.
+ * @file      io_event_instance.h
+ * @brief     I/O event notification instance interface.
+ * @author    Shane Barnes
+ * @date      15 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _IO_EVENT_INSTANCE_H_
