@@ -1,8 +1,10 @@
 /**
- * @file   socket_instance.h
- * @author Shane Barnes
- * @date   03 Mar 2016
- * @brief  Network socket instance interface.
+ * @file      socket_instance.h
+ * @brief     Network socket instance interface.
+ * @author    Shane Barnes
+ * @date      03 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _SOCKET_INSTANCE_H_
