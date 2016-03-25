@@ -14,8 +14,8 @@
 #include "output_if_instance.h"
 #include "output_if_std.h"
 #include "thread_instance.h"
-#include "socket_tcp.h"
-#include "socket_udp.h"
+#include "sock_tcp.h"
+#include "sock_udp.h"
 #include "system_types.h"
 #include "util_sysctl.h"
 
@@ -89,7 +89,7 @@ void *thread_client_tcp(void * arg)
     struct thread_instance *instance = (struct thread_instance *)arg;
     char buf[2048];
     int32_t error, sendcount;
-    struct socket_instance client;
+    struct sockobj client;
 
     logger_printf(LOGGER_LEVEL_DEBUG,
                   "%s: starting thread '%s'\n",
@@ -99,14 +99,14 @@ void *thread_client_tcp(void * arg)
     if (instance != NULL)
     {
         memset(&client, 0, sizeof(client));
-        socket_tcp_create(&client);
+        socktcp_create(&client);
         client.ipaddr = "127.0.0.1";
         client.ipport = 5001;
 
-        if ((client.ops.sio_open(&client) == true) &&
+        if ((client.ops.soo_open(&client) == true) &&
             ((client.event.timeoutms = 1000) > 0) &&
-            /*(client.ops.sio_bind(&client) == true) &&*/
-            (client.ops.sio_connect(&client) == true))
+            /*(client.ops.soo_bind(&client) == true) &&*/
+            (client.ops.soo_connect(&client) == true))
         {
             logger_printf(LOGGER_LEVEL_DEBUG,
                           "%s: connected to %s\n",
@@ -119,7 +119,7 @@ void *thread_client_tcp(void * arg)
             while ((thread_instance_isrunning(instance) == false) &&
                    (sendcount < 5))
             {
-                error = client.ops.sio_send(&client, buf, sizeof(buf));
+                error = client.ops.soo_send(&client, buf, sizeof(buf));
 
                 if (error > 0)
                 {
@@ -130,10 +130,10 @@ void *thread_client_tcp(void * arg)
                     break;
                 }
 
-                client.ops.sio_recv(&client, buf, sizeof(buf));
+                client.ops.soo_recv(&client, buf, sizeof(buf));
             }
 
-            client.ops.sio_close(&client);
+            client.ops.soo_close(&client);
         }
         else
         {
@@ -173,7 +173,7 @@ void *thread_server_tcp(void * arg)
     char buf[2048];
     int32_t error;
     int32_t count = 0, recvbytes = 0;
-    struct socket_instance server, socket;
+    struct sockobj server, socket;
 
     logger_printf(LOGGER_LEVEL_DEBUG,
                   "%s: starting thread '%s'\n",
@@ -183,13 +183,13 @@ void *thread_server_tcp(void * arg)
     if (instance != NULL)
     {
         memset(&server, 0, sizeof(server));
-        socket_tcp_create(&server);
+        socktcp_create(&server);
         server.ipaddr = "127.0.0.1";
         server.ipport = 5001;
 
-        if ((server.ops.sio_open(&server) == true) &&
-            (server.ops.sio_bind(&server) == true) &&
-            (server.ops.sio_listen(&server, 1) == true))
+        if ((server.ops.soo_open(&server) == true) &&
+            (server.ops.soo_bind(&server) == true) &&
+            (server.ops.soo_listen(&server, 1) == true))
         {
             server.event.timeoutms = 1000;
 
@@ -202,7 +202,7 @@ void *thread_server_tcp(void * arg)
             {
                 if (count <= 0)
                 {
-                    if (server.ops.sio_accept(&server, &socket) == true)
+                    if (server.ops.soo_accept(&server, &socket) == true)
                     {
                         logger_printf(LOGGER_LEVEL_DEBUG,
                                       "%s: server accepted connection on %s\n",
@@ -215,7 +215,7 @@ void *thread_server_tcp(void * arg)
                 }
                 else
                 {
-                    error = socket.ops.sio_recv(&socket, buf, sizeof(buf));
+                    error = socket.ops.soo_recv(&socket, buf, sizeof(buf));
 
                     if (error > 0)
                     {
@@ -228,7 +228,7 @@ void *thread_server_tcp(void * arg)
                     }
                     else if (error < 0)
                     {
-                        socket.ops.sio_close(&socket);
+                        socket.ops.soo_close(&socket);
                         count--;
                         logger_printf(LOGGER_LEVEL_DEBUG,
                                       "%s: read a total of %d bytes from %s\n",
@@ -242,7 +242,7 @@ void *thread_server_tcp(void * arg)
 
             if (count > 0)
             {
-                socket.ops.sio_close(&socket);
+                socket.ops.soo_close(&socket);
                 count--;
             }
         }
@@ -274,7 +274,7 @@ void *thread_server_udp(void * arg)
     struct thread_instance *instance = (struct thread_instance *)arg;
     char buf[2048];
     int32_t error;
-    struct socket_instance server;
+    struct sockobj server;
 
     logger_printf(LOGGER_LEVEL_DEBUG,
                   "%s: starting thread '%s'\n",
@@ -284,12 +284,12 @@ void *thread_server_udp(void * arg)
     if (instance != NULL)
     {
         memset(&server, 0, sizeof(server));
-        socket_udp_create(&server);
+        sockudp_create(&server);
         server.ipaddr = "127.0.0.1";
         server.ipport = 5001;
 
-        if ((server.ops.sio_open(&server) == true) &&
-            (server.ops.sio_bind(&server) == true))
+        if ((server.ops.soo_open(&server) == true) &&
+            (server.ops.soo_bind(&server) == true))
         {
             server.event.timeoutms = 1000;
 
@@ -300,7 +300,7 @@ void *thread_server_udp(void * arg)
 
             while (thread_instance_isrunning(instance) == false)
             {
-                error = server.ops.sio_recv(&server, buf, sizeof(buf));
+                error = server.ops.soo_recv(&server, buf, sizeof(buf));
 
                 if (error >= 0)
                 {
@@ -320,7 +320,7 @@ void *thread_server_udp(void * arg)
                 }
             }
 
-            server.ops.sio_close(&server);
+            server.ops.soo_close(&server);
         }
 
         logger_printf(LOGGER_LEVEL_DEBUG,
@@ -350,7 +350,7 @@ void *thread_client_udp(void * arg)
     struct thread_instance *instance = (struct thread_instance *)arg;
     char buf[248];
     int32_t error, sendcount;
-    struct socket_instance client;
+    struct sockobj client;
 
     logger_printf(LOGGER_LEVEL_DEBUG,
                   "%s: starting thread '%s'\n",
@@ -360,14 +360,14 @@ void *thread_client_udp(void * arg)
     if (instance != NULL)
     {
         memset(&client, 0, sizeof(client));
-        socket_udp_create(&client);
+        sockudp_create(&client);
         client.ipaddr = "127.0.0.1";
         client.ipport = 5001;
 
-        if ((client.ops.sio_open(&client) == true) &&
+        if ((client.ops.soo_open(&client) == true) &&
             ((client.event.timeoutms = 1000) > 0) /*&&
-            (client.ops.sio_bind(&client) == true)*/ &&
-            (client.ops.sio_connect(&client) == true))
+            (client.ops.soo_bind(&client) == true)*/ &&
+            (client.ops.soo_connect(&client) == true))
         {
             logger_printf(LOGGER_LEVEL_DEBUG,
                           "%s: connected to %s\n",
@@ -380,7 +380,7 @@ void *thread_client_udp(void * arg)
             while ((thread_instance_isrunning(instance) == false) &&
                    (sendcount < 5))
             {
-                error = client.ops.sio_send(&client, buf, sizeof(buf));
+                error = client.ops.soo_send(&client, buf, sizeof(buf));
 logger_printf(LOGGER_LEVEL_ERROR, "%s: sending\n", __FUNCTION__); //??
                 if (error > 0)
                 {
@@ -391,10 +391,10 @@ logger_printf(LOGGER_LEVEL_ERROR, "%s: sending\n", __FUNCTION__); //??
                     break;
                 }
 
-                client.ops.sio_recv(&client, buf, sizeof(buf));
+                client.ops.soo_recv(&client, buf, sizeof(buf));
             }
 
-            client.ops.sio_close(&client);
+            client.ops.soo_close(&client);
         }
         else
         {
