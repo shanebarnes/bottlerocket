@@ -21,8 +21,8 @@
  *
  * @return True if the timespec was set with a valid time value.
  */
-static bool util_date_time_clock(const enum util_date_clock clock,
-                                 struct timespec * const ts)
+static bool utildate_gettptime(const enum util_date_clock clock,
+                               struct timespec * const ts)
 {
     bool retval = true;
 
@@ -64,16 +64,16 @@ static bool util_date_time_clock(const enum util_date_clock clock,
 /**
  * @see See header file for interface comments.
  */
-bool util_date_time(const enum util_date_clock clock,
-                    uint64_t * const sec,
-                    uint64_t * const nsec)
+bool utildate_gettvtime(const enum util_date_clock clock,
+                        uint64_t * const sec,
+                        uint64_t * const nsec)
 {
     bool retval = false;
     struct timespec ts;
 
     if ((sec != NULL) && (nsec != NULL))
     {
-        retval = util_date_time_clock(clock, &ts);
+        retval = utildate_gettptime(clock, &ts);
 
         if (retval == true)
         {
@@ -93,13 +93,13 @@ bool util_date_time(const enum util_date_clock clock,
 /**
  * @see See header file for interface comments.
  */
-uint64_t util_date_time_units(const enum util_date_clock clock,
-                              const enum unit_prefix_time prefix)
+uint64_t utildate_gettstime(const enum util_date_clock clock,
+                            const enum unit_prefix_time prefix)
 {
     uint64_t retval = 0;
     struct timespec ts;
 
-    if (util_date_time_clock(clock, &ts) == true)
+    if (utildate_gettptime(clock, &ts) == true)
     {
         retval = (uint64_t)(ts.tv_sec * prefix);
 
@@ -115,11 +115,12 @@ uint64_t util_date_time_units(const enum util_date_clock clock,
 /**
  * @see See header file for interface comments.
  */
-uint64_t util_date_time_mono_elapsed(const uint64_t tsref,
-                                     const enum unit_prefix_time prefix)
+uint64_t utildate_gettselapsed(const enum util_date_clock clock,
+                               const uint64_t tsref,
+                               const enum unit_prefix_time prefix)
 {
     uint64_t retval = 0;
-    uint64_t tsnow = util_date_time_units(DATE_CLOCK_MONOTONIC, prefix);
+    uint64_t tsnow = utildate_gettstime(clock, prefix);
 
     if (tsnow >= tsref)
     {
@@ -132,9 +133,9 @@ uint64_t util_date_time_mono_elapsed(const uint64_t tsref,
 /**
  * @see See header file for interface comments.
  */
-uint64_t util_date_convert_units(const uint64_t ts,
-                                 const enum unit_prefix_time prefix,
-                                 const enum unit_prefix_time newprefix)
+uint64_t utildate_gettsconvert(const uint64_t ts,
+                               const enum unit_prefix_time prefix,
+                               const enum unit_prefix_time newprefix)
 {
     uint64_t retval = (ts * newprefix) / prefix;
 
@@ -144,11 +145,11 @@ uint64_t util_date_convert_units(const uint64_t ts,
 /**
  * @see See header file for interface comments.
  */
-bool util_date_time_format(const uint64_t ts,
-                           const enum unit_prefix_time prefix,
-                           const char * const format,
-                           char * const buf,
-                           uint32_t len)
+bool utildate_gettsformat(const uint64_t ts,
+                          const enum unit_prefix_time prefix,
+                          const char * const format,
+                          char * const buf,
+                          uint32_t len)
 {
     bool retval = false;
     time_t time;
@@ -172,13 +173,13 @@ bool util_date_time_format(const uint64_t ts,
 /**
  * @see See header file for interface comments.
  */
-uint64_t util_date_time_diff(const uint64_t ts1,
-                             const uint64_t ts2,
-                             const enum unit_prefix_time prefix,
-                             struct util_date_diff * const diff)
+uint64_t utildate_gettsdiff(const uint64_t ts1,
+                            const uint64_t ts2,
+                            const enum unit_prefix_time prefix,
+                            struct util_date_diff * const diff)
 {
     uint64_t diffts = (ts1 > ts2 ? ts1 - ts2 : ts2 - ts1);
-    uint64_t diffms = util_date_convert_units(diffts, prefix, UNIT_TIME_MSEC);
+    uint64_t diffms = utildate_gettsconvert(diffts, prefix, UNIT_TIME_MSEC);
 
     if (diff != NULL)
     {
@@ -209,8 +210,8 @@ uint64_t util_date_time_diff(const uint64_t ts1,
 /**
  * @see See header file for interface comments.
  */
-uint64_t util_date_time_sec_parti(const uint64_t ts,
-                                  const enum unit_prefix_time prefix)
+uint64_t utildate_gettsinteger(const uint64_t ts,
+                               const enum unit_prefix_time prefix)
 {
     uint64_t retval = ts / prefix;
 
@@ -220,10 +221,10 @@ uint64_t util_date_time_sec_parti(const uint64_t ts,
 /**
  * @see See header file for interface comments.
  */
-uint64_t util_date_time_sec_partf(const uint64_t ts,
-                                  const enum unit_prefix_time prefix)
+uint64_t utildate_gettsfraction(const uint64_t ts,
+                                const enum unit_prefix_time prefix)
 {
-    uint64_t retval = ts - util_date_time_sec_parti(ts, prefix) * prefix;
+    uint64_t retval = ts - utildate_gettsinteger(ts, prefix) * prefix;
 
     return retval;
 }

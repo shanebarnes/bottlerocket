@@ -40,31 +40,36 @@ struct util_date_diff
  * @return True if the input time buffers were set with valid time values.
  *         Otherwise, the input time buffers were set to zero.
  */
-bool util_date_time(const enum util_date_clock clock,
-                    uint64_t * const sec,
-                    uint64_t * const nsec);
+bool utildate_gettvtime(const enum util_date_clock clock,
+                        uint64_t * const sec,
+                        uint64_t * const nsec);
 
 /**
- * @brief Get the monotonic or realtime clock time.
+ * @brief Get the monotonic or realtime clock time as a Unix timestamp in the
+ *        time unit specified.
  *
  * @param[in] clock The clock type (monotonic or realtime).
  * @param[in] prefix The monotonic time unit or prefix.
  *
- * @return The time in the time unit specified (0 on error).
+ * @return The monotonic or realtime clock time as a Unix timestamp in the time
+ *         unit specified (0 on error).
  */
-uint64_t util_date_time_units(const enum util_date_clock clock,
-                              const enum unit_prefix_time prefix);
+uint64_t utildate_gettstime(const enum util_date_clock clock,
+                            const enum unit_prefix_time prefix);
 
 /**
- * @brief Get the elapsed time given a monotonic start time reference.
+ * @brief Get the elapsed time in the time units specified given a clock start
+ *        time reference.
  *
- * @param[in] tsref  The monotonic start time reference.
- * @param[in] prefix The monotonic time unit or prefix.
+ * @param[in] clock  The clock type (monotonic or realtime).
+ * @param[in] tsref  The clock start time reference.
+ * @param[in] prefix The clock time unit or prefix.
  *
  * @return The elapsed time in the specified time units (0 on error).
  */
-uint64_t util_date_time_mono_elapsed(const uint64_t tsref,
-                                     const enum unit_prefix_time prefix);
+uint64_t utildate_gettselapsed(const enum util_date_clock clock,
+                               const uint64_t tsref,
+                               const enum unit_prefix_time prefix);
 
 /**
  * @brief Convert a Unix timestamp into different time units.
@@ -75,9 +80,9 @@ uint64_t util_date_time_mono_elapsed(const uint64_t tsref,
  *
  * @return The converted Unix timestamp.
  */
-uint64_t util_date_convert_units(const uint64_t ts,
-                                 const enum unit_prefix_time prefix,
-                                 const enum unit_prefix_time newprefix);
+uint64_t utildate_gettsconvert(const uint64_t ts,
+                               const enum unit_prefix_time prefix,
+                               const enum unit_prefix_time newprefix);
 
 /**
  * @brief Get a formatted string representation of a Unix timestamp.
@@ -90,11 +95,11 @@ uint64_t util_date_convert_units(const uint64_t ts,
  *
  * @return True if a formatted string representation was created.
  */
-bool util_date_time_format(const uint64_t ts,
-                           const enum unit_prefix_time prefix,
-                           const char * const format,
-                           char * const buf,
-                           const uint32_t len);
+bool utildate_gettsformat(const uint64_t ts,
+                          const enum unit_prefix_time prefix,
+                          const char * const format,
+                          char * const buf,
+                          const uint32_t len);
 
 /**
  * @brief Get the (absolute) time difference between two Unix timestamps.
@@ -108,31 +113,35 @@ bool util_date_time_format(const uint64_t ts,
  *
  * @return The (absolute) time difference between two Unix timestamps.
  */
-uint64_t util_date_time_diff(const uint64_t ts1,
-                             const uint64_t ts2,
-                             const enum unit_prefix_time prefix,
-                             struct util_date_diff * const diff);
+uint64_t utildate_gettsdiff(const uint64_t ts1,
+                            const uint64_t ts2,
+                            const enum unit_prefix_time prefix,
+                            struct util_date_diff * const diff);
 
 /**
- * @brief Get the integer-part of a Unix timestamp in seconds.
+ * @brief Get the integer-part of a Unix timestamp. For example, a Unix timstamp
+ *        of 123456 milliseconds is equivalent to 123.456 seconds. The integer-
+ *        part of the decimal representation is 123.
  *
  * @param[in] ts     A Unix timestamp.
  * @param[in] prefix The Unix timestamp time unit or prefix.
  *
  * @return The integer-part of a Unix timestamp in seconds.
  */
-uint64_t util_date_time_sec_parti(const uint64_t ts,
-                                  const enum unit_prefix_time prefix);
+uint64_t utildate_gettsinteger(const uint64_t ts,
+                               const enum unit_prefix_time prefix);
 
 /**
- * @brief Get the fractional-part of a Unix timestamp.
+ * @brief Get the fractional-part of a Unix timestamp. For example, a Unix
+ *        timestamp of 123456 milliseconds is equivalent to 123.456 seconds. The
+ *        fractional-part of the decimal representation is 456 milliseconds.
  *
  * @param[in] ts     A Unix timestamp.
  * @param[in] prefix The Unix timestamp time unit or prefix.
  *
  * @return The fractional-part of a Unix timestamp in the specified time unit.
  */
-uint64_t util_date_time_sec_partf(const uint64_t ts,
-                                  const enum unit_prefix_time prefix);
+uint64_t utildate_gettsfraction(const uint64_t ts,
+                                const enum unit_prefix_time prefix);
 
 #endif // _UTIL_DATE_H_
