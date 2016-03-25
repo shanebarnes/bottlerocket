@@ -1,8 +1,10 @@
 /**
- * @file   socket_instance.c
- * @author Shane Barnes
- * @date   03 Mar 2016
- * @brief  Network socket instance implementation.
+ * @file      socket_instance.c
+ * @brief     Network socket instance implementation.
+ * @author    Shane Barnes
+ * @date      03 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "io_event_poll.h"
