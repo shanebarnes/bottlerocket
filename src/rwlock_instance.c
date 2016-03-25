@@ -1,8 +1,10 @@
 /**
- * @file   rwlock_instance.c
- * @author Shane Barnes
- * @date   11 Mar 2016
- * @brief  Read/write lock instance implementation.
+ * @file      rwlock_instance.c
+ * @brief     Read/write lock instance implementation.
+ * @author    Shane Barnes
+ * @date      11 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "logger.h"
