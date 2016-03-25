@@ -1,8 +1,10 @@
 /**
- * @file   util_date.h
- * @author Shane Barnes
- * @date   08 Mar 2016
- * @brief  Date/time utility interface.
+ * @file      util_date.h
+ * @brief     Date/time utility interface.
+ * @author    Shane Barnes
+ * @date      08 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _UTIL_DATE_H_
