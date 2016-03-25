@@ -1,8 +1,10 @@
 /**
- * @file   input_if_instance.h
- * @author Shane Barnes
- * @date   24 Mar 2016
- * @brief  Input interface instance interface.
+ * @file      input_if_instance.h
+ * @brief     Input interface instance interface.
+ * @author    Shane Barnes
+ * @date      24 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _INPUT_IF_INSTANCE_H_
