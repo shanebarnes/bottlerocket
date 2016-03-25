@@ -8,21 +8,31 @@
 #include "logger.h"
 #include "util_date.h"
 #include "util_string.h"
-#include "rwlock_instance.h"
+#include "mutex_instance.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 
 static enum logger_level       static_level = LOGGER_LEVEL_ALL;
-static struct rwlock_instance  lock;
-static struct output_if_ops   *output_if = NULL;
+static struct mutex_instance *lock          = NULL;
+static struct output_if_ops   *output_if    = NULL;
+static int32_t                 refcount     = 0;
 
 /**
  * @see See header file for interface comments.
  */
 bool logger_create(void)
 {
-    return rwlock_instance_create(&lock);
+    bool retval = false;
+
+    lock = (struct mutex_instance *)malloc(sizeof(struct mutex_instance));
+
+    if (lock != NULL)
+    {
+        retval = mutex_instance_create(lock);
+    }
+
+    return retval;
 }
 
 /**
@@ -30,7 +40,14 @@ bool logger_create(void)
  */
 bool logger_destroy(void)
 {
-    return rwlock_instance_destroy(&lock);
+    bool retval = false;
+
+    if (lock != NULL)
+    {
+        retval = mutex_instance_destroy(lock);
+    }
+
+    return retval;
 }
 
 /**
@@ -56,11 +73,14 @@ bool logger_set_level(const enum logger_level level)
 {
     bool retval = false;
 
-    if ((level >= LOGGER_LEVEL_MIN) && (level <= LOGGER_LEVEL_MAX))
+    if ((lock != NULL) &&
+        (level >= LOGGER_LEVEL_MIN) &&
+        (level <= LOGGER_LEVEL_MAX))
     {
-        rwlock_instance_wrlock(&lock);
+        mutex_instance_lock(lock);
         static_level = level;
-        rwlock_instance_unlock(&lock);
+        mutex_instance_unlock(lock);
+
         retval = true;
     }
 
@@ -82,25 +102,25 @@ static char *logger_get_level_string(const enum logger_level level)
     switch (level)
     {
         case LOGGER_LEVEL_ALL:
-            retval = "ALL";
+            retval = (char*)"ALL";
             break;
         case LOGGER_LEVEL_TRACE:
-            retval = "TRACE";
+            retval = (char*)"TRACE";
             break;
         case LOGGER_LEVEL_DEBUG:
-            retval = "DEBUG";
+            retval = (char*)"DEBUG";
             break;
         case LOGGER_LEVEL_INFO:
-            retval = "INFO";
+            retval = (char*)"INFO";
             break;
         case LOGGER_LEVEL_WARN:
-            retval = "WARN";
+            retval = (char*)"WARN";
             break;
         case LOGGER_LEVEL_ERROR:
-            retval = "ERROR";
+            retval = (char*)"ERROR";
             break;
         case LOGGER_LEVEL_OFF:
-            retval = "OFF";
+            retval = (char*)"OFF";
             break;
         default:
             retval = NULL;
@@ -118,36 +138,65 @@ void logger_printf(const enum logger_level level, const char *format, ...)
     char msgbuf[128], outbuf[256], timebuf[32];
     va_list args;
     uint64_t sec = 0, nsec = 0;
-    rwlock_instance_rdlock(&lock);
-    enum logger_level setlevel = static_level;
-    rwlock_instance_unlock(&lock);
+    enum logger_level setlevel;
+    bool dropmsg = false;
 
-    if ((output_if != NULL) &&
-        (level >= setlevel) &&
-        (level < LOGGER_LEVEL_OFF))
+    if ((lock != NULL) &&
+        (output_if != NULL))
     {
-        va_start(args, format);
-        error = vsnprintf(msgbuf, sizeof(msgbuf), format, args);
-        va_end(args);
-
-        if (error >= 0)
+        mutex_instance_lock(lock);
+        // At the expense of more processing overhead, stop logging messages if
+        // the number of incomplete logging transactions exceeds 10 in the event
+        // that the high number of concurrent transactions is due to an
+        // unintended circular dependency.
+        if (refcount > 10)
         {
-            utildate_gettvtime(DATE_CLOCK_REALTIME, &sec, &nsec);
-            utildate_gettsformat(sec,
-                                 UNIT_TIME_SEC,
-                                 "%Y-%m-%dT%H:%M:%S",
-                                 timebuf,
-                                 sizeof(timebuf));
+            dropmsg = true;
+            fprintf(stderr,
+                    "%s: preventing unintended recursion\n",
+                    __FUNCTION__);
+        }
+        else
+        {
+            setlevel = static_level;
+            refcount++;
+        }
+        mutex_instance_unlock(lock);
 
-            util_string_concat(outbuf,
-                               sizeof(outbuf),
-                               "%s.%06u [%-5s]: %s",
-                               timebuf,
-                               (uint32_t)nsec / 1000,
-                               logger_get_level_string(level),
-                               msgbuf);
+        if ((dropmsg == false) &&
+            (level >= setlevel) &&
+            (level < LOGGER_LEVEL_OFF))
+        {
+            va_start(args, format);
+            error = vsnprintf(msgbuf, sizeof(msgbuf), format, args);
+            va_end(args);
 
-            output_if->oio_send(outbuf, sizeof(outbuf));
+            if (error >= 0)
+            {
+                utildate_gettvtime(DATE_CLOCK_REALTIME, &sec, &nsec);
+                utildate_gettsformat(sec,
+                                     UNIT_TIME_SEC,
+                                     "%Y-%m-%dT%H:%M:%S",
+                                     timebuf,
+                                     sizeof(timebuf));
+
+                utilstring_concat(outbuf,
+                                  sizeof(outbuf),
+                                  "%s.%06u [%-5s]: %s",
+                                  timebuf,
+                                  (uint32_t)nsec / 1000,
+                                  logger_get_level_string(level),
+                                  msgbuf);
+
+                output_if->oio_send(outbuf, sizeof(outbuf));
+            }
+        }
+
+        if (dropmsg == false)
+        {
+            mutex_instance_lock(lock);
+            refcount--;
+            mutex_instance_unlock(lock);
         }
     }
 }
