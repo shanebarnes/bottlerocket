@@ -1,8 +1,10 @@
 /**
- * @file   util_ioctl.c
- * @author Shane Barnes
- * @date   24 Mar 2016
- * @brief  I/O control utility implementation.
+ * @file      util_ioctl.c
+ * @brief     I/O control utility implementation.
+ * @author    Shane Barnes
+ * @date      24 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "logger.h"
