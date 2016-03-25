@@ -1,8 +1,10 @@
 /**
- * @file   io_event_poll.c
- * @author Shane Barnes
- * @date   15 Mar 2016
- * @brief  Poll I/O event notification implementation.
+ * @file      io_event_poll.c
+ * @brief     Poll I/O event notification implementation.
+ * @author    Shane Barnes
+ * @date      15 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "io_event_poll.h"
