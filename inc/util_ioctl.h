@@ -1,8 +1,10 @@
 /**
- * @file   util_ioctl.h
- * @author Shane Barnes
- * @date   24 Mar 2016
- * @brief  I/O control utility interface.
+ * @file      util_ioctl.h
+ * @brief     I/O control utility interface.
+ * @author    Shane Barnes
+ * @date      24 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _UTIL_IOCTL_H_
