@@ -1,8 +1,10 @@
 /**
- * @file   output_if_instance.h
- * @author Shane Barnes
- * @date   13 Mar 2016
- * @brief  Output interface instance interface.
+ * @file      output_if_instance.h
+ * @brief     Output interface instance interface.
+ * @author    Shane Barnes
+ * @date      13 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _OUTPUT_IF_INSTANCE_H_
