@@ -6,6 +6,7 @@
  */
 
 #include "cli_options.h"
+#include "input_if_std.h"
 #include "logger.h"
 #include "util_string.h"
 #include "output_if_instance.h"
@@ -412,6 +413,51 @@ logger_printf(LOGGER_LEVEL_ERROR, "%s: sending\n", __FUNCTION__); //??
 }
 
 /**
+ * @brief Input thread function.
+ *
+ * @param[in] arg Thread input argument.
+ *
+ * @return NULL.
+ */
+void *thread_input(void * arg)
+{
+    struct thread_instance *instance = (struct thread_instance *)arg;
+    char buf[2048];
+
+    logger_printf(LOGGER_LEVEL_DEBUG,
+                  "%s: starting thread '%s'\n",
+                  __FUNCTION__,
+                  instance->name);
+
+    if (instance != NULL)
+    {
+        while (thread_instance_isrunning(instance) == false)
+        {
+            if (input_if_std_recv(buf, sizeof(buf), 1000) > 0)
+            {
+                logger_printf(LOGGER_LEVEL_DEBUG,
+                              "%s: read '%s' from input interface\n",
+                              __FUNCTION__,
+                              buf);
+            }
+        }
+
+        logger_printf(LOGGER_LEVEL_DEBUG,
+                      "%s: stopping thread '%s'\n",
+                      __FUNCTION__,
+                      instance->name);
+    }
+    else
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: thread instance is invalid\n",
+                      __FUNCTION__);
+    }
+
+    return NULL;
+}
+
+/**
  * @brief Bottlerocket entry point.
  *
  * @param argc Command-line argument count.
@@ -449,9 +495,9 @@ int32_t main(int argc, char **argv)
     signal(SIGSTOP, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    if (threadcount != 2)
+    if (threadcount != 3)
     {
-        threadcount = 2;
+        threadcount = 3;
     }
 
     threads = (struct thread_instance *)malloc(threadcount * sizeof(struct thread_instance));
@@ -473,9 +519,12 @@ int32_t main(int argc, char **argv)
                     threads[i].function = thread_server_udp;
                     break;
                 case 2:
-                    threads[i].function = thread_client_tcp;
+                    threads[i].function = thread_input;
                     break;
                 case 3:
+                    threads[i].function = thread_client_tcp;
+                    break;
+                case 4:
                     threads[i].function = thread_client_udp;
                     break;
                 default:
