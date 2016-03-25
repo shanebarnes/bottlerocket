@@ -1,8 +1,10 @@
 /**
- * @file   socket_tcp.h
- * @author Shane Barnes
- * @date   01 Mar 2016
- * @brief  TCP socket interface.
+ * @file      socket_tcp.h
+ * @brief     TCP socket interface.
+ * @author    Shane Barnes
+ * @date      01 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _SOCKET_TCP_H_
