@@ -170,7 +170,7 @@ void *thread_server_tcp(void * arg)
     struct thread_instance *instance = (struct thread_instance *)arg;
     char buf[2048];
     int32_t error;
-    int32_t count = 0;
+    int32_t count = 0, recvbytes = 0;
     struct socket_instance server, socket;
 
     logger_printf(LOGGER_LEVEL_DEBUG,
@@ -222,11 +222,18 @@ void *thread_server_tcp(void * arg)
                                       __FUNCTION__,
                                       error,
                                       socket.addrself.sockaddrstr);
+                        recvbytes += error;
                     }
                     else if (error < 0)
                     {
                         socket.ops.sio_close(&socket);
                         count--;
+                        logger_printf(LOGGER_LEVEL_DEBUG,
+                                      "%s: read a total of %d bytes from %s\n",
+                                      __FUNCTION__,
+                                      recvbytes,
+                                      socket.addrself.sockaddrstr);
+                        recvbytes = 0;
                     }
                 }
             }
