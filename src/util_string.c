@@ -1,8 +1,10 @@
 /**
- * @file   util_string.c
- * @author Shane Barnes
- * @date   07 Mar 2016
- * @brief  String utility implementation.
+ * @file      util_string.c
+ * @brief     String utility implementation.
+ * @author    Shane Barnes
+ * @date      07 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "logger.h"
