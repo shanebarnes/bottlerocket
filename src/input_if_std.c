@@ -1,8 +1,10 @@
 /**
- * @file   input_if_std.c
- * @author Shane Barnes
- * @date   24 Mar 2016
- * @brief  Standard input stream interface implementation.
+ * @file      input_if_std.c
+ * @brief     Standard input stream interface implementation.
+ * @author    Shane Barnes
+ * @date      24 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "input_if_std.h"
