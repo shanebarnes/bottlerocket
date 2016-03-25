@@ -1,8 +1,10 @@
 /**
- * @file   socket_tcp.c
- * @author Shane Barnes
- * @date   01 Mar 2016
- * @brief  TCP socket implementation.
+ * @file      socket_tcp.c
+ * @brief     TCP socket implementation.
+ * @author    Shane Barnes
+ * @date      01 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "logger.h"
