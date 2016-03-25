@@ -1,8 +1,10 @@
 /**
- * @file   output_if_std.c
- * @author Shane Barnes
- * @date   14 Mar 2016
- * @brief  Standard output stream interface implementation.
+ * @file      output_if_std.c
+ * @brief     Standard output stream interface implementation.
+ * @author    Shane Barnes
+ * @date      14 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "output_if_std.h"
