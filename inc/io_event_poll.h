@@ -1,8 +1,10 @@
 /**
- * @file   io_event_poll.h
- * @author Shane Barnes
- * @date   15 Mar 2016
- * @brief  Poll I/O event notification interface.
+ * @file      io_event_poll.h
+ * @brief     Poll I/O event notification interface.
+ * @author    Shane Barnes
+ * @date      15 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _IO_EVENT_POLL_H_
