@@ -18,7 +18,7 @@
  * @return Return an integer value equivalent to the string representation of a
  *         bit rate prefix (0 on error).
  */
-static uint64_t util_unit_get_bitrate_prefix(const char *const prefix)
+static uint64_t utilunit_getbitrateprefix(const char *const prefix)
 {
     uint64_t retval = 0;
 
@@ -99,7 +99,7 @@ static uint64_t util_unit_get_bitrate_prefix(const char *const prefix)
  * @return Return an integer value equivalent to the string representation of a
  *         byte prefix (0 on error).
  */
-static uint64_t util_unit_get_byte_prefix(const char * const prefix)
+static uint64_t utilunit_getbyteprefix(const char * const prefix)
 {
     uint64_t retval = 0;
 
@@ -181,7 +181,7 @@ static uint64_t util_unit_get_byte_prefix(const char * const prefix)
  * @return Return an integer value equivalent to the string representation of a
  *         seconds prefix (0 on error).
  */
-static uint64_t util_unit_get_seconds_prefix(const char * const prefix)
+static uint64_t utilunit_getsecsprefix(const char * const prefix)
 {
     uint64_t retval = 0;
 
@@ -217,7 +217,7 @@ static uint64_t util_unit_get_seconds_prefix(const char * const prefix)
 /**
  * @see See header file for interace comments.
  */
-uint64_t util_unit_get_bitrate(const char * const bitrate)
+uint64_t utilunit_getbitrate(const char * const bitrate)
 {
     uint64_t retval = 0;
     int32_t  matchcount = 0;
@@ -232,7 +232,7 @@ uint64_t util_unit_get_bitrate(const char * const bitrate)
            break;
         case 2:
             // @todo Protect against overflow.
-            retval = retval * util_unit_get_bitrate_prefix(prefix);
+            retval = retval * utilunit_getbitrateprefix(prefix);
             break;
         default:
             // Nothing to do.
@@ -245,7 +245,7 @@ uint64_t util_unit_get_bitrate(const char * const bitrate)
 /**
  * @see See header file for interace comments.
  */
-uint64_t util_unit_get_bytes(const char * const bytes)
+uint64_t utilunit_getbytes(const char * const bytes)
 {
     uint64_t retval = 0;
     int32_t  matchcount = 0;
@@ -260,7 +260,7 @@ uint64_t util_unit_get_bytes(const char * const bytes)
            break;
         case 2:
             // @todo Protect against overflow.
-            retval = retval * util_unit_get_byte_prefix(prefix);
+            retval = retval * utilunit_getbyteprefix(prefix);
             break;
         default:
             // Nothing to do.
@@ -273,13 +273,13 @@ uint64_t util_unit_get_bytes(const char * const bytes)
 /**
  * @see See header file for interace comments.
  */
-uint64_t util_unit_get_seconds(const char * const seconds)
+uint64_t utilunit_getsecs(const char * const secs)
 {
     uint64_t retval = 0;
     int32_t  matchcount = 0;
     char     prefix[80];
 
-    matchcount = utilstring_parse(seconds, "%" PRIu64 "%s", &retval, prefix);
+    matchcount = utilstring_parse(secs, "%" PRIu64 "%s", &retval, prefix);
 
     switch (matchcount)
     {
@@ -288,7 +288,7 @@ uint64_t util_unit_get_seconds(const char * const seconds)
            break;
         case 2:
             // @todo Protect against overflow.
-            retval = retval * util_unit_get_seconds_prefix(prefix);
+            retval = retval * utilunit_getsecsprefix(prefix);
             break;
         default:
             // Nothing to do.
@@ -305,7 +305,7 @@ uint64_t util_unit_get_seconds(const char * const seconds)
  *
  * @return A character representing the prefix value (null character on error).
  */
-static char util_unit_get_prefix_symbol(const uint64_t prefix)
+static char utilunit_getprefixsymbol(const uint64_t prefix)
 {
     char retval = '\0';
 
@@ -347,11 +347,11 @@ static char util_unit_get_prefix_symbol(const uint64_t prefix)
 /**
  * @see See header file for interace comments.
  */
-void util_unit_get_decimal_notation(const uint64_t base,
-                                    const uint8_t precision,
-                                    const uint64_t integer,
-                                    char * const buf,
-                                    const size_t len)
+void utilunit_getdecformat(const uint64_t base,
+                           const uint8_t precision,
+                           const uint64_t integer,
+                           char * const buf,
+                           const size_t len)
 {
     uint64_t parti          = integer;
     uint64_t partf          = 0;
@@ -411,7 +411,7 @@ void util_unit_get_decimal_notation(const uint64_t base,
                               precision > digitcount ?
                                   (uint8_t)digitcount : precision,
                               (uint32_t)partf,
-                              util_unit_get_prefix_symbol(prefix),
+                              utilunit_getprefixsymbol(prefix),
                               scale == 1024 ? 'i' : '\0');
         }
         else
@@ -420,7 +420,7 @@ void util_unit_get_decimal_notation(const uint64_t base,
                               len,
                               "%" PRIu64 " %c%c",
                               parti,
-                              util_unit_get_prefix_symbol(prefix),
+                              utilunit_getprefixsymbol(prefix),
                               scale == 1024 ? 'i' : '\0');
         }
     }

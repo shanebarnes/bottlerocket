@@ -91,7 +91,7 @@ enum unit_prefix_time
  * @return An integer value equivalent to the string representation of a bit
  *         rate count (0 on error).
  */
-uint64_t util_unit_get_bitrate(const char * const bitrate);
+uint64_t utilunit_getbitrate(const char * const bitrate);
 
 /**
  * @brief Convert a string representation of a byte count to a numeric
@@ -102,7 +102,7 @@ uint64_t util_unit_get_bitrate(const char * const bitrate);
  * @return An integer value equivalent to the string representation of a byte
  *         count (0 on error).
  */
-uint64_t util_unit_get_bytes(const char * const bytes);
+uint64_t utilunit_getbytes(const char * const bytes);
 
 /**
  * @brief Convert a string representation of a seconds count to a numeric
@@ -113,7 +113,7 @@ uint64_t util_unit_get_bytes(const char * const bytes);
  * @return An integer value equivalent to the string representation of a seconds
  *         (0 on error).
  */
-uint64_t util_unit_get_seconds(const char * const seconds);
+uint64_t utilunit_getsecs(const char * const secs);
 
 /**
  * @brief Convert a number to decimal notation (e.g., 1200 bytes = 1.200 KB).
@@ -129,10 +129,10 @@ uint64_t util_unit_get_seconds(const char * const seconds);
  *
  * @return Void.
  */
-void util_unit_get_decimal_notation(const uint64_t base,
-                                    const uint8_t precision,
-                                    const uint64_t integer,
-                                    char * const buf,
-                                    const size_t len);
+void utilunit_getdecformat(const uint64_t base,
+                           const uint8_t precision,
+                           const uint64_t integer,
+                           char * const buf,
+                           const size_t len);
 
 #endif // _UTIL_UNIT_H_
