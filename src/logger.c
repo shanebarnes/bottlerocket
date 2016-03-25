@@ -14,7 +14,7 @@
 #include <stdio.h>
 
 static enum logger_level       static_level = LOGGER_LEVEL_ALL;
-static struct mutex_instance *lock          = NULL;
+static struct mutex_instance  *lock         = NULL;
 static struct output_if_ops   *output_if    = NULL;
 static int32_t                 refcount     = 0;
 
@@ -45,6 +45,8 @@ bool logger_destroy(void)
     if (lock != NULL)
     {
         retval = mutex_instance_destroy(lock);
+        free(lock);
+        lock = NULL;
     }
 
     return retval;
