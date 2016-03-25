@@ -1,8 +1,10 @@
 /**
- * @file   util_sysctl.c
- * @author Shane Barnes
- * @date   11 Mar 2016
- * @brief  System control utility implementation.
+ * @file      util_sysctl.c
+ * @brief     System control utility implementation.
+ * @author    Shane Barnes
+ * @date      11 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "util_sysctl.h"
