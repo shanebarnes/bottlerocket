@@ -1,8 +1,10 @@
 /**
- * @file   util_sysctl.h
- * @author Shane Barnes
- * @date   11 Mar 2016
- * @brief  System control utility interface.
+ * @file      util_sysctl.h
+ * @brief     System control utility interface.
+ * @author    Shane Barnes
+ * @date      11 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _UTIL_SYSCTL_H_
