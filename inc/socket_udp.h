@@ -1,8 +1,10 @@
 /**
- * @file   socket_udp.h
- * @author Shane Barnes
- * @date   21 Mar 2016
- * @brief  UDP socket interface.
+ * @file      socket_udp.h
+ * @brief     UDP socket interface.
+ * @author    Shane Barnes
+ * @date      21 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _SOCKET_UDP_H_
