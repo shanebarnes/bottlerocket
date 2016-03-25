@@ -1,8 +1,10 @@
 /**
- * @file   gtest_brutil.cpp
- * @author Shane Barnes
- * @date   18 Mar 2016
- * @brief  Bottlerocket utility Google unit tests.
+ * @file      gtest_brutil.cpp
+ * @brief     Bottlerocket utility Google unit tests.
+ * @author    Shane Barnes
+ * @date      18 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "logger.c"
