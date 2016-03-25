@@ -1,8 +1,10 @@
 /**
- * @file   rwlock_instance.h
- * @author Shane Barnes
- * @date   11 Mar 2016
- * @brief  Read/write lock instance interface.
+ * @file      rwlock_instance.h
+ * @brief     Read/write lock instance interface.
+ * @author    Shane Barnes
+ * @date      11 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _RWLOCK_INSTANCE_H_
