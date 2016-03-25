@@ -7,6 +7,7 @@
 
 #include "logger.h"
 #include "socket_tcp.h"
+#include "util_ioctl.h"
 
 #include <errno.h>
 #include <sys/types.h>
@@ -305,61 +306,65 @@ int32_t socket_tcp_recv(struct socket_instance * const instance,
     }
     else
     {
-        retval = recv(instance->sockfd, buf, len, flags);
-
-        if (retval > 0)
+        if (instance->event.ops.ieo_poll(&instance->event) == false)
         {
-            logger_printf(LOGGER_LEVEL_TRACE,
-                          "%s: socket %d received %d bytes\n",
-                          __FUNCTION__,
-                          instance->sockfd,
-                          retval);
+            retval = -1;
+        }
+        else if ((instance->event.revents & IO_EVENT_RET_ERROR) &&
+                 (utilioctl_getbytesavail(instance->sockfd) <= 0))
+        {
+            retval = -1;
+        }
+        else if (instance->event.revents & IO_EVENT_RET_INREADY)
+        {
+            retval = recv(instance->sockfd, buf, len, flags);
+
+            if (retval > 0)
+            {
+                logger_printf(LOGGER_LEVEL_TRACE,
+                              "%s: socket %d received %d bytes\n",
+                              __FUNCTION__,
+                              instance->sockfd,
+                              retval);
+            }
+            else
+            {
+                switch (errno)
+                {
+                    // Fatal errors.
+                    case EBADF:
+                    case ECONNRESET:
+                    case EPIPE:
+                    case ENOTSOCK:
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: socket %d fatal error (%d)\n",
+                                      __FUNCTION__,
+                                      instance->sockfd,
+                                      errno);
+                        retval = -1;
+                        break;
+                    // Non-fatal errors.
+                    case EAGAIN:
+                    case EFAULT:
+                    case EINTR:
+                    case EINVAL:
+                    case ENOBUFS:
+                    case ENOTCONN:
+                    case EOPNOTSUPP:
+                    case ETIMEDOUT:
+                    default:
+                        logger_printf(LOGGER_LEVEL_TRACE,
+                                      "%s: socket %d non-fatal error (%d)\n",
+                                      __FUNCTION__,
+                                      instance->sockfd,
+                                      errno);
+                        retval = 0;
+                }
+            }
         }
         else
         {
-            switch (errno)
-            {
-                // Fatal errors.
-                case EBADF:
-                case ECONNRESET:
-                case EPIPE:
-                case ENOTSOCK:
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %d fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  instance->sockfd,
-                                  errno);
-                    retval = -1;
-                    break;
-                // Non-fatal errors.
-                case EAGAIN:
-                case EFAULT:
-                case EINTR:
-                case EINVAL:
-                case ENOBUFS:
-                case ENOTCONN:
-                case EOPNOTSUPP:
-                case ETIMEDOUT:
-                default:
-                    logger_printf(LOGGER_LEVEL_TRACE,
-                                  "%s: socket %d non-fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  instance->sockfd,
-                                  errno);
-                    retval = 0;
-            }
-
-            if (retval == 0)
-            {
-                if (instance->event.ops.ieo_poll(&instance->event) == false)
-                {
-                    retval = -1;
-                }
-                else if (instance->event.revents & IO_EVENT_RET_ERROR)
-                {
-                    retval = -1;
-                }
-            }
+            retval = 0;
         }
     }
 
