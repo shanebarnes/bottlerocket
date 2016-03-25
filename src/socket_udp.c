@@ -1,8 +1,10 @@
 /**
- * @file   socket_udp.c
- * @author Shane Barnes
- * @date   21 Mar 2016
- * @brief  UDP socket implementation.
+ * @file      socket_udp.c
+ * @brief     UDP socket implementation.
+ * @author    Shane Barnes
+ * @date      21 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "logger.h"
