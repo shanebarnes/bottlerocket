@@ -1,8 +1,10 @@
 /**
- * @file   mutex_instance.h
- * @author Shane Barnes
- * @date   12 Mar 2016
- * @brief  Mutex instance interface.
+ * @file      mutex_instance.h
+ * @brief     Mutex instance interface.
+ * @author    Shane Barnes
+ * @date      12 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _MUTEX_INSTANCE_H_
