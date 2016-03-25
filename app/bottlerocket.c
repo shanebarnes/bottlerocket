@@ -1,8 +1,10 @@
 /**
- * @file   bottlerocket.c
- * @author Shane Barnes
- * @date   01 Mar 2016
- * @brief  A socket benchmark utility implementation.
+ * @file      bottlerocket.c
+ * @brief     A socket benchmark utility implementation.
+ * @author    Shane Barnes
+ * @date      01 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "cli_options.h"
