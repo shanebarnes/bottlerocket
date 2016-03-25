@@ -15,6 +15,6 @@
  *
  * @return The number of available CPUs (0 on error).
  */
-uint32_t util_sysctl_cpuavail(void);
+uint32_t utilsysctl_getcpusavail(void);
 
 #endif // _UTIL_SYSCTL_H_
