@@ -7,6 +7,7 @@
 
 #include "logger.h"
 #include "socket_udp.h"
+#include "util_ioctl.h"
 
 #include <errno.h>
 #include <sys/types.h>
@@ -208,86 +209,90 @@ int32_t socket_udp_recv(struct socket_instance * const instance,
     }
     else
     {
-        if (instance->state & SOCKET_STATE_CONNECT)
+        if (instance->event.ops.ieo_poll(&instance->event) == false)
         {
-            retval = recv(instance->sockfd, buf, len, flags);
+            retval = -1;
+        }
+        else if ((instance->event.revents & IO_EVENT_RET_ERROR) &&
+                 (utilioctl_getbytesavail(instance->sockfd) <= 0))
+        {
+            retval = -1;
+        }
+        else if (instance->event.revents & IO_EVENT_RET_INREADY)
+        {
+            if (instance->state & SOCKET_STATE_CONNECT)
+            {
+                retval = recv(instance->sockfd, buf, len, flags);
+            }
+            else
+            {
+                socklen  = sizeof(instance->addrpeer.sockaddr);
+                retval = recvfrom(instance->sockfd,
+                                  buf,
+                                  len,
+                                  flags,
+                                  (struct sockaddr *)&(instance->addrpeer.sockaddr),
+                                  &socklen);
+            }
+
+            if (retval > 0)
+            {
+                if ((instance->state & SOCKET_STATE_CONNECT) == 0)
+                {
+                    inet_ntop(AF_INET,
+                              &(instance->addrpeer.sockaddr.sin_addr),
+                              instance->addrpeer.ipaddr,
+                              sizeof(instance->addrpeer.ipaddr));
+
+                    instance->addrpeer.ipport = ntohs(instance->addrpeer.sockaddr.sin_port);
+                }
+
+                logger_printf(LOGGER_LEVEL_TRACE,
+                              "%s: socket %d received %d bytes from %s:%u\n",
+                              __FUNCTION__,
+                              instance->sockfd,
+                              retval,
+                              instance->addrpeer.ipaddr,
+                              instance->addrpeer.ipport);
+            }
+            else
+            {
+                switch (errno)
+                {
+                    // Fatal errors.
+                    case EBADF:
+                    case ECONNRESET:
+                    case EPIPE:
+                    case ENOTSOCK:
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: socket %d fatal error (%d)\n",
+                                      __FUNCTION__,
+                                      instance->sockfd,
+                                      errno);
+                        retval = -1;
+                        break;
+                    // Non-fatal errors.
+                    case EAGAIN:
+                    case EFAULT:
+                    case EINTR:
+                    case EINVAL:
+                    case ENOBUFS:
+                    case ENOTCONN:
+                    case EOPNOTSUPP:
+                    case ETIMEDOUT:
+                    default:
+                        logger_printf(LOGGER_LEVEL_TRACE,
+                                      "%s: socket %d non-fatal error (%d)\n",
+                                      __FUNCTION__,
+                                      instance->sockfd,
+                                      errno);
+                        retval = 0;
+                }
+            }
         }
         else
         {
-            socklen  = sizeof(instance->addrpeer.sockaddr);
-            retval = recvfrom(instance->sockfd,
-                              buf,
-                              len,
-                              flags,
-                              (struct sockaddr *)&(instance->addrpeer.sockaddr),
-                              &socklen);
-        }
-
-        if (retval > 0)
-        {
-            if ((instance->state & SOCKET_STATE_CONNECT) == 0)
-            {
-                inet_ntop(AF_INET,
-                          &(instance->addrpeer.sockaddr.sin_addr),
-                          instance->addrpeer.ipaddr,
-                          sizeof(instance->addrpeer.ipaddr));
-
-                instance->addrpeer.ipport = ntohs(instance->addrpeer.sockaddr.sin_port);
-            }
-
-            logger_printf(LOGGER_LEVEL_TRACE,
-                          "%s: socket %d received %d bytes from %s:%u\n",
-                          __FUNCTION__,
-                          instance->sockfd,
-                          retval,
-                          instance->addrpeer.ipaddr,
-                          instance->addrpeer.ipport);
-        }
-        else
-        {
-            switch (errno)
-            {
-                // Fatal errors.
-                case EBADF:
-                case ECONNRESET:
-                case EPIPE:
-                case ENOTSOCK:
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %d fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  instance->sockfd,
-                                  errno);
-                    retval = -1;
-                    break;
-                // Non-fatal errors.
-                case EAGAIN:
-                case EFAULT:
-                case EINTR:
-                case EINVAL:
-                case ENOBUFS:
-                case ENOTCONN:
-                case EOPNOTSUPP:
-                case ETIMEDOUT:
-                default:
-                    logger_printf(LOGGER_LEVEL_TRACE,
-                                  "%s: socket %d non-fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  instance->sockfd,
-                                  errno);
-                    retval = 0;
-            }
-
-            if (retval == 0)
-            {
-                if (instance->event.ops.ieo_poll(&instance->event) == false)
-                {
-                    retval = -1;
-                }
-                else if (instance->event.revents & IO_EVENT_RET_ERROR)
-                {
-                    retval = -1;
-                }
-            }
+            retval = 0;
         }
     }
 
