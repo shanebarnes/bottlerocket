@@ -1,8 +1,10 @@
 /**
- * @file   util_date.c
- * @author Shane Barnes
- * @date   08 Mar 2016
- * @brief  Date/time utility implementation.
+ * @file      util_date.c
+ * @brief     Date/time utility implementation.
+ * @author    Shane Barnes
+ * @date      08 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #include "util_date.h"
