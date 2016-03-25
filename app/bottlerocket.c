@@ -423,7 +423,7 @@ logger_printf(LOGGER_LEVEL_ERROR, "%s: sending\n", __FUNCTION__); //??
 int32_t main(int argc, char **argv)
 {
     int32_t retval = EXIT_SUCCESS;
-    uint32_t threadcount = util_sysctl_cpuavail();
+    uint32_t threadcount = utilsysctl_getcpusavail();
     struct thread_instance *threads = NULL;
     struct output_if_ops output_if;
     struct cli_options_instance options;
