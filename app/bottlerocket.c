@@ -460,10 +460,10 @@ int32_t main(int argc, char **argv)
     {
         for (i = 0; i < threadcount; i++)
         {
-            util_string_concat(threads[i].name,
-                               sizeof(threads[i].name),
-                               "t-%02d",
-                               i);
+            utilstring_concat(threads[i].name,
+                              sizeof(threads[i].name),
+                              "t-%02d",
+                              i);
             switch (i)
             {
                 case 0:
