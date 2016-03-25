@@ -1,8 +1,10 @@
 /**
- * @file   util_unit.h
- * @author Shane Barnes
- * @date   06 Mar 2016
- * @brief  Unit utility interface.
+ * @file      util_unit.h
+ * @brief     Unit utility interface.
+ * @author    Shane Barnes
+ * @date      06 Mar 2016
+ * @copyright Copyright 2016 Shane Barnes. All rights reserved.
+ *            This project is released under the MIT license.
  */
 
 #ifndef _UTIL_UNIT_H_
