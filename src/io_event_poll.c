@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <sys/socket.h>
 
 struct internals
 {
