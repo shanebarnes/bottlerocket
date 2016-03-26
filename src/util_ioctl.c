@@ -12,6 +12,7 @@
 
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 
 /**
  * @see See header file for interace comments.
@@ -27,6 +28,39 @@ int32_t utilioctl_getbytesavail(const int32_t fd)
                       __FUNCTION__,
                       errno);
         retval = -1;
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interace comments.
+ */
+bool utilioctl_gettermsize(uint16_t * const rows, uint16_t * const cols)
+{
+    int32_t retval = 0;
+    struct winsize win;
+
+    if ((rows == NULL) || (cols == NULL))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) == -1)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: ioctl request failed (%d)\n",
+                      __FUNCTION__,
+                      errno);
+        *rows = 0;
+        *cols = 0;
+    }
+    else
+    {
+        *rows = win.ws_row;
+        *cols = win.ws_col;
+        retval = true;
     }
 
     return retval;

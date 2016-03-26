@@ -21,4 +21,14 @@
  */
 int32_t utilioctl_getbytesavail(const int32_t fd);
 
+/**
+ * @brief Get the terminal window size in terms of column size and row size.
+ *
+ * @param[in,out] rows A pointer to a row size variable to set (0 on error).
+ * @param[in,out] cols A pointer to a column size variable to set (0 on error).
+ *
+ * @return True if the terminal window size dimensions were retrieved.
+ */
+bool utilioctl_gettermsize(uint16_t * const rows, uint16_t * const cols);
+
 #endif // _UTIL_IOCTL_H_
