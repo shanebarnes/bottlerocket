@@ -142,7 +142,7 @@ void logger_printf(const enum logger_level level, const char *format, ...)
     char msgbuf[128], outbuf[256], timebuf[32];
     va_list args;
     uint64_t sec = 0, nsec = 0;
-    enum logger_level setlevel;
+    enum logger_level setlevel = LOGGER_LEVEL_OFF;
     bool dropmsg = false;
 
     if ((lock != NULL) &&
