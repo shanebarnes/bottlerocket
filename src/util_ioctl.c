@@ -12,6 +12,9 @@
 
 #include <errno.h>
 #include <sys/ioctl.h>
+#if defined(__CYGWIN__)
+    #include <sys/socket.h>
+#endif
 #include <unistd.h>
 
 /**
