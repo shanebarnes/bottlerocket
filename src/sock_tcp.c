@@ -9,7 +9,6 @@
 
 #include "logger.h"
 #include "sock_tcp.h"
-#include "util_ioctl.h"
 
 #include <errno.h>
 #include <sys/types.h>
@@ -310,11 +309,6 @@ int32_t socktcp_recv(struct sockobj * const obj,
         {
             retval = -1;
         }
-        else if ((obj->event.revents & IO_EVENT_RET_ERROR) &&
-                 (utilioctl_getbytesavail(obj->sockfd) <= 0))
-        {
-            retval = -1;
-        }
         else if (obj->event.revents & IO_EVENT_RET_INREADY)
         {
             retval = recv(obj->sockfd, buf, len, flags);
@@ -329,38 +323,17 @@ int32_t socktcp_recv(struct sockobj * const obj,
             }
             else
             {
-                switch (errno)
-                {
-                    // Fatal errors.
-                    case EBADF:
-                    case ECONNRESET:
-                    case EPIPE:
-                    case ENOTSOCK:
-                        logger_printf(LOGGER_LEVEL_ERROR,
-                                      "%s: socket %d fatal error (%d)\n",
-                                      __FUNCTION__,
-                                      obj->sockfd,
-                                      errno);
-                        retval = -1;
-                        break;
-                    // Non-fatal errors.
-                    case EAGAIN:
-                    case EFAULT:
-                    case EINTR:
-                    case EINVAL:
-                    case ENOBUFS:
-                    case ENOTCONN:
-                    case EOPNOTSUPP:
-                    case ETIMEDOUT:
-                    default:
-                        logger_printf(LOGGER_LEVEL_TRACE,
-                                      "%s: socket %d non-fatal error (%d)\n",
-                                      __FUNCTION__,
-                                      obj->sockfd,
-                                      errno);
-                        retval = 0;
-                }
+                logger_printf(LOGGER_LEVEL_TRACE,
+                              "%s: socket %d fatal error (%d)\n",
+                              __FUNCTION__,
+                              obj->sockfd,
+                              errno);
+                retval = -1;
             }
+        }
+        else if (obj->event.revents & IO_EVENT_RET_ERROR)
+        {
+            retval = -1;
         }
         else
         {
