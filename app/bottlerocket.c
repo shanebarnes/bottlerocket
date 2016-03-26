@@ -10,13 +10,14 @@
 #include "cli_options.h"
 #include "input_if_std.h"
 #include "logger.h"
-#include "util_string.h"
 #include "output_if_instance.h"
 #include "output_if_std.h"
-#include "thread_instance.h"
 #include "sock_tcp.h"
 #include "sock_udp.h"
 #include "system_types.h"
+#include "thread_instance.h"
+#include "util_ioctl.h"
+#include "util_string.h"
 #include "util_sysctl.h"
 
 #include <errno.h>
@@ -432,6 +433,8 @@ void *thread_input(void * arg)
 {
     struct thread_instance *instance = (struct thread_instance *)arg;
     char buf[2048];
+    uint16_t cols = 0, rows = 0;
+    int32_t pos = 0;
 
     logger_printf(LOGGER_LEVEL_DEBUG,
                   "%s: starting thread '%s'\n",
@@ -444,9 +447,15 @@ void *thread_input(void * arg)
         {
             if (input_if_std_recv(buf, sizeof(buf), 1000) > 0)
             {
+                utilioctl_gettermsize(&rows, &cols);
+                pos = (pos < 0 ? cols / 4 : -cols / 4);
                 logger_printf(LOGGER_LEVEL_DEBUG,
-                              "%s: read '%s' from input interface\n",
+                              "%s: read from input (%u, %u, %d): '%*s'\n",
                               __FUNCTION__,
+                              rows,
+                              cols,
+                              pos,
+                              pos,
                               buf);
             }
         }
