@@ -21,6 +21,7 @@ int32_t output_if_std_send(void * const buf, const uint32_t len)
     if ((buf != NULL) && (len > 0))
     {
         retval = fputs((const char *)buf, stdout);
+        fflush(stdout);
     }
 
     return retval;
