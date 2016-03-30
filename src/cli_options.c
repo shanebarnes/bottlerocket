@@ -11,6 +11,12 @@
 
 #include <stdio.h>
 
+static struct tuple_element options[] =
+{
+    {"--help",    "-h", "Print help information and quit",    NULL},
+    {"--version", "-v", "Print version information and quit", NULL}
+};
+
 /**
  * @brief Print a command-line usage message to a file stream.
  *
@@ -20,9 +26,19 @@
  */
 static void cli_options_usage(FILE * const stream)
 {
+    uint32_t i;
+
     fprintf(stream, "\nUsage: bottlerocket [options]\n\n");
-    fprintf(stream, "  -h            Print help information and quit\n");
-    fprintf(stream, "  -v            Print version information and quit\n");
+
+    for (i = 0; i < sizeof(options) / sizeof(struct tuple_element); i++)
+    {
+        fprintf(stream,
+                "  %-2s, %-10s %s\n",
+                options[i].sname,
+                options[i].lname,
+                options[i].desc);
+    }
+
     fprintf(stream, "\n");
 }
 

@@ -12,6 +12,14 @@
 
 #include "system_types.h"
 
+struct tuple_element
+{
+  const char *lname; // Tuple attribute long name (e.g., --argument)
+  const char *sname; // Tuple attribute short name (e.g., -a)
+  const char *desc;  // Tuple description
+  const char *dval;  // Tuple default value
+};
+
 struct cli_options_instance
 {
     bool exit;
