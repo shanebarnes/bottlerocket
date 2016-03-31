@@ -17,13 +17,17 @@
  *
  * @param[in] str1       The first string.
  * @param[in] str2       The second string.
- * @param[in] ignoreCase True if the case of characters should not influence the
+ * @param[in] len        The number of characters to compare beginning from the
+ *                       the start of the strings  (0 to compare all characters
+ *                       in strings).
+ * @param[in] ignorecase True if the case of characters should not influence the
  *                       result of the comparison.
  *
  * @return True if the strings match.
  */
 bool utilstring_compare(const char * const str1,
                         const char * const str2,
+                        const size_t len,
                         const bool ignorecase);
 
 /**

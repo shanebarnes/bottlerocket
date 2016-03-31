@@ -21,6 +21,7 @@
  */
 bool utilstring_compare(const char * const str1,
                         const char * const str2,
+                        const size_t len,
                         bool ignorecase)
 {
     bool retval = false;
@@ -33,11 +34,25 @@ bool utilstring_compare(const char * const str1,
     }
     else if (ignorecase == true)
     {
-        retval = (strcasecmp(str1, str2) == 0);
+        if (len != 0)
+        {
+            retval = (strncasecmp(str1, str2, len) == 0);
+        }
+        else
+        {
+            retval = (strcasecmp(str1, str2) == 0);
+        }
     }
     else
     {
-        retval = (strcmp(str1, str2) == 0);
+        if (len != 0)
+        {
+            retval = (strncmp(str1, str2, len) == 0);
+        }
+        else
+        {
+            retval = (strcmp(str1, str2) == 0);
+        }
     }
 
     return retval;
