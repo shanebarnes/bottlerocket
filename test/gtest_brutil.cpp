@@ -18,30 +18,30 @@
 TEST (ManipStringTest, Compare)
 {
     // Empty strings or null pointers.
-    ASSERT_TRUE(utilstring_compare("", "", false));
-    ASSERT_TRUE(utilstring_compare("", "", true));
-    ASSERT_FALSE(utilstring_compare(NULL, "", false));
-    ASSERT_FALSE(utilstring_compare("", NULL, false));
-    ASSERT_FALSE(utilstring_compare(NULL, "", true));
-    ASSERT_FALSE(utilstring_compare("", NULL, true));
-    ASSERT_FALSE(utilstring_compare(NULL, NULL, false));
-    ASSERT_FALSE(utilstring_compare(NULL, NULL, true));
+    ASSERT_TRUE(utilstring_compare("", "", 0, false));
+    ASSERT_TRUE(utilstring_compare("", "", 0, true));
+    ASSERT_FALSE(utilstring_compare(NULL, "", 0, false));
+    ASSERT_FALSE(utilstring_compare("", NULL, 0, false));
+    ASSERT_FALSE(utilstring_compare(NULL, "", 0, true));
+    ASSERT_FALSE(utilstring_compare("", NULL, 0, true));
+    ASSERT_FALSE(utilstring_compare(NULL, NULL, 0, false));
+    ASSERT_FALSE(utilstring_compare(NULL, NULL, 0, true));
 
     // Strings containing only alphabetic characters.
-    ASSERT_TRUE(utilstring_compare("string", "string", false));
-    ASSERT_TRUE(utilstring_compare("string", "string", true));
-    ASSERT_FALSE(utilstring_compare("string", "STRING", false));
-    ASSERT_TRUE(utilstring_compare("string", "STRING", true));
+    ASSERT_TRUE(utilstring_compare("string", "string", 0, false));
+    ASSERT_TRUE(utilstring_compare("string", "string", 0, true));
+    ASSERT_FALSE(utilstring_compare("string", "STRING", 0, false));
+    ASSERT_TRUE(utilstring_compare("string", "STRING", 0, true));
 
     // Strings containing only numeric characters.
-    ASSERT_TRUE(utilstring_compare("123", "123", false));
-    ASSERT_TRUE(utilstring_compare("123", "123", true));
+    ASSERT_TRUE(utilstring_compare("123", "123", 0, false));
+    ASSERT_TRUE(utilstring_compare("123", "123", 0, true));
 
     // String containing alphanumeric characters.
-    ASSERT_TRUE(utilstring_compare("string123", "string123", false));
-    ASSERT_TRUE(utilstring_compare("string123", "string123", true));
-    ASSERT_FALSE(utilstring_compare("string123", "STRING123", false));
-    ASSERT_TRUE(utilstring_compare("string123", "STRING123", true));
+    ASSERT_TRUE(utilstring_compare("string123", "string123", 0, false));
+    ASSERT_TRUE(utilstring_compare("string123", "string123", 0, true));
+    ASSERT_FALSE(utilstring_compare("string123", "STRING123", 0, false));
+    ASSERT_TRUE(utilstring_compare("string123", "STRING123", 0, true));
 }
 
 TEST (ManipStringTest, Concat)
