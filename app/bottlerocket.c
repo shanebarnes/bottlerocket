@@ -7,7 +7,7 @@
  *            This project is released under the MIT license.
  */
 
-#include "cli_options.h"
+#include "args.h"
 #include "input_if_std.h"
 #include "logger.h"
 #include "output_if_instance.h"
@@ -495,11 +495,10 @@ int32_t main(int argc, char **argv)
     uint32_t threadcount = utilsysctl_getcpusavail();
     struct thread_instance *threads = NULL;
     struct output_if_ops output_if;
-    struct cli_options_instance options;
+    struct args_obj args;
     uint16_t i;
 
-    cli_options_decode(argc, argv, &options);
-    if (options.exit == true)
+    if (args_parse(argc, argv, &args) == false)
     {
         exit(EXIT_FAILURE);
     }
