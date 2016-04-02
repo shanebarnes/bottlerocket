@@ -14,6 +14,7 @@ set(BR_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/thread_instance.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_date.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_ioctl.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_inet.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_string.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_sysctl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_unit.c

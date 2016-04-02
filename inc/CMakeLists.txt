@@ -18,6 +18,7 @@ set(BR_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/thread_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_date.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_ioctl.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_inet.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_string.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_sysctl.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_unit.h
