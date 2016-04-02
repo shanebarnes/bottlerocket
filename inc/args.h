@@ -12,6 +12,8 @@
 
 #include "system_types.h"
 
+#include <netinet/in.h>
+
 enum args_mode
 {
     ARGS_MODE_PERF = 0x00,
@@ -29,7 +31,7 @@ struct args_obj
 {
     enum args_mode mode;
     enum args_arch arch;
-    char           ipaddr[128];
+    char           ipaddr[INET6_ADDRSTRLEN];
     uint16_t       ipport;
 };
 

@@ -9,6 +9,7 @@
 
 #include "args.h"
 #include "logger.h"
+#include "util_inet.h"
 #include "util_string.h"
 #include "version.h"
 
@@ -17,15 +18,76 @@
 
 struct tuple_element
 {
-  const char *lname;  // Tuple attribute long name (e.g., --argument)
-  const char  sname;  // Tuple attribute short name (e.g., -a)
-  const char *desc;   // Tuple description
-  const char *dval;   // Tuple default value
-  void (*func)(void); // Tuple validation function pointer.
+  const char *lname;                   // Tuple attribute long name (e.g., --argument)
+  const char  sname;                   // Tuple attribute short name (e.g., -a)
+  const char *desc;                    // Tuple description
+  const char *dval;                    // Tuple default value
+  bool      (*copy)(const char * const val,
+                    struct args_obj *args); // Tuple validation function pointer.
 };
 
 static const char *prefix_skey = "-";
 static const char *prefix_lkey = "--";
+
+/**
+ * @brief Validate and copy an IP address value to an arguments object.
+ *
+ * @param[in]     val  A pointer to a value to validate.
+ * @param[in,out] args A pointer to an argument object.
+ *
+ * @return True if a valid IP address value was copied to an arguments object.
+ */
+static bool args_copyipaddr(const char * const val, struct args_obj *args)
+{
+    bool retval = false;
+
+    if ((val == NULL) || (args == NULL))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        retval = utilinet_getaddrfromhost(val, args->ipaddr);
+    }
+
+    return retval;
+}
+
+/**
+ * @brief Validate and copy an IP port number value to an arguments object.
+ *
+ * @param[in]     val  A pointer to a value to validate.
+ * @param[in,out] args A pointer to an argument object.
+ *
+ * @return True if a valid IP port number value was copied to an arguments
+ *         object.
+ */
+static bool args_copyipport(const char * const val, struct args_obj *args)
+{
+    bool retval = false;
+    int32_t port;
+
+    if ((val == NULL) || (args == NULL))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if ((utilstring_parse(val, "%d", &port) == 1) &&
+            (port >= 0x0000) &&
+            (port <= 0xFFFF))
+        {
+            args->ipport = (uint16_t)port;
+            retval = true;
+        }
+    }
+
+    return retval;
+}
 
 static struct tuple_element options[] =
 {
@@ -38,13 +100,13 @@ static struct tuple_element options[] =
         "0xFFFFFFFF",     NULL},
 #endif
     {"--bind",     'B', "bind to a specific socket address",
-        "127.0.0.1:5001", NULL},
+        "127.0.0.1:5001", args_copyipport},
     {"--client",   'c', "run as a client",
-        "127.0.0.1:5001", NULL},
+        "127.0.0.1:5001", args_copyipaddr},
     {"--server",   's', "run as a server",
-        "0.0.0.0:5001",   NULL},
+        "0.0.0.0:5001",   args_copyipaddr},
     {"--port",     'p', "server port to listen on or connect to",
-        "5001",           NULL},
+        "5001",           args_copyipport},
     {"--help",     'h', "print help information and quit",
         NULL,             NULL},
     {"--version",  'v', "print version information and quit",
@@ -83,19 +145,24 @@ static void args_usage(FILE * const stream)
  * @brief Get an argument (i.e., key-value pair) from an argument vector and map
  *        it to a bottlerocket argument element.
  *
- * @param[in] argc An argument count.
- * @param[in] argv An argument vector.
- * @param[in] argi A pointer to an argument vector index.
+ * @param[in]     argc An argument count.
+ * @param[in]     argv An argument vector.
+ * @param[in,out] argi A pointer to an argument vector index.
+ * @param[in,out] args A pointer to a bottlerocket arguments structure to
+ *                     populate.
  *
  * @return A character representing the unique bottlerocket argument element (0
  *         on error).
  */
-static char args_getarg(const int32_t argc, char ** const argv, int32_t * argi)
+static char args_getarg(const int32_t argc,
+                        char ** const argv,
+                        int32_t *argi,
+                        struct args_obj *args)
 {
     char retval = 0, c;
     uint32_t i;
 
-    if ((argv == NULL) || (argi == NULL))
+    if ((argv == NULL) || (argi == NULL) || (args == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -145,7 +212,17 @@ static char args_getarg(const int32_t argc, char ** const argv, int32_t * argi)
             {
                 (*argi)++;
 
-                fprintf(stderr, "val = %s\n", argv[*argi]);
+                if (options[i].copy != NULL)
+                {
+                    if (options[i].copy(argv[*argi], args) == true)
+                    {
+                        fprintf(stderr, "val = '%s' is valid\n", argv[*argi]);
+                    }
+                    else
+                    {
+                        fprintf(stderr, "val = '%s' is invalid\n", argv[*argi]);
+                    }
+                }
             }
             else
             {
@@ -178,7 +255,7 @@ bool args_parse(const int32_t argc,
     {
         for (i = 1; (i < argc) && (retval == true); i++)
         {
-            switch (args_getarg(argc, argv, &i))
+            switch (args_getarg(argc, argv, &i, args))
             {
 #if !defined(__APPLE__)
                 case 'A':
