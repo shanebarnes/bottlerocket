@@ -34,4 +34,15 @@ bool utilinet_isipv4(const char * const addr);
  */
 bool utilinet_isipv6(const char * const addr);
 
+/**
+ * @brief Get an IP address from a hostname (e.g., reverse DNS lookup).
+ *
+ * @param[in]     hostname A human-readable nickname for an IP address (e.g.,
+ *                         www.google.com).
+ * @param[in,out] addr     A pointer to a string buffer to copy the IP address.
+ *
+ * @return True if an IP address was found for the given hostname.
+ */
+bool utilinet_getaddrfromhost(const char * const hostname, char * const addr);
+
 #endif // _UTIL_INET_H_
