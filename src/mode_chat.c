@@ -27,7 +27,7 @@ static void *modechat_thread(void * arg)
 {
     struct thread_instance *thread = (struct thread_instance *)arg;
     struct sockobj server, socket;
-    char     recvbuf[1024], sendbuf[1024];
+    char     recvbuf[1024], sendbuf[4096];
     uint16_t cols = 0, rows = 0;
     int32_t  lmargin = 0, rmargin = 0;
     int32_t  count = 0, timeoutms = 0;
@@ -73,6 +73,8 @@ static void *modechat_thread(void * arg)
                     socket.event.timeoutms = timeoutms;
                     count++;
                 }
+
+                // @todo Exit if server socket has fatal error.
             }
             else
             {
@@ -119,7 +121,7 @@ static void *modechat_thread(void * arg)
 
                         if (tempbytes > 0)
                         {
-                            sendbytes += tempbytes;
+                            sendbytes += (rmargin - lmargin);
                         }
                     }
                 }
