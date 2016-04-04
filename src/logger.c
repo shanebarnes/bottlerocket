@@ -138,7 +138,7 @@ static char *logger_get_level_string(const enum logger_level level)
  */
 void logger_printf(const enum logger_level level, const char *format, ...)
 {
-    int32_t error = 0;
+    int32_t error = 0, len;
     char msgbuf[128], outbuf[256], timebuf[32];
     va_list args;
     uint64_t sec = 0, nsec = 0;
@@ -184,15 +184,18 @@ void logger_printf(const enum logger_level level, const char *format, ...)
                                      timebuf,
                                      sizeof(timebuf));
 
-                utilstring_concat(outbuf,
-                                  sizeof(outbuf),
-                                  "%s.%06u [%-5s]: %s",
-                                  timebuf,
-                                  (uint32_t)nsec / 1000,
-                                  logger_get_level_string(level),
-                                  msgbuf);
+                len = utilstring_concat(outbuf,
+                                        sizeof(outbuf),
+                                        "%s.%06u [%-5s]: %s",
+                                        timebuf,
+                                        (uint32_t)nsec / 1000,
+                                        logger_get_level_string(level),
+                                        msgbuf);
 
-                output_if->oio_send(outbuf, sizeof(outbuf));
+                if (len > 0)
+                {
+                    output_if->oio_send(outbuf, len);
+                }
             }
         }
 
