@@ -39,8 +39,10 @@ bool utilstring_compare(const char * const str1,
  * @param[in]     format A string containing the concatenation format.
  * @param[in]      ...   A variable size argument list.
  *
- * @return The length of the string (if the buffer had been sufficiently large)
- *         containing the concatenated strings, integers, etc (-1 on error).
+ * @return The length of the string containing the concatenated strings,
+ *         integers, etc (-1 on error). If the string buffer size is too small
+ *         to contain all concatenated values, then the string buffer will be
+ *         truncated but null-terminated.
  */
 int32_t utilstring_concat(char * const str,
                           const size_t len,

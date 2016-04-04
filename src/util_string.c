@@ -80,6 +80,11 @@ int32_t utilstring_concat(char * const buf,
         va_start(args, format);
         retval = vsnprintf(buf, len, format, args);
         va_end(args);
+
+        if ((retval > 0) && ((size_t)retval > len))
+        {
+            retval = len;
+        }
     }
 
     return retval;
