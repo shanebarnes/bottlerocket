@@ -94,6 +94,7 @@ bool thread_instance_destroy(struct thread_instance * const instance)
         pthread_attr_destroy(&instance->attributes);
         free(instance->internal);
         instance->internal = NULL;
+        retval = true;
     }
     else
     {
@@ -153,7 +154,7 @@ bool thread_instance_isrunning(struct thread_instance * const instance)
     if (instance != NULL)
     {
         mutex_instance_lock(&instance->internal->mutex);
-        retval = instance->internal->shutdown;
+        retval = !instance->internal->shutdown;
         mutex_instance_unlock(&instance->internal->mutex);
     }
     else
