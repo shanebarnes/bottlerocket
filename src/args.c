@@ -50,7 +50,9 @@ static bool args_copyipaddr(const char * const val, struct args_obj *args)
     }
     else
     {
-        retval = utilinet_getaddrfromhost(val, args->ipaddr);
+        retval = utilinet_getaddrfromhost(val,
+                                          args->ipaddr,
+                                          sizeof(args->ipaddr));
     }
 
     return retval;
