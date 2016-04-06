@@ -73,13 +73,15 @@ bool utilinet_isipv6(const char * const addr)
 /**
  * @see See header file for interace comments.
  */
-bool utilinet_getaddrfromhost(const char * const hostname, char * const addr)
+bool utilinet_getaddrfromhost(const char * const hostname,
+                              char * const addr,
+                              const uint32_t len)
 {
     bool retval = false;
     struct addrinfo hints, *result, *rp;
     struct sockaddr_in *saddr;
 
-    if ((hostname == NULL) || (addr == NULL))
+    if ((hostname == NULL) || (addr == NULL) || (len == 0))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -101,7 +103,7 @@ bool utilinet_getaddrfromhost(const char * const hostname, char * const addr)
             for (rp = result; rp != NULL; rp = rp->ai_next)
             {
                 saddr = (struct sockaddr_in *)rp->ai_addr;
-                strncpy(addr, inet_ntoa(saddr->sin_addr), strlen(addr));
+                strncpy(addr, inet_ntoa(saddr->sin_addr), len);
                 retval = true;
                 break;
             }
