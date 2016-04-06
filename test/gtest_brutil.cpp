@@ -71,7 +71,7 @@ TEST (ManipStringTest, Concat)
 
     // Buffer overflow.
     ASSERT_EQ(strsize, utilstring_concat(buf, strsize, "%s", str));
-    ASSERT_EQ(strsize, utilstring_concat(buf, strsize - 1, "%s", str));
+    ASSERT_EQ(strsize - 1, utilstring_concat(buf, strsize - 1, "%s", str));
 }
 
 int main(int argc, char **argv)
