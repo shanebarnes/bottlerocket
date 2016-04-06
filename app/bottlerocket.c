@@ -10,6 +10,7 @@
 #include "args.h"
 #include "input_if_std.h"
 #include "logger.h"
+#include "mode_chat.h"
 #include "output_if_instance.h"
 #include "output_if_std.h"
 #include "sock_tcp.h"
@@ -106,7 +107,7 @@ void *thread_client_tcp(void * arg)
     {
         memset(&client, 0, sizeof(client));
         socktcp_create(&client);
-        client.ipaddr = "127.0.0.1";
+        //client.ipaddr = "127.0.0.1";
         client.ipport = 5001;
 
         if ((client.ops.soo_open(&client) == true) &&
@@ -122,7 +123,7 @@ void *thread_client_tcp(void * arg)
             client.event.timeoutms = 1000;
             sendcount = 0;
 
-            while ((thread_instance_isrunning(instance) == false) &&
+            while ((thread_instance_isrunning(instance) == true) &&
                    (sendcount < 5))
             {
                 error = client.ops.soo_send(&client, buf, sizeof(buf));
@@ -190,7 +191,7 @@ void *thread_server_tcp(void * arg)
     {
         memset(&server, 0, sizeof(server));
         socktcp_create(&server);
-        server.ipaddr = "127.0.0.1";
+        //server.ipaddr = "127.0.0.1";
         server.ipport = 5001;
 
         if ((server.ops.soo_open(&server) == true) &&
@@ -204,7 +205,7 @@ void *thread_server_tcp(void * arg)
                           __FUNCTION__,
                           server.addrself.sockaddrstr);
 
-            while (thread_instance_isrunning(instance) == false)
+            while (thread_instance_isrunning(instance) == true)
             {
                 if (count <= 0)
                 {
@@ -291,7 +292,7 @@ void *thread_server_udp(void * arg)
     {
         memset(&server, 0, sizeof(server));
         sockudp_create(&server);
-        server.ipaddr = "127.0.0.1";
+        //server.ipaddr = "127.0.0.1";
         server.ipport = 5001;
 
         if ((server.ops.soo_open(&server) == true) &&
@@ -304,7 +305,7 @@ void *thread_server_udp(void * arg)
                           __FUNCTION__,
                           server.addrself.sockaddrstr);
 
-            while (thread_instance_isrunning(instance) == false)
+            while (thread_instance_isrunning(instance) == true)
             {
                 error = server.ops.soo_recv(&server, buf, sizeof(buf));
 
@@ -367,7 +368,7 @@ void *thread_client_udp(void * arg)
     {
         memset(&client, 0, sizeof(client));
         sockudp_create(&client);
-        client.ipaddr = "127.0.0.1";
+        //client.ipaddr = "127.0.0.1";
         client.ipport = 5001;
 
         if ((client.ops.soo_open(&client) == true) &&
@@ -383,7 +384,7 @@ void *thread_client_udp(void * arg)
             client.event.timeoutms = 1000;
             sendcount = 0;
 
-            while ((thread_instance_isrunning(instance) == false) &&
+            while ((thread_instance_isrunning(instance) == true) &&
                    (sendcount < 5))
             {
                 error = client.ops.soo_send(&client, buf, sizeof(buf));
@@ -428,59 +429,6 @@ logger_printf(LOGGER_LEVEL_ERROR, "%s: sending\n", __FUNCTION__); //??
 }
 
 /**
- * @brief Input thread function.
- *
- * @param[in] arg Thread input argument.
- *
- * @return NULL.
- */
-void *thread_input(void * arg)
-{
-    struct thread_instance *instance = (struct thread_instance *)arg;
-    char buf[2048];
-    uint16_t cols = 0, rows = 0;
-    int32_t pos = 0;
-
-    logger_printf(LOGGER_LEVEL_DEBUG,
-                  "%s: starting thread '%s'\n",
-                  __FUNCTION__,
-                  instance->name);
-
-    if (instance != NULL)
-    {
-        while (thread_instance_isrunning(instance) == false)
-        {
-            if (input_if_std_recv(buf, sizeof(buf), 1000) > 0)
-            {
-                utilioctl_gettermsize(&rows, &cols);
-                pos = (pos < 0 ? cols / 4 : -cols / 4);
-                logger_printf(LOGGER_LEVEL_DEBUG,
-                              "%s: read from input (%u, %u, %d): '%*s'\n",
-                              __FUNCTION__,
-                              rows,
-                              cols,
-                              pos,
-                              pos,
-                              buf);
-            }
-        }
-
-        logger_printf(LOGGER_LEVEL_DEBUG,
-                      "%s: stopping thread '%s'\n",
-                      __FUNCTION__,
-                      instance->name);
-    }
-    else
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: thread instance is invalid\n",
-                      __FUNCTION__);
-    }
-
-    return NULL;
-}
-
-/**
  * @brief Bottlerocket entry point.
  *
  * @param argc Command-line argument count.
@@ -492,21 +440,16 @@ void *thread_input(void * arg)
 int32_t main(int argc, char **argv)
 {
     int32_t retval = EXIT_SUCCESS;
-    uint32_t threadcount = utilsysctl_getcpusavail();
-    struct thread_instance *threads = NULL;
+    //uint32_t threadcount = utilsysctl_getcpusavail();
+    //struct thread_instance *threads = NULL;
     struct output_if_ops output_if;
     struct args_obj args;
-    uint16_t i;
-
-    if (args_parse(argc, argv, &args) == false)
-    {
-        exit(EXIT_FAILURE);
-    }
+    //uint16_t i;
 
     logger_create();
     output_if.oio_send = output_if_std_send;
     logger_set_output(&output_if);
-    logger_set_level(LOGGER_LEVEL_DEBUG);
+    logger_set_level(LOGGER_LEVEL_WARN);
 
     // Catch and handle signals.
     signal(SIGHUP,  signal_handler);
@@ -517,57 +460,70 @@ int32_t main(int argc, char **argv)
     signal(SIGSTOP, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    if (threadcount != 3)
+    if (args_parse(argc, argv, &args) == false)
     {
-        threadcount = 3;
+        retval = EXIT_FAILURE;
     }
-
-    threads = (struct thread_instance *)malloc(threadcount * sizeof(struct thread_instance));
-
-    if (argc > 0 && argv)
+    else
     {
-        for (i = 0; i < threadcount; i++)
+        if (args.mode == ARGS_MODE_CHAT)
         {
-            utilstring_concat(threads[i].name,
-                              sizeof(threads[i].name),
-                              "t-%02d",
-                              i);
-            switch (i)
-            {
-                case 0:
-                    threads[i].function = thread_server_tcp;
-                    break;
-                case 1:
-                    threads[i].function = thread_server_udp;
-                    break;
-                case 2:
-                    threads[i].function = thread_input;
-                    break;
-                case 3:
-                    threads[i].function = thread_client_tcp;
-                    break;
-                case 4:
-                    threads[i].function = thread_client_udp;
-                    break;
-                default:
-                    break;
-            }
-            threads[i].argument = &threads[i];
+            modechat_create(&args);
+            modechat_start();
 
-            thread_instance_create(&threads[i]);
-            thread_instance_start(&threads[i]);
+            pause();
+            modechat_stop();
         }
     }
 
-    pause();
+    //if (threadcount != 3)
+    //{
+    //    threadcount = 3;
+    //}
 
-    for (i = 0; i < threadcount; i++)
-    {
-        thread_instance_stop(&threads[i]);
-        thread_instance_destroy(&threads[i]);
-    }
+    //threads = (struct thread_instance *)malloc(threadcount * sizeof(struct thread_instance));
 
-    logger_printf(LOGGER_LEVEL_TRACE, "%s: exiting\n", __FUNCTION__);
+    //if (argc > 0 && argv)
+    //{
+    //    for (i = 0; i < threadcount; i++)
+    //    {
+    //        utilstring_concat(threads[i].name,
+    //                          sizeof(threads[i].name),
+    //                          "t-%02d",
+    //                          i);
+    //        switch (i)
+    //        {
+    //            case 0:
+    //                threads[i].function = thread_server_tcp;
+    //                break;
+    //            case 1:
+    //                threads[i].function = thread_server_udp;
+    //                break;
+    //            case 2:
+    //                threads[i].function = thread_client_tcp;
+    //                break;
+    //            case 3:
+    //                threads[i].function = thread_client_udp;
+    //                break;
+    //            default:
+    //                break;
+    //        }
+    //        threads[i].argument = &threads[i];
+
+    //        thread_instance_create(&threads[i]);
+    //        thread_instance_start(&threads[i]);
+    //    }
+    //}
+
+    //pause();
+
+    //for (i = 0; i < threadcount; i++)
+    //{
+    //    thread_instance_stop(&threads[i]);
+    //    thread_instance_destroy(&threads[i]);
+    //}
+
+    //logger_printf(LOGGER_LEVEL_TRACE, "%s: exiting\n", __FUNCTION__);
     logger_destroy();
 
     return retval;
