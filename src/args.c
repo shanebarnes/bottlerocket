@@ -264,6 +264,14 @@ static char args_getarg(const int32_t argc,
                         argv[*argi]);
                 retval = 0;
             }
+            else if (options[i].copy(options[i].dval, args) == false)
+            {
+                fprintf(stderr,
+                        "\ninvalid option '%s %s'\n",
+                        argv[*argi],
+                        options[i].dval);
+                retval = 0;
+            }
         }
     }
 
@@ -290,8 +298,7 @@ bool args_parse(const int32_t argc,
     {
         // Set defaults.
         args->mode = ARGS_MODE_CHAT;
-        args->arch = ARGS_ARCH_SERVER;
-        args_copyipaddr("127.0.0.1", args);
+        args->arch = ARGS_ARCH_NULL;
         args_copyipport("5001", args);
 
         for (i = 1; (i < argc) && (retval == true); i++)
@@ -305,10 +312,26 @@ bool args_parse(const int32_t argc,
                 case 'B':
                     break;
                 case 'c':
-                    args->arch = ARGS_ARCH_CLIENT;
+                    if (args->arch == ARGS_ARCH_NULL)
+                    {
+                        args->arch = ARGS_ARCH_CLIENT;
+                    }
+                    else
+                    {
+                        args_usage(stdout);
+                        retval = false;
+                    }
                     break;
                 case 's':
-                    args->arch = ARGS_ARCH_SERVER;
+                    if (args->arch == ARGS_ARCH_NULL)
+                    {
+                        args->arch = ARGS_ARCH_SERVER;
+                    }
+                    else
+                    {
+                        args_usage(stdout);
+                        retval = false;
+                    }
                     break;
                 case 'p':
                     break;

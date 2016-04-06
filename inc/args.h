@@ -16,15 +16,17 @@
 
 enum args_mode
 {
-    ARGS_MODE_PERF = 0x00,
-    ARGS_MODE_CHAT = 0x01
+    ARGS_MODE_NULL = 0x00,
+    ARGS_MODE_PERF = 0x01,
+    ARGS_MODE_CHAT = 0x02
 };
 
 enum args_arch
 {
-    ARGS_ARCH_CLIENT = 0x00,
-    ARGS_ARCH_SERVER = 0x01,
-    ARGS_ARCH_PEER2P = 0x02
+    ARGS_ARCH_NULL   = 0x00,
+    ARGS_ARCH_CLIENT = 0x01,
+    ARGS_ARCH_SERVER = 0x02,
+    ARGS_ARCH_PEER2P = 0x03
 };
 
 struct args_obj
