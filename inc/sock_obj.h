@@ -155,8 +155,8 @@ struct sockobj
                               addrpeer;
     struct addrinfo           ainfo,
                              *alist;
-    char                     *ipaddr; // User configuration
-    uint16_t                  ipport; // User configuration
+    char                      ipaddr[INET6_ADDRSTRLEN];
+    uint16_t                  ipport;
     enum sockobj_state        state;
 };
 
