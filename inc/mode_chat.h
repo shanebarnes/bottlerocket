@@ -13,7 +13,7 @@
 #include "args.h"
 #include "system_types.h"
 
-bool modechat_create(const struct args_obj * const args);
+bool modechat_create(struct args_obj * const args);
 
 bool modechat_start(void);
 

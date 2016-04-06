@@ -19,6 +19,7 @@
 #include <string.h>
 
 static struct thread_instance thread;
+static struct args_obj *opts = NULL;
 
 /**
  * @see See header file for interace comments.
@@ -30,7 +31,7 @@ static void *modechat_thread(void * arg)
     char     recvbuf[1024], sendbuf[4096];
     uint16_t cols = 0, rows = 0;
     int32_t  lmargin = 0, rmargin = 0;
-    int32_t  count = 0, timeoutms = 0;
+    int32_t  count = 0, timeoutms = 500;
     int32_t  recvbytes = 0, sendbytes = 0, tempbytes = 0;
 
     if (thread == NULL)
@@ -42,8 +43,8 @@ static void *modechat_thread(void * arg)
     else
     {
         socktcp_create(&server);
-        server.ipaddr = "127.0.0.1";
-        server.ipport = 5001;
+        memcpy(server.ipaddr, opts->ipaddr, sizeof(server.ipaddr));
+        server.ipport = opts->ipport;
 
         if ((server.ops.soo_open(&server) == false) ||
             (server.ops.soo_bind(&server) == false) ||
@@ -84,18 +85,24 @@ static void *modechat_thread(void * arg)
 
                 if (recvbytes > 0)
                 {
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: bytes received = %d\n",
-                                  __FUNCTION__,
-                                  recvbytes);
+                    utilioctl_gettermsize(&rows, &cols);
+                    rmargin = cols;
+                    lmargin = cols / 2;
+
+                    // Add tag to each message including an audible beep.
+                    // @todo Make audible beep optional.
+                    tempbytes = utilstring_concat(sendbuf,
+                                                  sizeof(sendbuf),
+                                                  "%*s[%s (%4d bytes)]\a\n",
+                                                  lmargin,
+                                                  "",
+                                                  socket.addrpeer.sockaddrstr,
+                                                  recvbytes);
+                    output_if_std_send(sendbuf, tempbytes);
 
                     // Null-terminate the string.
                     recvbuf[recvbytes] = '\0';
                     recvbytes++;
-
-                    utilioctl_gettermsize(&rows, &cols);
-                    rmargin = cols;
-                    lmargin = cols / 2;
 
                     sendbytes = 0;
 
@@ -116,7 +123,6 @@ static void *modechat_thread(void * arg)
                                                       rmargin - lmargin,
                                                       rmargin - lmargin,
                                                       recvbuf + sendbytes);
-
                         tempbytes = output_if_std_send(sendbuf, tempbytes);
 
                         if (tempbytes > 0)
@@ -153,13 +159,19 @@ static void *modechat_thread(void * arg)
 /**
  * @see See header file for interace comments.
  */
-bool modechat_create(const struct args_obj * const args)
+bool modechat_create(struct args_obj * const args)
 {
     bool retval = false;
 
     if (args == NULL)
     {
-
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        opts = args;
     }
 
     return retval;
@@ -175,7 +187,13 @@ bool modechat_start(void)
     thread.function = modechat_thread;
     thread.argument = &thread;
 
-    if (thread_instance_create(&thread) == false)
+    if (opts == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (thread_instance_create(&thread) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to create chat thread\n",
