@@ -22,6 +22,7 @@ struct tuple_element
   const char  sname;                   // Tuple attribute short name (e.g., -a)
   const char *desc;                    // Tuple description
   const char *dval;                    // Tuple default value
+  const bool  oval;                    // Tuple optional value
   bool      (*copy)(const char * const val,
                     struct args_obj *args); // Tuple validation function pointer.
 };
@@ -91,26 +92,26 @@ static bool args_copyipport(const char * const val, struct args_obj *args)
 
 static struct tuple_element options[] =
 {
-    {"chat",       0,   "enable chat mode",
-        "disabled",       NULL},
-    {"perf",       0,   "enable performance benchmarking mode",
-        "enabled",        NULL},
+    {"chat",        0,  "enable chat mode",
+        "enabled",      true,  NULL},
+    {"perf",        0,  "enable performance benchmarking mode",
+        "disabled",     true,  NULL},
 #if !defined(__APPLE__)
     {"--affinity", 'A', "set CPU affinity",
-        "0xFFFFFFFF",     NULL},
+        "0xFFFFFFFF",   false, NULL},
 #endif
     {"--bind",     'B', "bind to a specific socket address",
-        "127.0.0.1:5001", args_copyipport},
+        "127.0.0.1:0",  false, args_copyipport},
     {"--client",   'c', "run as a client",
-        "127.0.0.1:5001", args_copyipaddr},
+        "127.0.0.1",    true, args_copyipaddr},
     {"--server",   's', "run as a server",
-        "0.0.0.0:5001",   args_copyipaddr},
+        "0.0.0.0",      true, args_copyipaddr},
     {"--port",     'p', "server port to listen on or connect to",
-        "5001",           args_copyipport},
+        "5001",         false, args_copyipport},
     {"--help",     'h', "print help information and quit",
-        NULL,             NULL},
+        NULL,           false, NULL},
     {"--version",  'v', "print version information and quit",
-        NULL,             NULL}
+        NULL,           false, NULL}
 };
 
 /**
@@ -193,16 +194,28 @@ static char args_getarg(const int32_t argc,
             }
         }
 
-        // If an argument attribute name was found, then check the next array
-        // index for the argument attribute value if a value is expected. A
-        // value is only required if a default value was specified in the
-        // matching argument tuple.
-        if ((retval != 0) &&
-            ((*argi+ 1) < argc) &&
-            (options[i].dval != NULL) &&
-            (options[i+1].sname != 0))
+
+        if (retval == 0)
         {
-            // Check if next value starts with a short- or long-key prefix.
+            fprintf(stderr,
+                    "\nunkown option '%s'\n",
+                    argv[*argi]);
+        }
+        else if (options[i].dval == NULL)
+        {
+            // Do nothing.
+        }
+        else if (options[i].copy == NULL)
+        {
+            // Do nothing.
+        }
+        // If an argument attribute name was found, then check the next array
+        // index for the argument attribute value if a value is expected (i.e.,
+        // default value is not null).
+        else if ((*argi + 1) < argc)
+        {
+            // The argument attribute value cannot start with either a short- or
+            // long-key prefix.
             if ((utilstring_compare(argv[*argi+1],
                                     prefix_skey,
                                     strlen(prefix_skey), true) == false) &&
@@ -212,21 +225,41 @@ static char args_getarg(const int32_t argc,
             {
                 (*argi)++;
 
-                if (options[i].copy != NULL)
+                if (options[i].copy(argv[*argi], args) == false)
                 {
-                    if (options[i].copy(argv[*argi], args) == true)
-                    {
-                        fprintf(stderr, "val = '%s' is valid\n", argv[*argi]);
-                    }
-                    else
-                    {
-                        fprintf(stderr, "val = '%s' is invalid\n", argv[*argi]);
-                    }
+                    fprintf(stderr,
+                            "\ninvalid option '%s %s'\n",
+                            argv[*argi-1],
+                            argv[*argi]);
+                    retval = 0;
                 }
             }
             else
             {
-                // @todo value error should be output rather than key error.
+                if (options[i].oval == false)
+                {
+                    fprintf(stderr,
+                            "\nmissing value for option '%s'\n",
+                            argv[*argi]);
+                    retval = 0;
+                }
+                else if (options[i].copy(options[i].dval, args) == false)
+                {
+                    fprintf(stderr,
+                            "\ninvalid option '%s %s'\n",
+                            argv[*argi],
+                            options[i].dval);
+                    retval = 0;
+                }
+            }
+        }
+        else
+        {
+            if (options[i].oval == false)
+            {
+                fprintf(stderr,
+                        "\nmissing value for option '%s'\n",
+                        argv[*argi]);
                 retval = 0;
             }
         }
@@ -253,16 +286,28 @@ bool args_parse(const int32_t argc,
     }
     else
     {
+        // Set defaults.
+        args->mode = ARGS_MODE_CHAT;
+        args->arch = ARGS_ARCH_SERVER;
+        args_copyipaddr("127.0.0.1", args);
+        args_copyipport("5001", args);
+
         for (i = 1; (i < argc) && (retval == true); i++)
         {
             switch (args_getarg(argc, argv, &i, args))
             {
 #if !defined(__APPLE__)
                 case 'A':
+                    break;
 #endif
                 case 'B':
+                    break;
                 case 'c':
+                    args->arch = ARGS_ARCH_CLIENT;
+                    break;
                 case 's':
+                    args->arch = ARGS_ARCH_SERVER;
+                    break;
                 case 'p':
                     break;
                 case 'h':
@@ -277,10 +322,8 @@ bool args_parse(const int32_t argc,
                             version_date());
                     break;
                 default:
-                    fprintf(stderr,
-                            "bottlerocket: unknown option '%s'\n",
-                            argv[i]);
                     args_usage(stdout);
+                    retval = false;
             }
         }
     }
