@@ -77,9 +77,7 @@ bool logger_set_level(const enum logger_level level)
 {
     bool retval = false;
 
-    if ((lock != NULL) &&
-        (level >= LOGGER_LEVEL_MIN) &&
-        (level <= LOGGER_LEVEL_MAX))
+    if ((lock != NULL) && (level <= LOGGER_LEVEL_MAX))
     {
         mutex_instance_lock(lock);
         static_level = level;
