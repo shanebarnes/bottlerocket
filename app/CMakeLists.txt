@@ -19,6 +19,10 @@ include_directories(${BR_LIB_INCLUDE_DIR})
 link_directories(${BR_LIB_INCLUDE_DIR})
 link_libraries(pthread)
 
+if (${LINUX})
+    link_libraries(rt)
+endif(${LINUX})
+
 add_executable(${PROJECT_NAME} ${PROJECT_NAME}.c ${BR_HEADERS} ${BR_SOURCES})
 
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
