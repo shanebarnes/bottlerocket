@@ -279,7 +279,7 @@ static char args_getarg(const int32_t argc,
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool args_parse(const int32_t argc,
                 char ** const argv,
