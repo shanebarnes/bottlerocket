@@ -13,7 +13,7 @@
 #include <errno.h>
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool listdlink_inserthead(struct listdlink * const list, void * const val)
 {
@@ -65,7 +65,7 @@ bool listdlink_inserthead(struct listdlink * const list, void * const val)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool listdlink_inserttail(struct listdlink * const list, void * const val)
 {
@@ -117,7 +117,7 @@ bool listdlink_inserttail(struct listdlink * const list, void * const val)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool listdlink_deletehead(struct listdlink * const list)
 {
@@ -155,7 +155,7 @@ bool listdlink_deletehead(struct listdlink * const list)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool listdlink_deletetail(struct listdlink * const list)
 {
