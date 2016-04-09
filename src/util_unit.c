@@ -217,7 +217,7 @@ static uint64_t utilunit_getsecsprefix(const char * const prefix)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 uint64_t utilunit_getbitrate(const char * const bitrate)
 {
@@ -245,7 +245,7 @@ uint64_t utilunit_getbitrate(const char * const bitrate)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 uint64_t utilunit_getbytes(const char * const bytes)
 {
@@ -273,7 +273,7 @@ uint64_t utilunit_getbytes(const char * const bytes)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 uint64_t utilunit_getsecs(const char * const secs)
 {
@@ -347,7 +347,7 @@ static char utilunit_getprefixsymbol(const uint64_t prefix)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 void utilunit_getdecformat(const uint64_t base,
                            const uint8_t precision,
