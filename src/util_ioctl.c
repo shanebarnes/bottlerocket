@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 int32_t utilioctl_getbytesavail(const int32_t fd)
 {
@@ -37,7 +37,7 @@ int32_t utilioctl_getbytesavail(const int32_t fd)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool utilioctl_gettermsize(uint16_t * const rows, uint16_t * const cols)
 {
