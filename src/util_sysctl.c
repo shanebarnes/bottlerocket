@@ -16,7 +16,7 @@
 #endif
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 uint32_t utilsysctl_getcpusavail(void)
 {
