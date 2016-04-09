@@ -7,6 +7,7 @@ set(BR_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/io_event_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/io_event_poll.h
     ${CMAKE_CURRENT_SOURCE_DIR}/logger.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/list_dlink.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_chat.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mutex_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_instance.h
