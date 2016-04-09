@@ -15,7 +15,7 @@
 #include <string.h>
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool utilinet_isipv4(const char * const addr)
 {
@@ -43,7 +43,7 @@ bool utilinet_isipv4(const char * const addr)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool utilinet_isipv6(const char * const addr)
 {
@@ -71,7 +71,7 @@ bool utilinet_isipv6(const char * const addr)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool utilinet_getaddrfromhost(const char * const hostname,
                               char * const addr,
