@@ -13,7 +13,7 @@
 #include <errno.h>
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool treebin_insert(const struct treebin tree,
                     struct treebin_node **node,
@@ -63,7 +63,7 @@ bool treebin_insert(const struct treebin tree,
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool treebin_delete(const struct treebin tree,
                     struct treebin_node **node,
@@ -83,6 +83,7 @@ bool treebin_delete(const struct treebin tree,
     }
     else
     {
+        // @todo Remove node without removing children or sub-trees.
         treebin_delete(tree, &((*node)->left), key);
         treebin_delete(tree, &((*node)->right), key);
         free(*node);
@@ -94,7 +95,7 @@ bool treebin_delete(const struct treebin tree,
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 struct treebin_node *treebin_search(const struct treebin tree,
                                     struct treebin_node **node,
@@ -129,7 +130,7 @@ struct treebin_node *treebin_search(const struct treebin tree,
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 int32_t treebin_compareint32(void * const key1, void * const key2)
 {
