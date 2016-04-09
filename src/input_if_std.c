@@ -14,16 +14,17 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 int32_t input_if_std_recv(void * const buf,
                           const uint32_t len,
                           const int32_t timeoutms)
 {
     int32_t retval = -1;
-    int32_t fd = fileno(stdin);
+    int32_t fd = STDIN_FILENO;
     struct io_event_instance instance;
 
     if ((buf == NULL) || (len == 0))
