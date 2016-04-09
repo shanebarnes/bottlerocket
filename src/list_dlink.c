@@ -2,7 +2,7 @@
  * @file      list_dlink.c
  * @brief     Doubly linked list implementation.
  * @author    Shane Barnes
- * @date      08 Alr 2016
+ * @date      08 Apr 2016
  * @copyright Copyright 2016 Shane Barnes. All rights reserved.
  *            This project is released under the MIT license.
  */
