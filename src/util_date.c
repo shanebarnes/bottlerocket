@@ -155,15 +155,15 @@ bool utildate_gettsformat(const uint64_t ts,
 {
     bool retval = false;
     time_t time;
-    struct tm *tm;
+    struct tm tm;
 
     if ((buf != NULL) && (len > 0))
     {
         time = ts / prefix;
 
-        tm = localtime(&time);
+        localtime_r(&time, &tm);
 
-        if (strftime(buf, len, format, tm) != 0)
+        if (strftime(buf, len, format, &tm) != 0)
         {
             retval = true;
         }
