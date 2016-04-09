@@ -16,7 +16,7 @@ static const char     *date  = "Mar 12 2016 14:10:00";
 static const char     *build = __DATE__ " " __TIME__;
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 uint64_t version_number(void)
 {
@@ -24,7 +24,7 @@ uint64_t version_number(void)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 uint16_t version_major(void)
 {
@@ -32,7 +32,7 @@ uint16_t version_major(void)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 uint16_t version_minor(void)
 {
@@ -40,7 +40,7 @@ uint16_t version_minor(void)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 uint16_t version_patch(void)
 {
@@ -48,7 +48,7 @@ uint16_t version_patch(void)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 const char * version_date(void)
 {
@@ -56,7 +56,7 @@ const char * version_date(void)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 const char * version_build(void)
 {
