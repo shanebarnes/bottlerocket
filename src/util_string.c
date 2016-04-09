@@ -17,7 +17,7 @@
 #include <string.h>
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool utilstring_compare(const char * const str1,
                         const char * const str2,
@@ -59,7 +59,7 @@ bool utilstring_compare(const char * const str1,
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 int32_t utilstring_concat(char * const buf,
                           const size_t len,
@@ -91,7 +91,7 @@ int32_t utilstring_concat(char * const buf,
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 int32_t utilstring_parse(const char * const str,
                          const char * const format,
@@ -117,7 +117,7 @@ int32_t utilstring_parse(const char * const str,
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 void utilstring_tolower(char * const str)
 {
@@ -139,7 +139,7 @@ void utilstring_tolower(char * const str)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 void utilstring_toupper(char * const str)
 {
