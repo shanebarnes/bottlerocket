@@ -22,7 +22,7 @@ static struct thread_instance thread;
 static struct args_obj *opts = NULL;
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 static void *modechat_thread(void * arg)
 {
@@ -157,7 +157,7 @@ static void *modechat_thread(void * arg)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool modechat_create(struct args_obj * const args)
 {
@@ -178,7 +178,7 @@ bool modechat_create(struct args_obj * const args)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool modechat_start(void)
 {
@@ -215,7 +215,7 @@ bool modechat_start(void)
 }
 
 /**
- * @see See header file for interace comments.
+ * @see See header file for interface comments.
  */
 bool modechat_stop(void)
 {
