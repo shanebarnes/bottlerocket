@@ -20,6 +20,7 @@ set(BR_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/util_string.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_sysctl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_unit.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/vector.c
     ${CMAKE_CURRENT_SOURCE_DIR}/version.c
     PARENT_SCOPE
 )
