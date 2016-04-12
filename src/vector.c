@@ -7,8 +7,8 @@
  *            This project is released under the MIT license.
  */
 
-#include "vector.h"
 #include "logger.h"
+#include "vector.h"
 
 #include <errno.h>
 
