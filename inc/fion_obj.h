@@ -11,6 +11,7 @@
 #define _FION_OBJ_H_
 
 #include "system_types.h"
+#include "vector.h"
 
 enum fionobj_pevent
 {
@@ -50,6 +51,30 @@ struct fionobj_ops
     bool (*foo_destroy)(struct fionobj * const obj);
 
     /**
+     * @brief Insert a file descriptor into a file I/O event notification
+     *        object.
+     *
+     * @param[in,out] obj A pointer to a file I/O event notificaion object.
+     * @param[in]     fd  A file descriptor.
+     *
+     * @return True if a file descriptor was inserted into a file I/O event
+     *         notification object.
+     */
+    bool (*foo_insertfd)(struct fionobj * const obj, const int32_t fd);
+
+    /**
+     * @brief Delete a file descriptor from a file I/O event notification
+     *        object.
+     *
+     * @param[in,out] obj A pointer to a file I/O event notificaion object.
+     * @param[in]     fd  A file descriptor.
+     *
+     * @return True if a file descriptor was deleted from a file I/O event
+     *         notification object.
+     */
+    bool (*foo_deletefd)(struct fionobj * const obj, const int32_t fd);
+
+    /**
      * @brief Set the file I/O event flags to handle.
      *
      * @param[in,out] obj A pointer to a file I/O event notification object.
@@ -73,13 +98,11 @@ struct fionobj_ops
 
 struct fionobj
 {
-    struct fionobj_ops  ops;
-    int32_t            *fds;
-    int32_t             size;
-    int32_t             timeoutms;
-    uint32_t            pevents;
-    uint32_t            revents;
-    struct internals   *internal;
+    struct fionobj_ops ops;
+    struct vector      fds;
+    int32_t            timeoutms;
+    uint32_t           pevents;
+    uint32_t           revents;
 };
 
 #endif // _FION_OBJ_H_
