@@ -29,20 +29,23 @@ bool socktcp_create(struct sockobj * const obj)
     }
     else
     {
-        obj->ops.soo_create  = socktcp_create;
-        obj->ops.soo_destroy = socktcp_destroy;
-        obj->ops.soo_open    = sockobj_open;
-        obj->ops.soo_close   = sockobj_close;
-        obj->ops.soo_bind    = sockobj_bind;
-        obj->ops.soo_listen  = socktcp_listen;
-        obj->ops.soo_accept  = socktcp_accept;
-        obj->ops.soo_connect = socktcp_connect;
-        obj->ops.soo_recv    = socktcp_recv;
-        obj->ops.soo_send    = socktcp_send;
+        if (sockobj_create(obj) == true)
+        {
+            obj->ops.soo_create  = socktcp_create;
+            obj->ops.soo_destroy = socktcp_destroy;
+            obj->ops.soo_open    = sockobj_open;
+            obj->ops.soo_close   = sockobj_close;
+            obj->ops.soo_bind    = sockobj_bind;
+            obj->ops.soo_listen  = socktcp_listen;
+            obj->ops.soo_accept  = socktcp_accept;
+            obj->ops.soo_connect = socktcp_connect;
+            obj->ops.soo_recv    = socktcp_recv;
+            obj->ops.soo_send    = socktcp_send;
 
-        obj->socktype = SOCK_STREAM;
+            obj->socktype = SOCK_STREAM;
 
-        retval = true;
+            retval = true;
+        }
     }
 
     return retval;
@@ -63,18 +66,7 @@ bool socktcp_destroy(struct sockobj * const obj)
     }
     else
     {
-        obj->ops.soo_create  = NULL;
-        obj->ops.soo_destroy = NULL;
-        obj->ops.soo_open    = NULL;
-        obj->ops.soo_close   = NULL;
-        obj->ops.soo_bind    = NULL;
-        obj->ops.soo_listen  = NULL;
-        obj->ops.soo_accept  = NULL;
-        obj->ops.soo_connect = NULL;
-        obj->ops.soo_recv    = NULL;
-        obj->ops.soo_send    = NULL;
-
-        retval = true;
+        retval = sockobj_destroy(obj);
     }
 
     return retval;
@@ -122,6 +114,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
     bool      retval     = false;
     socklen_t socklen    = 0;
     bool      sockaccept = false;
+    int32_t   sockfd     = -1;
 #if defined(LINUX)
     int32_t   flags      = 0;
 #endif
@@ -144,10 +137,10 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
         //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
         //       for signaling shutdown events, etc.
 
-        if (listener->event.ops.ieo_poll(&listener->event) == true)
+        if (listener->event.ops.foo_poll(&listener->event) == true)
         {
-            if (((listener->event.revents & IO_EVENT_RET_TIMEOUT) == 0) &&
-                ((listener->event.revents & IO_EVENT_RET_ERROR) == 0))
+            if (((listener->event.revents & FIONOBJ_REVENT_TIMEOUT) == 0) &&
+                ((listener->event.revents & FIONOBJ_REVENT_ERROR) == 0))
             {
                 sockaccept = true;
             }
@@ -156,25 +149,32 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
         if (sockaccept == true)
         {
 #if defined(LINUX)
-            if ((obj->sockfd = accept4(listener->sockfd,
-                                       (struct sockaddr *)&(listener->addrpeer.sockaddr),
-                                       &socklen,
-                                       flags)) > -1)
+            if ((sockfd = accept4(listener->sockfd,
+                                  (struct sockaddr *)&(listener->addrpeer.sockaddr),
+                                  &socklen,
+                                  flags)) > -1)
 #else
-            if ((obj->sockfd = accept(listener->sockfd,
-                                      (struct sockaddr *)&(listener->addrpeer.sockaddr),
-                                      &socklen)) > -1)
+            if ((sockfd = accept(listener->sockfd,
+                                 (struct sockaddr *)&(listener->addrpeer.sockaddr),
+                                 &socklen)) > -1)
 #endif
             {
                 socklen = sizeof(obj->addrself.sockaddr);
 
-                if ((socktcp_create(obj) == false) ||
-                    (sockobj_create(obj)) == false)
+                if (socktcp_create(obj) == false)
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %d accept initialization failed\n",
                                   __FUNCTION__,
                                   obj->sockfd);
+                }
+                else if (((obj->sockfd = sockfd) != sockfd) ||
+                         (obj->event.ops.foo_setflags(&obj->event) == false))
+                {
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: invalid socket fd (%d)\n",
+                                  __FUNCTION__,
+                                  sockfd);
                 }
                 else if (sockobj_getaddrself(obj) == false)
                 {
@@ -241,24 +241,24 @@ bool socktcp_connect(struct sockobj * const obj)
         {
             if (errno == EINPROGRESS)
             {
-                obj->event.pevents = IO_EVENT_POLL_IN | IO_EVENT_POLL_OUT;
-                obj->event.ops.ieo_setflags(&obj->event);
+                obj->event.pevents = FIONOBJ_PEVENT_IN | FIONOBJ_PEVENT_OUT;
+                obj->event.ops.foo_setflags(&obj->event);
 
                 // @todo If timeout is -1 (blocking), then the poll should occur
                 //       in a loop with a small timeout (e.g., 100 ms) or maybe
                 //       a self-pipe for signaling shutdown events, etc.
 
-                if (obj->event.ops.ieo_poll(&obj->event) == true)
+                if (obj->event.ops.foo_poll(&obj->event) == true)
                 {
-                    if (((obj->event.revents & IO_EVENT_RET_ERROR) == 0) &&
-                        (obj->event.revents & IO_EVENT_RET_OUTREADY))
+                    if (((obj->event.revents & FIONOBJ_REVENT_ERROR) == 0) &&
+                        (obj->event.revents & FIONOBJ_REVENT_OUTREADY))
                     {
                         retval = true;
                     }
                 }
 
-                obj->event.pevents = IO_EVENT_POLL_IN;
-                obj->event.ops.ieo_setflags(&obj->event);
+                obj->event.pevents = FIONOBJ_PEVENT_IN;
+                obj->event.ops.foo_setflags(&obj->event);
             }
             else
             {
@@ -305,11 +305,11 @@ int32_t socktcp_recv(struct sockobj * const obj,
     }
     else
     {
-        if (obj->event.ops.ieo_poll(&obj->event) == false)
+        if (obj->event.ops.foo_poll(&obj->event) == false)
         {
             retval = -1;
         }
-        else if (obj->event.revents & IO_EVENT_RET_INREADY)
+        else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
         {
             retval = recv(obj->sockfd, buf, len, flags);
 
@@ -331,7 +331,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
                 retval = -1;
             }
         }
-        else if (obj->event.revents & IO_EVENT_RET_ERROR)
+        else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
         {
             retval = -1;
         }
@@ -415,11 +415,11 @@ int32_t socktcp_send(struct sockobj * const obj,
 
             if (retval == 0)
             {
-                if (obj->event.ops.ieo_poll(&obj->event) == false)
+                if (obj->event.ops.foo_poll(&obj->event) == false)
                 {
                     retval = -1;
                 }
-                else if (obj->event.revents & IO_EVENT_RET_ERROR)
+                else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
                 {
                     retval = -1;
                 }
