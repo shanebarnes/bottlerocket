@@ -131,10 +131,10 @@ bool sockudp_accept(struct sockobj * const listener,
         //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
         //       for signaling shutdown events, etc.
 
-        if (listener->event.ops.ieo_poll(&listener->event) == true)
+        if (listener->event.ops.foo_poll(&listener->event) == true)
         {
-            if (((listener->event.revents & IO_EVENT_RET_TIMEOUT) == 0) &&
-                ((listener->event.revents & IO_EVENT_RET_ERROR) == 0))
+            if (((listener->event.revents & FIONOBJ_REVENT_TIMEOUT) == 0) &&
+                ((listener->event.revents & FIONOBJ_REVENT_ERROR) == 0))
             {
                 retval = true;
             }
@@ -209,11 +209,11 @@ int32_t sockudp_recv(struct sockobj * const obj,
     }
     else
     {
-        if (obj->event.ops.ieo_poll(&obj->event) == false)
+        if (obj->event.ops.foo_poll(&obj->event) == false)
         {
             retval = -1;
         }
-        else if (obj->event.revents & IO_EVENT_RET_INREADY)
+        else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
         {
             if (obj->state & SOCKOBJ_STATE_CONNECT)
             {
@@ -260,7 +260,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
                 retval = -1;
             }
         }
-        else if (obj->event.revents & IO_EVENT_RET_ERROR)
+        else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
         {
             retval = -1;
         }
@@ -356,11 +356,11 @@ int32_t sockudp_send(struct sockobj * const obj,
 
             if (retval == 0)
             {
-                if (obj->event.ops.ieo_poll(&obj->event) == false)
+                if (obj->event.ops.foo_poll(&obj->event) == false)
                 {
                     retval = -1;
                 }
-                else if (obj->event.revents & IO_EVENT_RET_ERROR)
+                else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
                 {
                     retval = -1;
                 }
