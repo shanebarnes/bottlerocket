@@ -115,6 +115,10 @@ bool vector_resize(struct vector * const vector, const uint32_t size)
             retval = true;
         }
     }
+    else
+    {
+        retval = true;
+    }
 
     return retval;
 }
