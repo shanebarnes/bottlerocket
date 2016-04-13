@@ -7,7 +7,7 @@
  *            This project is released under the MIT license.
  */
 
-#include "io_event_poll.h"
+#include "fion_poll.h"
 #include "logger.h"
 #include "sock_obj.h"
 
@@ -122,18 +122,21 @@ bool sockobj_create(struct sockobj * const obj)
     }
     else
     {
-        obj->event.fds       = &obj->sockfd;
-        obj->event.size      = 1;
-        obj->event.timeoutms = 0;
-        obj->event.pevents   = IO_EVENT_POLL_IN;
-        obj->event.internal  = NULL;
+        memset(obj, 0, sizeof(struct sockobj));
 
-        obj->event.ops.ieo_create   = io_event_poll_create;
-        obj->event.ops.ieo_destroy  = io_event_poll_destroy;
-        obj->event.ops.ieo_setflags = io_event_poll_setflags;
-        obj->event.ops.ieo_poll     = io_event_poll_poll;
-
-        retval = obj->event.ops.ieo_create(&obj->event);
+        if (fionpoll_create(&obj->event) == false)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: event allocation failed\n",
+                          __FUNCTION__);
+        }
+        else
+        {
+            obj->event.fds     = &obj->sockfd;
+            obj->event.pevents = FIONOBJ_PEVENT_IN;
+            obj->event.ops.foo_setflags(&obj->event);
+            retval = true;
+        }
     }
 
     return retval;
@@ -154,7 +157,18 @@ bool sockobj_destroy(struct sockobj * const obj)
     }
     else
     {
-        retval = obj->event.ops.ieo_destroy(&obj->event);
+        retval = obj->event.ops.foo_destroy(&obj->event);
+
+        obj->ops.soo_create  = NULL;
+        obj->ops.soo_destroy = NULL;
+        obj->ops.soo_open    = NULL;
+        obj->ops.soo_close   = NULL;
+        obj->ops.soo_bind    = NULL;
+        obj->ops.soo_listen  = NULL;
+        obj->ops.soo_accept  = NULL;
+        obj->ops.soo_connect = NULL;
+        obj->ops.soo_recv    = NULL;
+        obj->ops.soo_send    = NULL;
     }
 
     return retval;
@@ -191,6 +205,7 @@ bool sockobj_open(struct sockobj * const obj)
         portsize = snprintf(ipport, 6, "%d", obj->ipport);
 
         obj->alist = NULL;
+        obj->ipaddr[0] = '\0';
 
         if ((portsize > 0) &&
             (portsize < 6) &&
@@ -216,8 +231,9 @@ bool sockobj_open(struct sockobj * const obj)
                     obj->addrpeer.sockaddr.sin_port        = htons(obj->ipport);
 
                     optval = 1;
+                    obj->event.fds = &obj->sockfd;
 
-                    if (sockobj_create(obj) == false)
+                    if (obj->event.ops.foo_setflags(&obj->event) == false)
                     {
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %d event creation failed\n",
