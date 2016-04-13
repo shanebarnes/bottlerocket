@@ -10,7 +10,7 @@
 #ifndef _SOCK_OBJ_H_
 #define _SOCK_OBJ_H_
 
-#include "io_event_instance.h"
+#include "fion_obj.h"
 #include "system_types.h"
 
 #include <netdb.h>
@@ -147,17 +147,17 @@ struct sockobj_addr
 
 struct sockobj
 {
-    struct sockobj_ops        ops;
-    struct io_event_instance  event;
-    int32_t                   socktype, // e.g.: SOCK_DGRAM, SOCK_STREAM
-                              sockfd;
-    struct sockobj_addr       addrself,
-                              addrpeer;
-    struct addrinfo           ainfo,
-                             *alist;
-    char                      ipaddr[INET6_ADDRSTRLEN];
-    uint16_t                  ipport;
-    enum sockobj_state        state;
+    struct sockobj_ops   ops;
+    struct fionobj       event;
+    int32_t              socktype, // e.g.: SOCK_DGRAM, SOCK_STREAM
+                         sockfd;
+    struct sockobj_addr  addrself,
+                         addrpeer;
+    struct addrinfo      ainfo,
+                        *alist;
+    char                 ipaddr[INET6_ADDRSTRLEN];
+    uint16_t             ipport;
+    enum sockobj_state   state;
 };
 
 /**
