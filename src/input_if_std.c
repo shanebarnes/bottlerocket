@@ -7,8 +7,8 @@
  *            This project is released under the MIT license.
  */
 
+#include "fion_poll.h"
 #include "input_if_std.h"
-#include "io_event_poll.h"
 #include "logger.h"
 
 #include <errno.h>
@@ -25,7 +25,7 @@ int32_t input_if_std_recv(void * const buf,
 {
     int32_t retval = -1;
     int32_t fd = STDIN_FILENO;
-    struct io_event_instance instance;
+    struct fionobj event;
 
     if ((buf == NULL) || (len == 0))
     {
@@ -35,17 +35,17 @@ int32_t input_if_std_recv(void * const buf,
     }
     else
     {
-        instance.fds       = &fd;
-        instance.size      = 1;
-        instance.timeoutms = timeoutms;
-        instance.pevents   = IO_EVENT_POLL_IN;
-        instance.internal  = NULL;
+        memset(&event, 0, sizeof(event));
 
-        if (io_event_poll_create(&instance) == true)
+        if (fionpoll_create(&event) == true)
         {
-            if (io_event_poll_poll(&instance) ==  true)
+            event.fds       = &fd;
+            event.timeoutms = timeoutms;
+            event.pevents   = FIONOBJ_PEVENT_IN;
+
+            if (fionpoll_poll(&event) ==  true)
             {
-                if (instance.revents & IO_EVENT_RET_INREADY)
+                if (event.revents & FIONOBJ_REVENT_INREADY)
                 {
                     if (fgets((char*)buf, len, stdin) == NULL)
                     {
@@ -70,7 +70,7 @@ int32_t input_if_std_recv(void * const buf,
                 }
             }
 
-            io_event_poll_destroy(&instance);
+            fionpoll_destroy(&event);
         }
     }
 
