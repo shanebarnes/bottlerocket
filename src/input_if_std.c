@@ -39,7 +39,7 @@ int32_t input_if_std_recv(void * const buf,
 
         if (fionpoll_create(&event) == true)
         {
-            event.fds       = &fd;
+            event.ops.foo_insertfd(&event, fd);
             event.timeoutms = timeoutms;
             event.pevents   = FIONOBJ_PEVENT_IN;
 
