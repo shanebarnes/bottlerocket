@@ -15,11 +15,6 @@
 #include <poll.h>
 #include <sys/socket.h>
 
-struct internals
-{
-    struct pollfd *pfds;
-};
-
 /**
  * @see See header file for interface comments.
  */
@@ -27,7 +22,7 @@ bool fionpoll_create(struct fionobj * const obj)
 {
     bool retval = false;
 
-    if ((obj == NULL) || (obj->internal != NULL) || (obj->size != 0))
+    if ((obj == NULL) || (obj->fds.vsize != 0))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -37,37 +32,24 @@ bool fionpoll_create(struct fionobj * const obj)
     {
         obj->ops.foo_create   = fionpoll_create;
         obj->ops.foo_destroy  = fionpoll_destroy;
+        obj->ops.foo_insertfd = fionpoll_insertfd;
+        obj->ops.foo_deletefd = fionpoll_deletefd;
         obj->ops.foo_setflags = fionpoll_setflags;
         obj->ops.foo_poll     = fionpoll_poll;
 
-        obj->fds       = 0;
-        obj->size      = 1;
         obj->timeoutms = 0;
         obj->pevents   = 0;
-        obj->internal  = malloc(sizeof(struct internals));
 
-        if (obj->internal == NULL)
+        if (vector_create(&obj->fds, 0) == false)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: memory allocation failed (%d)\n",
+                          "%s: vector allocation failed (%d)\n",
                           __FUNCTION__,
                           errno);
         }
         else
         {
-            obj->internal->pfds = malloc(obj->size * sizeof(struct pollfd));
-
-            if (obj->internal->pfds == NULL)
-            {
-                logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: memory allocation failed (%d)\n",
-                              __FUNCTION__,
-                              errno);
-            }
-            else
-            {
-                retval = true;
-            }
+            retval = true;
         }
     }
 
@@ -81,7 +63,7 @@ bool fionpoll_destroy(struct fionobj * const obj)
 {
     bool retval = false;
 
-    if ((obj == NULL) || (obj->internal == NULL) || (obj->size <= 0))
+    if (obj == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -89,17 +71,19 @@ bool fionpoll_destroy(struct fionobj * const obj)
     }
     else
     {
-        if (obj->internal->pfds != NULL)
+        while (obj->fds.vsize > 0)
         {
-            free(obj->internal->pfds);
-            obj->internal->pfds = NULL;
+            if (vector_get(&obj->fds, 0) != NULL)
+            {
+                free(vector_get(&obj->fds, 0));
+                vector_delete(&obj->fds, 0);
+            }
         }
-
-        free(obj->internal);
-        obj->internal = NULL;
 
         obj->ops.foo_create   = NULL;
         obj->ops.foo_destroy  = NULL;
+        obj->ops.foo_insertfd = NULL;
+        obj->ops.foo_deletefd = NULL;
         obj->ops.foo_setflags = NULL;
         obj->ops.foo_poll     = NULL;
 
@@ -112,12 +96,13 @@ bool fionpoll_destroy(struct fionobj * const obj)
 /**
  * @see See header file for interface comments.
  */
-bool fionpoll_setflags(struct fionobj * const obj)
+bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
 {
-    bool retval = false;
-    int32_t i, flags;
+    bool retval = false, found = false;
+    struct pollfd *pfd = NULL;
+    uint32_t i;
 
-    if ((obj == NULL) || (obj->internal == NULL) || (obj->size <= 0))
+    if (obj == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -125,35 +110,125 @@ bool fionpoll_setflags(struct fionobj * const obj)
     }
     else
     {
-        for (i = 0; i < obj->size; i++)
+        for (i = 0; i < obj->fds.vsize; i++)
         {
-            obj->internal->pfds[i].fd = obj->fds[i];
-            obj->internal->pfds[i].events = POLLPRI |
+            pfd = (struct pollfd *)obj->fds.array[i];
+
+            if (pfd->fd == fd)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: fd %d is already in the list\n",
+                              __FUNCTION__,
+                              fd);
+                found = true;
+                break;
+            }
+        }
+
+        if (found == false)
+        {
+            pfd = malloc(sizeof(struct pollfd));
+            pfd->fd = fd;
+            retval = vector_inserttail(&obj->fds, pfd);
+        }
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd)
+{
+    bool retval = false, found = false;
+    struct pollfd *pfd = NULL;
+    uint32_t i;
+
+    if (obj == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        for (i = 0; i < obj->fds.vsize; i++)
+        {
+            pfd = (struct pollfd *)obj->fds.array[i];
+
+            if (pfd->fd == fd)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        if (found == false)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: fd %d is not in the list\n",
+                          __FUNCTION__,
+                          fd);
+        }
+        else
+        {
+            free(pfd);
+            retval = vector_delete(&obj->fds, i);
+        }
+    }
+
+    return retval;
+}
+
+
+/**
+ * @see See header file for interface comments.
+ */
+bool fionpoll_setflags(struct fionobj * const obj)
+{
+    bool retval = false;
+    struct pollfd *pfd = NULL;
+    uint32_t i;
+    int32_t flags;
+
+    if ((obj == NULL) || (obj->fds.vsize == 0))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        for (i = 0; i < obj->fds.vsize; i++)
+        {
+            pfd = (struct pollfd *)obj->fds.array[i];
+            pfd->events = POLLPRI |
 #if defined(LINUX)
-                                            POLLRDHUP |
+                          POLLRDHUP |
 #endif
-                                            POLLERR |
-                                            POLLHUP |
-                                            POLLNVAL;
+                          POLLERR |
+                          POLLHUP |
+                          POLLNVAL;
 
             if (obj->pevents & FIONOBJ_PEVENT_IN)
             {
-                obj->internal->pfds[i].events |= POLLIN;
+                pfd->events |= POLLIN;
             }
 
             if (obj->pevents & FIONOBJ_PEVENT_OUT)
             {
-                obj->internal->pfds[i].events |= POLLOUT;
+                pfd->events |= POLLOUT;
             }
 
-            flags = fcntl(obj->fds[i], F_GETFL, 0);
+            flags = fcntl(pfd->fd, F_GETFL, 0);
 
-            if (fcntl(obj->fds[i], F_SETFL, flags | O_NONBLOCK) != 0)
+            if (fcntl(pfd->fd, F_SETFL, flags | O_NONBLOCK) != 0)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %d non-blocking option failed (%d)\n",
                               __FUNCTION__,
-                              obj->fds[i],
+                              pfd->fd,
                               errno);
             }
         }
@@ -170,11 +245,11 @@ bool fionpoll_setflags(struct fionobj * const obj)
 bool fionpoll_poll(struct fionobj * const obj)
 {
     bool retval = false;
-    int32_t i, error;
+    struct pollfd *pfd = NULL;
+    uint32_t i;
+    int32_t error;
 
-    if ((obj == NULL) ||
-        (obj->internal == NULL) ||
-        (obj->internal->pfds == NULL))
+    if ((obj == NULL) || (obj->fds.vsize == 0))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -184,7 +259,7 @@ bool fionpoll_poll(struct fionobj * const obj)
     {
         obj->revents = 0;
 
-        error = poll(obj->internal->pfds, obj->size, obj->timeoutms);
+        error = poll((struct pollfd *)obj->fds.array[0], obj->fds.vsize, obj->timeoutms);
 
         if (error == 0)
         {
@@ -194,36 +269,38 @@ bool fionpoll_poll(struct fionobj * const obj)
         }
         else if (error > 0)
         {
-            for (i = 0; i < obj->size; i++)
+            for (i = 0; i < obj->fds.vsize; i++)
             {
+                pfd = (struct pollfd *)obj->fds.array[i];
+
                 // Check for error events.
-                if ((obj->internal->pfds[i].revents & POLLERR) ||
+                if ((pfd->revents & POLLERR) ||
 #if defined(LINUX)
-                    (obj->internal->pfds[i].revents & POLLRDHUP) ||
+                    (pfd->revents & POLLRDHUP) ||
 #endif
-                    (obj->internal->pfds[i].revents & POLLHUP) ||
-                    (obj->internal->pfds[i].revents & POLLNVAL))
+                    (pfd->revents & POLLHUP) ||
+                    (pfd->revents & POLLNVAL))
                 {
                     obj->revents |= FIONOBJ_REVENT_ERROR;
                 }
 
                 // Check for input event.
-                if (obj->internal->pfds[i].revents & POLLIN)
+                if (pfd->revents & POLLIN)
                 {
                     obj->revents |= FIONOBJ_REVENT_INREADY;
                 }
 
                 // Check for output event.
-                if (obj->internal->pfds[i].revents & POLLOUT)
+                if (pfd->revents & POLLOUT)
                 {
                     obj->revents |= FIONOBJ_REVENT_OUTREADY;
                 }
 #if defined(__CYGWIN__)
                 // @bug Hack to detect a remote peer connection closure.
-                if (obj->internal->pfds[i].revents & POLLIN)
+                if (pfd->revents & POLLIN)
                 {
                     uint8_t buf[1];
-                    if (recv(obj->fds[i],
+                    if (recv(pfd->fd,
                              buf,
                              sizeof(buf),
                              MSG_PEEK | MSG_DONTWAIT) != sizeof(buf))

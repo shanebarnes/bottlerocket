@@ -24,6 +24,16 @@ bool fionpoll_create(struct fionobj * const obj);
 bool fionpoll_destroy(struct fionobj * const obj);
 
 /**
+ * @see foo_insertfd() for interface comments.
+ */
+bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd);
+
+/**
+ * @see foo_deletefd() for interface comments.
+ */
+bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd);
+
+/**
  * @see foo_setflags() for interface comments.
  */
 bool fionpoll_setflags(struct fionobj * const obj);
