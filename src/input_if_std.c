@@ -43,7 +43,8 @@ int32_t input_if_std_recv(void * const buf,
             event.timeoutms = timeoutms;
             event.pevents   = FIONOBJ_PEVENT_IN;
 
-            if (fionpoll_poll(&event) ==  true)
+            if ((event.ops.foo_setflags(&event) == true) &&
+                (event.ops.foo_poll(&event) == true))
             {
                 if (event.revents & FIONOBJ_REVENT_INREADY)
                 {
