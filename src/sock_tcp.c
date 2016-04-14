@@ -169,6 +169,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                                   obj->sockfd);
                 }
                 else if (((obj->sockfd = sockfd) != sockfd) ||
+                         (obj->event.ops.foo_insertfd(&obj->event, sockfd) == false) ||
                          (obj->event.ops.foo_setflags(&obj->event) == false))
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
