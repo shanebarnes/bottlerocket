@@ -132,9 +132,7 @@ bool sockobj_create(struct sockobj * const obj)
         }
         else
         {
-            obj->event.fds     = &obj->sockfd;
             obj->event.pevents = FIONOBJ_PEVENT_IN;
-            obj->event.ops.foo_setflags(&obj->event);
             retval = true;
         }
     }
@@ -231,7 +229,7 @@ bool sockobj_open(struct sockobj * const obj)
                     obj->addrpeer.sockaddr.sin_port        = htons(obj->ipport);
 
                     optval = 1;
-                    obj->event.fds = &obj->sockfd;
+                    obj->event.ops.foo_insertfd(&obj->event, obj->sockfd);
 
                     if (obj->event.ops.foo_setflags(&obj->event) == false)
                     {
