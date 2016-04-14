@@ -203,7 +203,6 @@ bool sockobj_open(struct sockobj * const obj)
         portsize = snprintf(ipport, 6, "%d", obj->ipport);
 
         obj->alist = NULL;
-        obj->ipaddr[0] = '\0';
 
         if ((portsize > 0) &&
             (portsize < 6) &&
@@ -277,6 +276,12 @@ bool sockobj_open(struct sockobj * const obj)
                     break;
                 }
             }
+        }
+        else
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to get address information\n",
+                          __FUNCTION__);
         }
     }
 
