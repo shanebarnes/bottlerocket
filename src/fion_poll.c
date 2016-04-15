@@ -295,20 +295,20 @@ bool fionpoll_poll(struct fionobj * const obj)
                 {
                     obj->revents |= FIONOBJ_REVENT_OUTREADY;
                 }
-#if defined(__CYGWIN__)
-                // @bug Hack to detect a remote peer connection closure.
-                if (pfd->revents & POLLIN)
-                {
-                    uint8_t buf[1];
-                    if (recv(pfd->fd,
-                             buf,
-                             sizeof(buf),
-                             MSG_PEEK | MSG_DONTWAIT) != sizeof(buf))
-                    {
-                        obj->revents |= FIONOBJ_REVENT_ERROR;
-                    }
-                }
-#endif
+//#if defined(__CYGWIN__)
+//                // @bug Hack to detect a remote peer connection closure.
+//                if (pfd->revents & POLLIN)
+//                {
+//                    uint8_t buf[1];
+//                    if (recv(pfd->fd,
+//                             buf,
+//                             sizeof(buf),
+//                             MSG_PEEK | MSG_DONTWAIT) != sizeof(buf))
+//                    {
+//                        obj->revents |= FIONOBJ_REVENT_ERROR;
+//                    }
+//                }
+//#endif
             }
 
             retval = true;
