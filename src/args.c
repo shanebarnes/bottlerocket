@@ -16,20 +16,31 @@
 #include <stdio.h>
 #include <string.h>
 
+enum args_group
+{
+    ARGS_GROUP_NONE = 0,
+    ARGS_GROUP_MODE = 1,
+    ARGS_GROUP_ARCH = 2,
+    ARGS_GROUP_INFO = 3,
+    ARGS_GROUP_MAX  = 4
+};
+
 struct tuple_element
 {
-  const char *lname;                   // Tuple attribute long name (e.g., --argument)
-  const char  sname;                   // Tuple attribute short name (e.g., -a)
-  const char *desc;                    // Tuple description
-  const char *dval;                    // Tuple default value
-  const bool  oval;                    // Tuple optional value
-  bool      (*copy)(const char * const val,
-                    struct args_obj *args); // Tuple validation function pointer.
+  const char             *lname; // Tuple attribute long name (e.g., --argument)
+  const char              sname; // Tuple attribute short name (e.g., -a)
+  const enum  args_group  group; // Tuple group identification
+  const char             *desc;  // Tuple description
+  const char             *dval;  // Tuple default value
+  const bool              oval;  // Tuple optional value
+  const bool              oarg;  // Tuple optional attribute
+  bool       (*copy)(const char * const val,
+                     struct args_obj *args); // Tuple copy function pointer
 };
 
 static const char *prefix_skey = "-";
 static const char *prefix_lkey = "--";
-
+static uint16_t    groupcount[ARGS_GROUP_MAX];
 /**
  * @brief Validate and copy an IP address value to an arguments object.
  *
@@ -81,8 +92,7 @@ static bool args_copyipport(const char * const val, struct args_obj *args)
     else
     {
         if ((utilstring_parse(val, "%d", &port) == 1) &&
-            (port >= 0x0000) &&
-            (port <= 0xFFFF))
+            ((port & 0xFFFF0000) == 0))
         {
             args->ipport = (uint16_t)port;
             retval = true;
@@ -94,26 +104,89 @@ static bool args_copyipport(const char * const val, struct args_obj *args)
 
 static struct tuple_element options[] =
 {
-    {"chat",        0,  "enable chat mode",
-        "enabled",      true,  NULL},
-    {"perf",        0,  "enable performance benchmarking mode",
-        "disabled",     true,  NULL},
+    {"chat",
+     0,
+     ARGS_GROUP_NONE,
+     "enable chat mode",
+     "enabled",
+     true,
+     true,
+     NULL
+    },
+    {"perf",
+     0,
+     ARGS_GROUP_NONE,
+     "enable performance benchmarking mode",
+     "disabled",
+     true,
+     true,
+     NULL
+    },
 #if !defined(__APPLE__)
-    {"--affinity", 'A', "set CPU affinity",
-        "0xFFFFFFFF",   false, NULL},
+    {"--affinity",
+     'A',
+     ARGS_GROUP_NONE,
+     "set CPU affinity",
+     "0xFFFFFFFF",
+     false,
+     true,
+     NULL
+    },
 #endif
-    {"--bind",     'B', "bind to a specific socket address",
-        "127.0.0.1:0",  false, args_copyipport},
-    {"--client",   'c', "run as a client",
-        "127.0.0.1",    true, args_copyipaddr},
-    {"--server",   's', "run as a server",
-        "0.0.0.0",      true, args_copyipaddr},
-    {"--port",     'p', "server port to listen on or connect to",
-        "5001",         false, args_copyipport},
-    {"--help",     'h', "print help information and quit",
-        NULL,           false, NULL},
-    {"--version",  'v', "print version information and quit",
-        NULL,           false, NULL}
+    {"--bind",
+     'B',
+     ARGS_GROUP_NONE,
+     "bind to a specific socket address",
+     "127.0.0.1:0",
+     false,
+     true,
+     args_copyipport
+    },
+    {"--client",
+     'c',
+     ARGS_GROUP_ARCH,
+     "run as a client",
+     "127.0.0.1",
+     true,
+     false,
+     args_copyipaddr
+    },
+    {"--server",
+     's',
+     ARGS_GROUP_ARCH,
+     "run as a server",
+     "0.0.0.0",
+     true,
+     false,
+     args_copyipaddr
+    },
+    {"--port",
+     'p',
+     ARGS_GROUP_NONE,
+     "server port to listen on or connect to",
+     "5001",
+     false,
+     true,
+     args_copyipport
+    },
+    {"--help",
+     'h',
+     ARGS_GROUP_INFO,
+     "print help information and quit",
+     NULL,
+     false,
+     true,
+     NULL
+    },
+    {"--version",
+     'v',
+     ARGS_GROUP_INFO,
+     "print version information and quit",
+     NULL,
+     false,
+     true,
+     NULL
+    }
 };
 
 /**
@@ -181,6 +254,7 @@ static char args_getarg(const int32_t argc,
                 if (c == options[i].sname)
                 {
                     retval = c;
+                    groupcount[options[i].group]++;
                     break;
                 }
             }
@@ -192,6 +266,7 @@ static char args_getarg(const int32_t argc,
                                    true) == true)
             {
                 retval = options[i].sname;
+                groupcount[options[i].group]++;
                 break;
             }
         }
@@ -297,6 +372,7 @@ bool args_parse(const int32_t argc,
     else
     {
         // Set defaults.
+        memset(groupcount, 0, sizeof(groupcount));
         args->mode = ARGS_MODE_CHAT;
         args->arch = ARGS_ARCH_NULL;
         args_copyipport("5001", args);
@@ -352,10 +428,19 @@ bool args_parse(const int32_t argc,
             }
         }
 
-        if (args->arch == ARGS_ARCH_NULL)
+        if (retval == true)
         {
-            args_usage(stdout);
-            retval = false;
+            if (groupcount[ARGS_GROUP_INFO] > 0)
+            {
+                retval = false;
+            }
+            else if (groupcount[ARGS_GROUP_ARCH] != 1)
+            {
+                // Arguments in this group are mutually exclusive.
+
+                args_usage(stdout);
+                retval = false;
+            }
         }
     }
 
