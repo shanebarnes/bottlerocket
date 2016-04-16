@@ -129,6 +129,14 @@ static void *modechat_thread(void * arg)
                         {
                             sendbytes += (rmargin - lmargin);
                         }
+                        else
+                        {
+                            logger_printf(LOGGER_LEVEL_ERROR,
+                                          "%s: failed to print %d bytes\n",
+                                          __FUNCTION__,
+                                         recvbytes - sendbytes);
+                            break; // Prevent spinning.
+                        }
                     }
                 }
                 else if (recvbytes < 0)
@@ -137,17 +145,15 @@ static void *modechat_thread(void * arg)
                     count--;
                 }
 
-                if (input_if_std_recv(recvbuf, sizeof(recvbuf), timeoutms) > 0)
+                if ((recvbytes = input_if_std_recv(recvbuf,
+                                                   sizeof(recvbuf),
+                                                   timeoutms)) > 0)
                 {
-                    //pos = (pos < 0 ? cols / 4 : -cols / 4);
-                    //logger_printf(LOGGER_LEVEL_ERROR,
-                    //              "%s: read from input (%u, %u, %d): '%*s'\n",
-                    //              __FUNCTION__,
-                    //              rows,
-                    //              cols,
-                    //              pos,
-                    //              pos,
-                    //              buf);
+                    if (count > 0)
+                    {
+                        // @todo Fix for partial-send case.
+                        socket.ops.soo_send(&socket, recvbuf, recvbytes);
+                    }
                 }
             }
         }
