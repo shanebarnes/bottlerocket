@@ -351,6 +351,12 @@ bool args_parse(const int32_t argc,
                     retval = false;
             }
         }
+
+        if (args->arch == ARGS_ARCH_NULL)
+        {
+            args_usage(stdout);
+            retval = false;
+        }
     }
 
     return retval;
