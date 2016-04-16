@@ -21,7 +21,17 @@ int32_t output_if_std_send(void * const buf, const uint32_t len)
     if ((buf != NULL) && (len > 0))
     {
         retval = fputs((const char *)buf, stdout);
-        fflush(stdout);
+#if defined(__CYGWIN__)
+        // Zero is returned on success; otherwise, EOF is returned.
+        if ((retval == 0) && (retval != EOF))
+        {
+            retval = len;
+        }
+#endif
+        if (retval > 0)
+        {
+            fflush(stdout);
+        }
     }
 
     return retval;
