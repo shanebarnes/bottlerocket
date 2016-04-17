@@ -27,7 +27,6 @@ enum fionobj_revent
     FIONOBJ_REVENT_OUTREADY = 0x08
 };
 
-struct internals;
 struct fionobj;
 
 struct fionobj_ops
