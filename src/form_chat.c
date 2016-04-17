@@ -20,8 +20,7 @@ int32_t formchat_head(struct formobj * const obj)
     int32_t  retval  = -1;
     uint16_t cols    = 0,
              rows    = 0;
-    int32_t  lmargin = 0,
-             rmargin = 0;
+    int32_t  lmargin = 0;
 
     if ((obj == NULL) ||
         (obj->sock == NULL) ||
@@ -37,7 +36,6 @@ int32_t formchat_head(struct formobj * const obj)
     else
     {
         utilioctl_gettermsize(&rows, &cols);
-        rmargin = cols;
         lmargin = cols / 2;
 
         // Add tag to each message including an audible beep.
