@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 set(BR_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/args.c
     ${CMAKE_CURRENT_SOURCE_DIR}/fion_poll.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/form_chat.c
     ${CMAKE_CURRENT_SOURCE_DIR}/input_if_std.c
     ${CMAKE_CURRENT_SOURCE_DIR}/list_dlink.c
     ${CMAKE_CURRENT_SOURCE_DIR}/logger.c
