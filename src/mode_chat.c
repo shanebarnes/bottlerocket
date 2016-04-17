@@ -7,14 +7,13 @@
  *            This project is released under the MIT license.
  */
 
+#include "form_chat.h"
 #include "input_if_std.h"
 #include "logger.h"
 #include "mode_chat.h"
 #include "output_if_std.h"
 #include "sock_tcp.h"
 #include "thread_instance.h"
-#include "util_ioctl.h"
-#include "util_string.h"
 
 #include <string.h>
 
@@ -28,11 +27,10 @@ static void *modechat_thread(void * arg)
 {
     struct thread_instance *thread = (struct thread_instance *)arg;
     struct sockobj server, socket;
-    char     recvbuf[1024], sendbuf[4096];
-    uint16_t cols = 0, rows = 0;
-    int32_t  lmargin = 0, rmargin = 0;
-    int32_t  count = 0, timeoutms = 500;
-    int32_t  recvbytes = 0, sendbytes = 0, tempbytes = 0;
+    struct formobj form;
+    char    recvbuf[1024], sendbuf[4096];
+    int32_t count = 0, timeoutms = 500;
+    int32_t recvbytes = 0, formbytes = 0;
 
     if (thread == NULL)
     {
@@ -42,6 +40,14 @@ static void *modechat_thread(void * arg)
     }
     else
     {
+        form.ops.form_head = formchat_head;
+        form.ops.form_body = formchat_body;
+        form.ops.form_foot = formchat_foot;
+        form.srcbuf = recvbuf;
+        form.srclen = sizeof(recvbuf);
+        form.dstbuf = sendbuf;
+        form.dstlen = sizeof(sendbuf);
+
         socktcp_create(&server);
         memcpy(server.ipaddr, opts->ipaddr, sizeof(server.ipaddr));
         server.ipport = opts->ipport;
@@ -72,6 +78,7 @@ static void *modechat_thread(void * arg)
                                   __FUNCTION__,
                                   server.addrself.sockaddrstr);
                     socket.event.timeoutms = timeoutms;
+                    form.sock = &socket;
                     count++;
                 }
 
@@ -85,59 +92,17 @@ static void *modechat_thread(void * arg)
 
                 if (recvbytes > 0)
                 {
-                    utilioctl_gettermsize(&rows, &cols);
-                    rmargin = cols;
-                    lmargin = cols / 2;
-
-                    // Add tag to each message including an audible beep.
-                    // @todo Make audible beep optional.
-                    tempbytes = utilstring_concat(sendbuf,
-                                                  sizeof(sendbuf),
-                                                  "%*s[%s (%4d bytes)]\a\n",
-                                                  lmargin,
-                                                  "",
-                                                  socket.addrpeer.sockaddrstr,
-                                                  recvbytes);
-                    output_if_std_send(sendbuf, tempbytes);
+                    form.srclen = recvbytes;
+                    formbytes = form.ops.form_head(&form);
+                    output_if_std_send(form.dstbuf, formbytes);
 
                     // Null-terminate the string.
                     recvbuf[recvbytes] = '\0';
                     recvbytes++;
 
-                    sendbytes = 0;
-
-                    while (sendbytes < recvbytes)
-                    {
-                        if ((recvbytes - sendbytes) < (rmargin - lmargin))
-                        {
-                            rmargin = lmargin + (recvbytes - sendbytes);
-                        }
-
-                        // Set the left margin and create a substring that is
-                        // left justified.
-                        tempbytes = utilstring_concat(sendbuf,
-                                                      sizeof(sendbuf),
-                                                      "%*s%-*.*s\n",
-                                                      lmargin,
-                                                      "",
-                                                      rmargin - lmargin,
-                                                      rmargin - lmargin,
-                                                      recvbuf + sendbytes);
-                        tempbytes = output_if_std_send(sendbuf, tempbytes);
-
-                        if (tempbytes > 0)
-                        {
-                            sendbytes += (rmargin - lmargin);
-                        }
-                        else
-                        {
-                            logger_printf(LOGGER_LEVEL_ERROR,
-                                          "%s: failed to print %d bytes\n",
-                                          __FUNCTION__,
-                                         recvbytes - sendbytes);
-                            break; // Prevent spinning.
-                        }
-                    }
+                    form.srclen = recvbytes;
+                    formbytes = form.ops.form_body(&form);
+                    output_if_std_send(form.dstbuf, formbytes);
                 }
                 else if (recvbytes < 0)
                 {
