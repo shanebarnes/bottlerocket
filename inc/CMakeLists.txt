@@ -6,6 +6,7 @@ set(BR_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/fion_poll.h
     ${CMAKE_CURRENT_SOURCE_DIR}/form_chat.h
     ${CMAKE_CURRENT_SOURCE_DIR}/form_obj.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/form_perf.h
     ${CMAKE_CURRENT_SOURCE_DIR}/input_if_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/input_if_std.h
     ${CMAKE_CURRENT_SOURCE_DIR}/list_dlink.h
