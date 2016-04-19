@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include <string.h>
 
+static char str_somaxconn[12];
+
 enum args_group
 {
     ARGS_GROUP_NONE = 0,
@@ -27,29 +29,39 @@ enum args_group
 
 struct tuple_element
 {
-  const char             *lname; // Tuple attribute long name (e.g., --argument)
-  const char              sname; // Tuple attribute short name (e.g., -a)
-  const enum  args_group  group; // Tuple group identification
-  const char             *desc;  // Tuple description
-  const char             *dval;  // Tuple default value
-  const bool              oval;  // Tuple optional value
-  const bool              oarg;  // Tuple optional attribute
+  const char             *lname;  // Attribute long name (e.g., --argument)
+  const char              sname;  // Attribute short name (e.g., -a)
+  const enum  args_group  group;  // Group identification
+  const char             *desc;   // Description
+  const char             *dval;   // Default value
+  const char             *minval; // Minimum value
+  const char             *maxval; // Maximum value
+  const bool              oval;   // Optional value
+  const bool              oarg;   // Optional attribute
   bool       (*copy)(const char * const val,
+                     const char * const min,
+                     const char * const max,
                      struct args_obj *args); // Tuple copy function pointer
 };
 
 static const char *prefix_skey = "-";
 static const char *prefix_lkey = "--";
 static uint16_t    groupcount[ARGS_GROUP_MAX];
+
 /**
  * @brief Validate and copy an IP address value to an arguments object.
  *
  * @param[in]     val  A pointer to a value to validate.
+ * @param[in]     min  A pointer to a minimum value (NULL if no minimum value).
+ * @param[in]     max  A pointer to a maximum value (NULL if no maximum value).
  * @param[in,out] args A pointer to an argument object.
  *
  * @return True if a valid IP address value was copied to an arguments object.
  */
-static bool args_copyipaddr(const char * const val, struct args_obj *args)
+static bool args_copyipaddr(const char * const val,
+                            const char * const min,
+                            const char * const max,
+                            struct args_obj *args)
 {
     bool retval = false;
 
@@ -61,9 +73,20 @@ static bool args_copyipaddr(const char * const val, struct args_obj *args)
     }
     else
     {
-        retval = utilinet_getaddrfromhost(val,
-                                          args->ipaddr,
-                                          sizeof(args->ipaddr));
+        if ((min != NULL) && (false))
+        {
+            // Do nothing.
+        }
+        else if ((max != NULL) && (false))
+        {
+            // Do nothing.
+        }
+        else
+        {
+            retval = utilinet_getaddrfromhost(val,
+                                              args->ipaddr,
+                                              sizeof(args->ipaddr));
+        }
     }
 
     return retval;
@@ -73,15 +96,20 @@ static bool args_copyipaddr(const char * const val, struct args_obj *args)
  * @brief Validate and copy an IP port number value to an arguments object.
  *
  * @param[in]     val  A pointer to a value to validate.
+ * @param[in]     min  A pointer to a minimum value (NULL if no minimum value).
+ * @param[in]     max  A pointer to a maximum value (NULL if no maximum value).
  * @param[in,out] args A pointer to an argument object.
  *
  * @return True if a valid IP port number value was copied to an arguments
  *         object.
  */
-static bool args_copyipport(const char * const val, struct args_obj *args)
+static bool args_copyipport(const char * const val,
+                            const char * const min,
+                            const char * const max,
+                            struct args_obj *args)
 {
     bool retval = false;
-    int32_t port;
+    int32_t dmax, dmin, port;
 
     if ((val == NULL) || (args == NULL))
     {
@@ -91,11 +119,25 @@ static bool args_copyipport(const char * const val, struct args_obj *args)
     }
     else
     {
-        if ((utilstring_parse(val, "%d", &port) == 1) &&
-            ((port & 0xFFFF0000) == 0))
+        if ((utilstring_parse(val, "%d", &port) == 1))
         {
-            args->ipport = (uint16_t)port;
-            retval = true;
+            if ((min != NULL) &&
+                ((utilstring_parse(min, "%d", &dmin) != 1) ||
+                 (port < dmin)))
+            {
+                // Do nothing.
+            }
+            else if ((max != NULL) &&
+                     ((utilstring_parse(max, "%d", &dmax) != 1) ||
+                     (port > dmax)))
+            {
+                // Do nothing.
+            }
+            else
+            {
+                args->ipport = (uint16_t)port;
+                retval = true;
+            }
         }
     }
 
@@ -104,75 +146,110 @@ static bool args_copyipport(const char * const val, struct args_obj *args)
 
 static struct tuple_element options[] =
 {
-    {"chat",
+    {
+     "chat",
      0,
      ARGS_GROUP_NONE,
      "enable chat mode",
      "enabled",
+     NULL,
+     NULL,
      true,
      true,
      NULL
     },
-    {"perf",
+    {
+     "perf",
      0,
      ARGS_GROUP_NONE,
      "enable performance benchmarking mode",
      "disabled",
+     NULL,
+     NULL,
      true,
      true,
      NULL
     },
 #if !defined(__APPLE__)
-    {"--affinity",
+    {
+     "--affinity",
      'A',
      ARGS_GROUP_NONE,
      "set CPU affinity",
      "0xFFFFFFFF",
+     NULL,
+     NULL,
      false,
      true,
      NULL
     },
 #endif
-    {"--bind",
+    {
+     "--bind",
      'B',
      ARGS_GROUP_NONE,
      "bind to a specific socket address",
      "127.0.0.1:0",
+     "0",
+     "65535",
      false,
      true,
      args_copyipport
     },
-    {"--client",
+    {
+     "--client",
      'c',
      ARGS_GROUP_ARCH,
      "run as a client",
      "127.0.0.1",
+     NULL,
+     NULL,
      true,
      false,
      args_copyipaddr
     },
-    {"--server",
+    {
+     "--server",
      's',
      ARGS_GROUP_ARCH,
      "run as a server",
      "0.0.0.0",
+     NULL,
+     NULL,
      true,
      false,
      args_copyipaddr
     },
-    {"--port",
+    {
+     "--port",
      'p',
      ARGS_GROUP_NONE,
      "server port to listen on or connect to",
      "5001",
+     "0",
+     "65535",
      false,
      true,
      args_copyipport
+    },
+    {
+     "--backlog",
+     'q',
+     ARGS_GROUP_NONE,
+     "server backlog queue length",
+     str_somaxconn,
+     "1",
+     str_somaxconn,
+     false,
+     true,
+     NULL
     },
     {"--help",
      'h',
      ARGS_GROUP_INFO,
      "print help information and quit",
+     NULL,
+     NULL,
      NULL,
      false,
      true,
@@ -182,6 +259,8 @@ static struct tuple_element options[] =
      'v',
      ARGS_GROUP_INFO,
      "print version information and quit",
+     NULL,
+     NULL,
      NULL,
      false,
      true,
@@ -302,7 +381,10 @@ static char args_getarg(const int32_t argc,
             {
                 (*argi)++;
 
-                if (options[i].copy(argv[*argi], args) == false)
+                if (options[i].copy(argv[*argi],
+                                    options[i].minval,
+                                    options[i].maxval,
+                                    args) == false)
                 {
                     fprintf(stderr,
                             "\ninvalid option '%s %s'\n",
@@ -320,7 +402,10 @@ static char args_getarg(const int32_t argc,
                             argv[*argi]);
                     retval = 0;
                 }
-                else if (options[i].copy(options[i].dval, args) == false)
+                else if (options[i].copy(options[i].dval,
+                                         options[i].minval,
+                                         options[i].maxval,
+                                         args) == false)
                 {
                     fprintf(stderr,
                             "\ninvalid option '%s %s'\n",
@@ -339,7 +424,10 @@ static char args_getarg(const int32_t argc,
                         argv[*argi]);
                 retval = 0;
             }
-            else if (options[i].copy(options[i].dval, args) == false)
+            else if (options[i].copy(options[i].dval,
+                                     options[i].minval,
+                                     options[i].maxval,
+                                     args) == false)
             {
                 fprintf(stderr,
                         "\ninvalid option '%s %s'\n",
@@ -371,11 +459,13 @@ bool args_parse(const int32_t argc,
     }
     else
     {
+        utilstring_fromi32(SOMAXCONN, str_somaxconn, sizeof(str_somaxconn));
+
         // Set defaults.
         memset(groupcount, 0, sizeof(groupcount));
         args->mode = ARGS_MODE_CHAT;
         args->arch = ARGS_ARCH_NULL;
-        args_copyipport("5001", args);
+        args_copyipport("5001", "0", "65535", args);
 
         for (i = 1; (i < argc) && (retval == true); i++)
         {
