@@ -159,3 +159,38 @@ void utilstring_toupper(char * const str)
         }
     }
 }
+
+/**
+ * @see See header file for interface comments.
+ */
+bool utilstring_fromi32(const int32_t num, char * const str, const size_t len)
+{
+    bool retval = false;
+    int32_t errval = 0;
+
+    if ((str == NULL) || (len == 0))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        errval = snprintf(str, len, "%d", num);
+
+        if ((errval == 0) || (errval >= (int32_t)len))
+        {
+            //logger_printf(LOGGER_LEVEL_ERROR,
+            //              "%s: '%d' could not be converted to a string of size %d\n",
+            //              __FUNCTION__,
+            //              num,
+            //              len);
+        }
+        else
+        {
+            retval = true;
+        }
+    }
+
+    return retval;
+}

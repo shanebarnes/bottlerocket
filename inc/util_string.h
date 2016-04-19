@@ -81,4 +81,15 @@ void utilstring_tolower(char * const str);
  */
 void utilstring_toupper(char * const str);
 
+/**
+ * @brief Convert a 32-bit integer to a string.
+ *
+ * @param[in]     num A 32-bit integer to convert.
+ * @param[in,out] str A string buffer to store the converted 32-bit integer.
+ * @param[in]     len The size of the string buffer in bytes.
+ *
+ * @return True on success.
+ */
+bool utilstring_fromi32(const int32_t num, char * const str, const size_t len);
+
 #endif // _UTIL_STRING_H_
