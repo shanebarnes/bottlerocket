@@ -244,7 +244,8 @@ static struct tuple_element options[] =
      true,
      NULL
     },
-    {"--help",
+    {
+     "--help",
      'h',
      ARGS_GROUP_INFO,
      "print help information and quit",
@@ -255,7 +256,8 @@ static struct tuple_element options[] =
      true,
      NULL
     },
-    {"--version",
+    {
+     "--version",
      'v',
      ARGS_GROUP_INFO,
      "print version information and quit",
