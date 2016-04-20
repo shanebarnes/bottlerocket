@@ -249,6 +249,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
                               retval,
                               obj->addrpeer.ipaddr,
                               obj->addrpeer.ipport);
+                obj->info.recvbytes += retval;
             }
             else
             {
@@ -317,6 +318,7 @@ int32_t sockudp_send(struct sockobj * const obj,
                           __FUNCTION__,
                           obj->sockfd,
                           retval);
+            obj->info.sendbytes += retval;
         }
         else
         {
