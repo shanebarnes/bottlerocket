@@ -145,8 +145,17 @@ struct sockobj_addr
     char               sockaddrstr[INET6_ADDRSTRLEN + 6]; // form: <addr>:<port>
 };
 
+struct sockobj_info
+{
+    uint64_t startusec,
+             stopusec,
+             recvbytes,
+             sendbytes;
+};
+
 struct sockobj
 {
+    struct sockobj_info  info;
     struct sockobj_ops   ops;
     struct fionobj       event;
     int32_t              socktype, // e.g.: SOCK_DGRAM, SOCK_STREAM
