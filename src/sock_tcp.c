@@ -321,6 +321,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
                               __FUNCTION__,
                               obj->sockfd,
                               retval);
+                obj->info.recvbytes += retval;
             }
             else
             {
@@ -376,6 +377,7 @@ int32_t socktcp_send(struct sockobj * const obj,
                           __FUNCTION__,
                           obj->sockfd,
                           retval);
+            obj->info.sendbytes += retval;
         }
         // Check for socket errors if send failed.
         else
