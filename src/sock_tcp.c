@@ -9,6 +9,8 @@
 
 #include "logger.h"
 #include "sock_tcp.h"
+#include "util_date.h"
+#include "util_unit.h"
 
 #include <errno.h>
 #include <sys/types.h>
@@ -118,6 +120,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
 #if defined(LINUX)
     int32_t   flags      = 0;
 #endif
+    uint64_t  ts         = 0;
 
     if ((listener == NULL) ||
         (obj == NULL) ||
@@ -159,6 +162,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                                  &socklen)) > -1)
 #endif
             {
+                ts = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
                 socklen = sizeof(obj->addrself.sockaddr);
 
                 if (socktcp_create(obj) == false)
@@ -200,6 +204,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                                   obj->addrself.sockaddrstr,
                                   obj->addrpeer.sockaddrstr);
                     obj->state = SOCKOBJ_STATE_OPEN | SOCKOBJ_STATE_CONNECT;
+                    obj->info.startusec = ts;
                     retval = true;
                 }
             }
@@ -232,6 +237,9 @@ bool socktcp_connect(struct sockobj * const obj)
     }
     else
     {
+        obj->info.startusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                                 UNIT_TIME_USEC);
+
         if (connect(obj->sockfd,
                     obj->ainfo.ai_addr,
                     obj->ainfo.ai_addrlen) == 0)
