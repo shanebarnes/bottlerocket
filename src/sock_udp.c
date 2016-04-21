@@ -36,16 +36,16 @@ bool sockudp_create(struct sockobj * const obj)
     }
     else
     {
-        obj->ops.soo_create  = sockudp_create;
-        obj->ops.soo_destroy = sockudp_destroy;
-        obj->ops.soo_open    = sockobj_open;
-        obj->ops.soo_close   = sockobj_close;
-        obj->ops.soo_bind    = sockobj_bind;
-        obj->ops.soo_listen  = sockudp_listen;
-        obj->ops.soo_accept  = sockudp_accept;
-        obj->ops.soo_connect = sockudp_connect;
-        obj->ops.soo_recv    = sockudp_recv;
-        obj->ops.soo_send    = sockudp_send;
+        obj->ops.sock_create  = sockudp_create;
+        obj->ops.sock_destroy = sockudp_destroy;
+        obj->ops.sock_open    = sockobj_open;
+        obj->ops.sock_close   = sockobj_close;
+        obj->ops.sock_bind    = sockobj_bind;
+        obj->ops.sock_listen  = sockudp_listen;
+        obj->ops.sock_accept  = sockudp_accept;
+        obj->ops.sock_connect = sockudp_connect;
+        obj->ops.sock_recv    = sockudp_recv;
+        obj->ops.sock_send    = sockudp_send;
 
         obj->socktype = SOCK_DGRAM;
 
@@ -70,16 +70,16 @@ bool sockudp_destroy(struct sockobj * const obj)
     }
     else
     {
-        obj->ops.soo_create  = NULL;
-        obj->ops.soo_destroy = NULL;
-        obj->ops.soo_open    = NULL;
-        obj->ops.soo_close   = NULL;
-        obj->ops.soo_bind    = NULL;
-        obj->ops.soo_listen  = NULL;
-        obj->ops.soo_accept  = NULL;
-        obj->ops.soo_connect = NULL;
-        obj->ops.soo_recv    = NULL;
-        obj->ops.soo_send    = NULL;
+        obj->ops.sock_create  = NULL;
+        obj->ops.sock_destroy = NULL;
+        obj->ops.sock_open    = NULL;
+        obj->ops.sock_close   = NULL;
+        obj->ops.sock_bind    = NULL;
+        obj->ops.sock_listen  = NULL;
+        obj->ops.sock_accept  = NULL;
+        obj->ops.sock_connect = NULL;
+        obj->ops.sock_recv    = NULL;
+        obj->ops.sock_send    = NULL;
 
         retval = true;
     }
