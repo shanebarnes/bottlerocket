@@ -9,6 +9,8 @@
 
 #include "logger.h"
 #include "sock_udp.h"
+#include "util_date.h"
+#include "util_unit.h"
 
 #include <errno.h>
 #include <sys/types.h>
@@ -157,34 +159,41 @@ bool sockudp_connect(struct sockobj * const obj)
                       "%s: parameter validation failed\n",
                       __FUNCTION__);
     }
-    // There are a number of benefits to calling connect() on a UDP socket:
-    //    1. the local IP port can be retrieved,
-    //    2. send() can be used instead of sendto(), and
-    //    3. the socket will only accept datagrams from the "connected" peer.
-    // The socket can be disconnected by calling connect() again with the socket
-    // family set AF_UNSPEC.
-    else if (connect(obj->sockfd,
-                     obj->ainfo.ai_addr,
-                     obj->ainfo.ai_addrlen) == 0)
-    {
-        obj->state |= SOCKOBJ_STATE_CONNECT;
-        retval = true;
-
-        if (sockobj_getaddrself(obj) == false)
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: socket %d peer information is unavailable\n",
-                          __FUNCTION__,
-                          obj->sockfd);
-        }
-    }
     else
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: socket %d connect error (%d)\n",
-                      __FUNCTION__,
-                      obj->sockfd,
-                      errno);
+        obj->info.startusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                                       UNIT_TIME_USEC);
+
+        // There are a number of benefits to calling connect() on a UDP socket:
+        //    1. the local IP port can be retrieved,
+        //    2. send() can be used instead of sendto(), and
+        //    3. the socket will only accept datagrams from the "connected"
+        //       peer.
+        // The socket can be disconnected by calling connect() again with the
+        // socket family set AF_UNSPEC.
+        if (connect(obj->sockfd,
+                    obj->ainfo.ai_addr,
+                    obj->ainfo.ai_addrlen) == 0)
+        {
+            obj->state |= SOCKOBJ_STATE_CONNECT;
+            retval = true;
+
+            if (sockobj_getaddrself(obj) == false)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d peer information is unavailable\n",
+                              __FUNCTION__,
+                              obj->sockfd);
+            }
+        }
+        else
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: socket %d connect error (%d)\n",
+                          __FUNCTION__,
+                          obj->sockfd,
+                          errno);
+        }
     }
 
     return retval;
