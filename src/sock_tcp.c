@@ -33,16 +33,16 @@ bool socktcp_create(struct sockobj * const obj)
     {
         if (sockobj_create(obj) == true)
         {
-            obj->ops.soo_create  = socktcp_create;
-            obj->ops.soo_destroy = socktcp_destroy;
-            obj->ops.soo_open    = sockobj_open;
-            obj->ops.soo_close   = sockobj_close;
-            obj->ops.soo_bind    = sockobj_bind;
-            obj->ops.soo_listen  = socktcp_listen;
-            obj->ops.soo_accept  = socktcp_accept;
-            obj->ops.soo_connect = socktcp_connect;
-            obj->ops.soo_recv    = socktcp_recv;
-            obj->ops.soo_send    = socktcp_send;
+            obj->ops.sock_create  = socktcp_create;
+            obj->ops.sock_destroy = socktcp_destroy;
+            obj->ops.sock_open    = sockobj_open;
+            obj->ops.sock_close   = sockobj_close;
+            obj->ops.sock_bind    = sockobj_bind;
+            obj->ops.sock_listen  = socktcp_listen;
+            obj->ops.sock_accept  = socktcp_accept;
+            obj->ops.sock_connect = socktcp_connect;
+            obj->ops.sock_recv    = socktcp_recv;
+            obj->ops.sock_send    = socktcp_send;
 
             obj->socktype = SOCK_STREAM;
 
