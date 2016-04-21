@@ -52,9 +52,9 @@ static void *modechat_thread(void * arg)
         memcpy(server.ipaddr, opts->ipaddr, sizeof(server.ipaddr));
         server.ipport = opts->ipport;
 
-        if ((server.ops.soo_open(&server) == false) ||
-            (server.ops.soo_bind(&server) == false) ||
-            (server.ops.soo_listen(&server, 1) == false))
+        if ((server.ops.sock_open(&server) == false) ||
+            (server.ops.sock_bind(&server) == false) ||
+            (server.ops.sock_listen(&server, 1) == false))
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to listen on %s:%u\n",
@@ -71,7 +71,7 @@ static void *modechat_thread(void * arg)
         {
             if (count <= 0)
             {
-                if (server.ops.soo_accept(&server, &socket) == true)
+                if (server.ops.sock_accept(&server, &socket) == true)
                 {
                     logger_printf(LOGGER_LEVEL_DEBUG,
                                   "%s: server accepted connection on %s\n",
@@ -88,9 +88,9 @@ static void *modechat_thread(void * arg)
             }
             else
             {
-                recvbytes = socket.ops.soo_recv(&socket,
-                                                recvbuf,
-                                                sizeof(recvbuf) - 1);
+                recvbytes = socket.ops.sock_recv(&socket,
+                                                 recvbuf,
+                                                 sizeof(recvbuf) - 1);
 
                 if (recvbytes > 0)
                 {
@@ -104,7 +104,7 @@ static void *modechat_thread(void * arg)
                 }
                 else if (recvbytes < 0)
                 {
-                    socket.ops.soo_close(&socket);
+                    socket.ops.sock_close(&socket);
                     count--;
                     formbytes = form.ops.form_foot(&form);
                     output_if_std_send(form.dstbuf, formbytes);
@@ -117,7 +117,7 @@ static void *modechat_thread(void * arg)
                     if (count > 0)
                     {
                         // @todo Fix for partial-send case.
-                        socket.ops.soo_send(&socket, recvbuf, recvbytes);
+                        socket.ops.sock_send(&socket, recvbuf, recvbytes);
                     }
                 }
             }
