@@ -79,6 +79,8 @@ static void *modechat_thread(void * arg)
                                   server.addrself.sockaddrstr);
                     socket.event.timeoutms = timeoutms;
                     form.sock = &socket;
+                    formbytes = form.ops.form_head(&form);
+                    output_if_std_send(form.dstbuf, formbytes);
                     count++;
                 }
 
@@ -92,10 +94,6 @@ static void *modechat_thread(void * arg)
 
                 if (recvbytes > 0)
                 {
-                    form.srclen = recvbytes;
-                    formbytes = form.ops.form_head(&form);
-                    output_if_std_send(form.dstbuf, formbytes);
-
                     // Null-terminate the string.
                     recvbuf[recvbytes] = '\0';
                     recvbytes++;
@@ -108,6 +106,8 @@ static void *modechat_thread(void * arg)
                 {
                     socket.ops.soo_close(&socket);
                     count--;
+                    formbytes = form.ops.form_foot(&form);
+                    output_if_std_send(form.dstbuf, formbytes);
                 }
 
                 if ((recvbytes = input_if_std_recv(recvbuf,
