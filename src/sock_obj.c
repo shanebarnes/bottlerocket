@@ -10,6 +10,8 @@
 #include "fion_poll.h"
 #include "logger.h"
 #include "sock_obj.h"
+#include "util_date.h"
+#include "util_unit.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -321,6 +323,8 @@ bool sockobj_close(struct sockobj * const obj)
         }
         else
         {
+            obj->info.stopusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                                    UNIT_TIME_USEC);
             retval = true;
         }
 
