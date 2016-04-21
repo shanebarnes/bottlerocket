@@ -110,10 +110,10 @@ void *thread_client_tcp(void * arg)
         //client.ipaddr = "127.0.0.1";
         client.ipport = 5001;
 
-        if ((client.ops.soo_open(&client) == true) &&
+        if ((client.ops.sock_open(&client) == true) &&
             ((client.event.timeoutms = 1000) > 0) &&
-            /*(client.ops.soo_bind(&client) == true) &&*/
-            (client.ops.soo_connect(&client) == true))
+            /*(client.ops.sock_bind(&client) == true) &&*/
+            (client.ops.sock_connect(&client) == true))
         {
             logger_printf(LOGGER_LEVEL_DEBUG,
                           "%s: connected to %s\n",
@@ -126,7 +126,7 @@ void *thread_client_tcp(void * arg)
             while ((thread_instance_isrunning(instance) == true) &&
                    (sendcount < 5))
             {
-                error = client.ops.soo_send(&client, buf, sizeof(buf));
+                error = client.ops.sock_send(&client, buf, sizeof(buf));
 
                 if (error > 0)
                 {
@@ -137,10 +137,10 @@ void *thread_client_tcp(void * arg)
                     break;
                 }
 
-                client.ops.soo_recv(&client, buf, sizeof(buf));
+                client.ops.sock_recv(&client, buf, sizeof(buf));
             }
 
-            client.ops.soo_close(&client);
+            client.ops.sock_close(&client);
         }
         else
         {
@@ -194,9 +194,9 @@ void *thread_server_tcp(void * arg)
         //server.ipaddr = "127.0.0.1";
         server.ipport = 5001;
 
-        if ((server.ops.soo_open(&server) == true) &&
-            (server.ops.soo_bind(&server) == true) &&
-            (server.ops.soo_listen(&server, 1) == true))
+        if ((server.ops.sock_open(&server) == true) &&
+            (server.ops.sock_bind(&server) == true) &&
+            (server.ops.sock_listen(&server, 1) == true))
         {
             server.event.timeoutms = 1000;
 
@@ -209,7 +209,7 @@ void *thread_server_tcp(void * arg)
             {
                 if (count <= 0)
                 {
-                    if (server.ops.soo_accept(&server, &socket) == true)
+                    if (server.ops.sock_accept(&server, &socket) == true)
                     {
                         logger_printf(LOGGER_LEVEL_DEBUG,
                                       "%s: server accepted connection on %s\n",
@@ -222,7 +222,7 @@ void *thread_server_tcp(void * arg)
                 }
                 else
                 {
-                    error = socket.ops.soo_recv(&socket, buf, sizeof(buf));
+                    error = socket.ops.sock_recv(&socket, buf, sizeof(buf));
 
                     if (error > 0)
                     {
@@ -235,7 +235,7 @@ void *thread_server_tcp(void * arg)
                     }
                     else if (error < 0)
                     {
-                        socket.ops.soo_close(&socket);
+                        socket.ops.sock_close(&socket);
                         count--;
                         logger_printf(LOGGER_LEVEL_DEBUG,
                                       "%s: read a total of %d bytes from %s\n",
@@ -249,7 +249,7 @@ void *thread_server_tcp(void * arg)
 
             if (count > 0)
             {
-                socket.ops.soo_close(&socket);
+                socket.ops.sock_close(&socket);
                 count--;
             }
         }
@@ -295,8 +295,8 @@ void *thread_server_udp(void * arg)
         //server.ipaddr = "127.0.0.1";
         server.ipport = 5001;
 
-        if ((server.ops.soo_open(&server) == true) &&
-            (server.ops.soo_bind(&server) == true))
+        if ((server.ops.sock_open(&server) == true) &&
+            (server.ops.sock_bind(&server) == true))
         {
             server.event.timeoutms = 1000;
 
@@ -307,7 +307,7 @@ void *thread_server_udp(void * arg)
 
             while (thread_instance_isrunning(instance) == true)
             {
-                error = server.ops.soo_recv(&server, buf, sizeof(buf));
+                error = server.ops.sock_recv(&server, buf, sizeof(buf));
 
                 if (error >= 0)
                 {
@@ -327,7 +327,7 @@ void *thread_server_udp(void * arg)
                 }
             }
 
-            server.ops.soo_close(&server);
+            server.ops.sock_close(&server);
         }
 
         logger_printf(LOGGER_LEVEL_DEBUG,
@@ -371,10 +371,10 @@ void *thread_client_udp(void * arg)
         //client.ipaddr = "127.0.0.1";
         client.ipport = 5001;
 
-        if ((client.ops.soo_open(&client) == true) &&
+        if ((client.ops.sock_open(&client) == true) &&
             ((client.event.timeoutms = 1000) > 0) /*&&
-            (client.ops.soo_bind(&client) == true)*/ &&
-            (client.ops.soo_connect(&client) == true))
+            (client.ops.sock_bind(&client) == true)*/ &&
+            (client.ops.sock_connect(&client) == true))
         {
             logger_printf(LOGGER_LEVEL_DEBUG,
                           "%s: connected to %s\n",
@@ -387,7 +387,7 @@ void *thread_client_udp(void * arg)
             while ((thread_instance_isrunning(instance) == true) &&
                    (sendcount < 5))
             {
-                error = client.ops.soo_send(&client, buf, sizeof(buf));
+                error = client.ops.sock_send(&client, buf, sizeof(buf));
 logger_printf(LOGGER_LEVEL_ERROR, "%s: sending\n", __FUNCTION__); //??
                 if (error > 0)
                 {
@@ -398,10 +398,10 @@ logger_printf(LOGGER_LEVEL_ERROR, "%s: sending\n", __FUNCTION__); //??
                     break;
                 }
 
-                client.ops.soo_recv(&client, buf, sizeof(buf));
+                client.ops.sock_recv(&client, buf, sizeof(buf));
             }
 
-            client.ops.soo_close(&client);
+            client.ops.sock_close(&client);
         }
         else
         {
