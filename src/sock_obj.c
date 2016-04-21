@@ -110,7 +110,7 @@ bool sockobj_getaddrself(struct sockobj * const obj)
 }
 
 /**
- * @see See soo_create() for interface comments.
+ * @see See sock_create() for interface comments.
  */
 bool sockobj_create(struct sockobj * const obj)
 {
@@ -143,7 +143,7 @@ bool sockobj_create(struct sockobj * const obj)
 }
 
 /**
- * @see See soo_destroy() for interface comments.
+ * @see See sock_destroy() for interface comments.
  */
 bool sockobj_destroy(struct sockobj * const obj)
 {
@@ -159,16 +159,16 @@ bool sockobj_destroy(struct sockobj * const obj)
     {
         retval = obj->event.ops.foo_destroy(&obj->event);
 
-        obj->ops.soo_create  = NULL;
-        obj->ops.soo_destroy = NULL;
-        obj->ops.soo_open    = NULL;
-        obj->ops.soo_close   = NULL;
-        obj->ops.soo_bind    = NULL;
-        obj->ops.soo_listen  = NULL;
-        obj->ops.soo_accept  = NULL;
-        obj->ops.soo_connect = NULL;
-        obj->ops.soo_recv    = NULL;
-        obj->ops.soo_send    = NULL;
+        obj->ops.sock_create  = NULL;
+        obj->ops.sock_destroy = NULL;
+        obj->ops.sock_open    = NULL;
+        obj->ops.sock_close   = NULL;
+        obj->ops.sock_bind    = NULL;
+        obj->ops.sock_listen  = NULL;
+        obj->ops.sock_accept  = NULL;
+        obj->ops.sock_connect = NULL;
+        obj->ops.sock_recv    = NULL;
+        obj->ops.sock_send    = NULL;
     }
 
     return retval;

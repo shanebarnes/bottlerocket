@@ -27,7 +27,7 @@ struct sockobj_ops
      *
      * @return True if a socket object was created.
      */
-    bool (*soo_create)(struct sockobj * const obj);
+    bool (*sock_create)(struct sockobj * const obj);
 
     /**
      * brief Destroy a socket object.
@@ -36,7 +36,7 @@ struct sockobj_ops
      *
      * @return True if a socket object was destroyed.
      */
-    bool (*soo_destroy)(struct sockobj * const obj);
+    bool (*sock_destroy)(struct sockobj * const obj);
 
     /**
      * @brief Open a socket.
@@ -45,7 +45,7 @@ struct sockobj_ops
      *
      * @return True on success.
      */
-    bool (*soo_open)(struct sockobj * const obj);
+    bool (*sock_open)(struct sockobj * const obj);
 
     /**
      * @brief Close a socket.
@@ -54,7 +54,7 @@ struct sockobj_ops
      *
      * @return True on success.
      */
-    bool (*soo_close)(struct sockobj * const obj);
+    bool (*sock_close)(struct sockobj * const obj);
 
     /**
      * @brief Assign an address to a socket.
@@ -63,7 +63,7 @@ struct sockobj_ops
      *
      * @return True on success.
      */
-    bool (*soo_bind)(struct sockobj * const obj);
+    bool (*sock_bind)(struct sockobj * const obj);
 
     /**
      * @brief Listen for connections on an open socket.
@@ -74,8 +74,8 @@ struct sockobj_ops
      *
      * @return True on success.
      */
-    bool (*soo_listen)(struct sockobj * const obj,
-                       const int32_t backlog);
+    bool (*sock_listen)(struct sockobj * const obj,
+                        const int32_t backlog);
 
     /**
      * @brief Accept a connection on a listener socket.
@@ -86,8 +86,8 @@ struct sockobj_ops
      *
      * @return True if a connection was accepted on a listener socket.
      */
-    bool (*soo_accept)(struct sockobj * const listener,
-                       struct sockobj * const obj);
+    bool (*sock_accept)(struct sockobj * const listener,
+                        struct sockobj * const obj);
 
     /**
      * @brief Initiate a connection on a socket.
@@ -96,7 +96,7 @@ struct sockobj_ops
      *
      * @return True on success.
      */
-    bool (*soo_connect)(struct sockobj * const obj);
+    bool (*sock_connect)(struct sockobj * const obj);
 
     /**
      * @brief Receive data from a socket.
@@ -108,9 +108,9 @@ struct sockobj_ops
      *
      * @return The number of bytes received from the socket (-1 on error).
      */
-    int32_t (*soo_recv)(struct sockobj * const obj,
-                        void * const buf,
-                        const uint32_t len);
+    int32_t (*sock_recv)(struct sockobj * const obj,
+                         void * const buf,
+                         const uint32_t len);
 
     /**
      * @brief Send data to a socket.
@@ -122,9 +122,9 @@ struct sockobj_ops
      *
      * @return The number of bytes sent to the socket (-1 on error).
      */
-    int32_t (*soo_send)(struct sockobj * const obj,
-                        void * const buf,
-                        const uint32_t len);
+    int32_t (*sock_send)(struct sockobj * const obj,
+                         void * const buf,
+                         const uint32_t len);
 };
 
 enum sockobj_state
@@ -188,27 +188,27 @@ bool sockobj_getaddrpeer(struct sockobj * const obj);
 bool sockobj_getaddrself(struct sockobj * const obj);
 
 /**
- * @see soo_create() for interface comments.
+ * @see sock_create() for interface comments.
  */
 bool sockobj_create(struct sockobj * const obj);
 
 /**
- * @see soo_destroy() for interface comments.
+ * @see sock_destroy() for interface comments.
  */
 bool sockobj_destroy(struct sockobj * const obj);
 
 /**
- * @see soo_open() for interface comments.
+ * @see sock_open() for interface comments.
  */
 bool sockobj_open(struct sockobj * const obj);
 
 /**
- * @see soo_close() for interface comments.
+ * @see sock_close() for interface comments.
  */
 bool sockobj_close(struct sockobj * const obj);
 
 /**
- * @see soo_bind() for interface comments.
+ * @see sock_bind() for interface comments.
  */
 bool sockobj_bind(struct sockobj * const obj);
 
