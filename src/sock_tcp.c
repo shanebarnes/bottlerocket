@@ -23,11 +23,18 @@
 bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
 {
     bool retval = false;
+    int32_t errval = -1;
 #if defined (__APPLE__)
-    int32_t errval = 0;
     struct tcp_connection_info optval;
-    socklen_t optlen = sizeof(optval);
+    int32_t optname = TCP_CONNECTION_INFO;
+#elif defined (LINUX)
+    struct tcp_info optval;
+    int32_t optname = TCP_INFO;
+#else
+    uint32_t optval;
+    uint32_t optname = 0;
 #endif
+    socklen_t optlen = sizeof(optval);
 
     if ((fd < 0) || (info == NULL))
     {
@@ -37,10 +44,9 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
     }
     else
     {
-#if defined (__APPLE__)
         errval = getsockopt(fd,
                             IPPROTO_TCP,
-                            TCP_CONNECTION_INFO,
+                            optname,
                             &optval,
                             (socklen_t *)&optlen);
 
@@ -53,15 +59,21 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
         }
         else
         {
+#if defined (__APPLE__) || defined (LINUX)
             info->state     = optval.tcpi_state;
             info->sndwscale = optval.tcpi_snd_wscale;
             info->rcvwscale = optval.tcpi_rcv_wscale;
             info->options   = optval.tcpi_options;
             info->flags     = optval.tcpi_flags;
             info->rto       = optval.tcpi_rto;
+    #if defined (__APPLE__)
             info->mss       = optval.tcpi_maxseg;
+    #else
+            info->mss       = optval.tcpi_snd_mss;
+    #endif
             info->ssthresh  = optval.tcpi_snd_ssthresh;
             info->cwnd      = optval.tcpi_snd_cwnd;
+    #if defined (__APPLE__)
             info->sndbuf    = optval.tcpi_snd_sbbytes;
             info->rcvwin    = optval.tcpi_rcv_wnd;
             info->rttcur    = optval.tcpi_rttcur;
@@ -73,10 +85,10 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
             info->rxpackets = optval.tcpi_rxpackets;
             info->rxbytes   = optval.tcpi_rxbytes;
             info->rxoobytes = optval.tcpi_rxoutoforderbytes;
-
+    #endif
             retval = true;
-        }
 #endif
+        }
     }
 
     return retval;
