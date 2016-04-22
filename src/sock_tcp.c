@@ -29,7 +29,7 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
     socklen_t optlen = sizeof(optval);
 #endif
 
-    if (info == NULL)
+    if ((fd < 0) || (info == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -75,8 +75,8 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
             info->rxoobytes = optval.tcpi_rxoutoforderbytes;
 
             retval = true;
-#endif
         }
+#endif
     }
 
     return retval;
