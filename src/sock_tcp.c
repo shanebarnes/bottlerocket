@@ -13,8 +13,74 @@
 #include "util_unit.h"
 
 #include <errno.h>
+#include <netinet/tcp.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+
+/**
+ * @see See header file for interface comments.
+ */
+bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
+{
+    bool retval = false;
+#if defined (__APPLE__)
+    int32_t errval = 0;
+    struct tcp_connection_info optval;
+    socklen_t optlen = sizeof(optval);
+#endif
+
+    if (info == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+#if defined (__APPLE__)
+        errval = getsockopt(fd,
+                            IPPROTO_TCP,
+                            TCP_CONNECTION_INFO,
+                            &optval,
+                            (socklen_t *)&optlen);
+
+        if (errval != 0)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to get TCP info (%d)\n",
+                          __FUNCTION__,
+                          errno);
+        }
+        else
+        {
+            info->state     = optval.tcpi_state;
+            info->sndwscale = optval.tcpi_snd_wscale;
+            info->rcvwscale = optval.tcpi_rcv_wscale;
+            info->options   = optval.tcpi_options;
+            info->flags     = optval.tcpi_flags;
+            info->rto       = optval.tcpi_rto;
+            info->mss       = optval.tcpi_maxseg;
+            info->ssthresh  = optval.tcpi_snd_ssthresh;
+            info->cwnd      = optval.tcpi_snd_cwnd;
+            info->sndbuf    = optval.tcpi_snd_sbbytes;
+            info->rcvwin    = optval.tcpi_rcv_wnd;
+            info->rttcur    = optval.tcpi_rttcur;
+            info->rttavg    = optval.tcpi_srtt;
+            info->rttvar    = optval.tcpi_rttvar;
+            info->txpackets = optval.tcpi_txpackets;
+            info->txbytes   = optval.tcpi_txbytes;
+            info->retxbytes = optval.tcpi_txretransmitbytes;
+            info->rxpackets = optval.tcpi_rxpackets;
+            info->rxbytes   = optval.tcpi_rxbytes;
+            info->rxoobytes = optval.tcpi_rxoutoforderbytes;
+
+            retval = true;
+#endif
+        }
+    }
+
+    return retval;
+}
 
 /**
  * @see See header file for interface comments.
