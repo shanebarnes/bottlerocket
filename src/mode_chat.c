@@ -13,11 +13,11 @@
 #include "mode_chat.h"
 #include "output_if_std.h"
 #include "sock_tcp.h"
-#include "thread_instance.h"
+#include "thread_obj.h"
 
 #include <string.h>
 
-static struct thread_instance thread;
+static struct threadobj thread;
 static struct args_obj *opts = NULL;
 
 /**
@@ -25,7 +25,7 @@ static struct args_obj *opts = NULL;
  */
 static void *modechat_thread(void * arg)
 {
-    struct thread_instance *thread = (struct thread_instance *)arg;
+    struct threadobj *thread = (struct threadobj *)arg;
     struct sockobj server, socket;
     struct formobj form;
     char    recvbuf[1024], sendbuf[4096];
@@ -67,7 +67,7 @@ static void *modechat_thread(void * arg)
             server.event.timeoutms = timeoutms;
         }
 
-        while (thread_instance_isrunning(thread) == true)
+        while (threadobj_isrunning(thread) == true)
         {
             if (count <= 0)
             {
@@ -164,15 +164,15 @@ bool modechat_start(void)
                       "%s: parameter validation failed\n",
                       __FUNCTION__);
     }
-    else if (thread_instance_create(&thread) == false)
+    else if (threadobj_create(&thread) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to create chat thread\n",
                       __FUNCTION__);
     }
-    else if (thread_instance_start(&thread) == false)
+    else if (threadobj_start(&thread) == false)
     {
-        thread_instance_destroy(&thread);
+        threadobj_destroy(&thread);
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to start chat thread\n",
                       __FUNCTION__);
@@ -192,13 +192,13 @@ bool modechat_stop(void)
 {
     bool retval = false;
 
-    if (thread_instance_stop(&thread) == false)
+    if (threadobj_stop(&thread) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to stop chat thread\n",
                       __FUNCTION__);
     }
-    else if (thread_instance_destroy(&thread) == false)
+    else if (threadobj_destroy(&thread) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to destroy chat thread\n",
