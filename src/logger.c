@@ -10,15 +10,15 @@
 #include "logger.h"
 #include "util_date.h"
 #include "util_string.h"
-#include "mutex_instance.h"
+#include "mutex_obj.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 
-static enum logger_level       static_level = LOGGER_LEVEL_ALL;
-static struct mutex_instance  *lock         = NULL;
-static struct output_if_ops   *output_if    = NULL;
-static int32_t                 refcount     = 0;
+static enum logger_level     static_level = LOGGER_LEVEL_ALL;
+static struct mutexobj      *lock         = NULL;
+static struct output_if_ops *output_if    = NULL;
+static int32_t               refcount     = 0;
 
 /**
  * @see See header file for interface comments.
@@ -27,11 +27,11 @@ bool logger_create(void)
 {
     bool retval = false;
 
-    lock = (struct mutex_instance *)malloc(sizeof(struct mutex_instance));
+    lock = (struct mutexobj*)malloc(sizeof(struct mutexobj));
 
     if (lock != NULL)
     {
-        retval = mutex_instance_create(lock);
+        retval = mutexobj_create(lock);
     }
 
     return retval;
@@ -46,7 +46,7 @@ bool logger_destroy(void)
 
     if (lock != NULL)
     {
-        retval = mutex_instance_destroy(lock);
+        retval = mutexobj_destroy(lock);
         free(lock);
         lock = NULL;
     }
@@ -57,13 +57,13 @@ bool logger_destroy(void)
 /**
  * @see See header file for interface comments.
  */
-bool logger_set_output(struct output_if_ops * const instance)
+bool logger_set_output(struct output_if_ops * const obj)
 {
     bool retval = false;
 
-    if (instance != NULL)
+    if (obj != NULL)
     {
-        output_if = instance;
+        output_if = obj;
         retval = true;
     }
 
@@ -79,9 +79,9 @@ bool logger_set_level(const enum logger_level level)
 
     if ((lock != NULL) && (level <= LOGGER_LEVEL_MAX))
     {
-        mutex_instance_lock(lock);
+        mutexobj_lock(lock);
         static_level = level;
-        mutex_instance_unlock(lock);
+        mutexobj_unlock(lock);
 
         retval = true;
     }
@@ -146,7 +146,7 @@ void logger_printf(const enum logger_level level, const char *format, ...)
     if ((lock != NULL) &&
         (output_if != NULL))
     {
-        mutex_instance_lock(lock);
+        mutexobj_lock(lock);
         // At the expense of more processing overhead, stop logging messages if
         // the number of incomplete logging transactions exceeds 10 in the event
         // that the high number of concurrent transactions is due to an
@@ -163,7 +163,7 @@ void logger_printf(const enum logger_level level, const char *format, ...)
             setlevel = static_level;
             refcount++;
         }
-        mutex_instance_unlock(lock);
+        mutexobj_unlock(lock);
 
         if ((dropmsg == false) &&
             (level >= setlevel) &&
@@ -199,9 +199,9 @@ void logger_printf(const enum logger_level level, const char *format, ...)
 
         if (dropmsg == false)
         {
-            mutex_instance_lock(lock);
+            mutexobj_lock(lock);
             refcount--;
-            mutex_instance_unlock(lock);
+            mutexobj_unlock(lock);
         }
     }
 }

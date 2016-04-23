@@ -41,13 +41,13 @@ bool logger_create(void);
 bool logger_destroy(void);
 
 /**
- * @brief Set the logger output interface instance.
+ * @brief Set the logger output interface object.
  *
- * @param[in] instance A pointer to the output interface instance.
+ * @param[in] obj A pointer to a output interface object.
  *
- * @return True if the new logger output interface instance was set.
+ * @return True if a new logger output interface object was set.
  */
-bool logger_set_output(struct output_if_ops * const instance);
+bool logger_set_output(struct output_if_ops * const obj);
 
 /**
  * @brief Set the logger level.
