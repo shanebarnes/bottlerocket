@@ -12,15 +12,15 @@ set(BR_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/list_dlink.h
     ${CMAKE_CURRENT_SOURCE_DIR}/logger.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_chat.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/mutex_instance.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/mutex_obj.h
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_std.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/rwlock_instance.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/rwlock_obj.h
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_obj.h
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_tcp.h
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_udp.h
     ${CMAKE_CURRENT_SOURCE_DIR}/system_types.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thread_instance.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thread_obj.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_date.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_ioctl.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_inet.h
