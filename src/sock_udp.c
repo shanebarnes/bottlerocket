@@ -133,7 +133,7 @@ bool sockudp_accept(struct sockobj * const listener,
         //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
         //       for signaling shutdown events, etc.
 
-        if (listener->event.ops.foo_poll(&listener->event) == true)
+        if (listener->event.ops.fion_poll(&listener->event) == true)
         {
             if (((listener->event.revents & FIONOBJ_REVENT_TIMEOUT) == 0) &&
                 ((listener->event.revents & FIONOBJ_REVENT_ERROR) == 0))
@@ -218,7 +218,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
     }
     else
     {
-        if (obj->event.ops.foo_poll(&obj->event) == false)
+        if (obj->event.ops.fion_poll(&obj->event) == false)
         {
             retval = -1;
         }
@@ -367,7 +367,7 @@ int32_t sockudp_send(struct sockobj * const obj,
 
             if (retval == 0)
             {
-                if (obj->event.ops.foo_poll(&obj->event) == false)
+                if (obj->event.ops.fion_poll(&obj->event) == false)
                 {
                     retval = -1;
                 }
