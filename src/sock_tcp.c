@@ -218,7 +218,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
         //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
         //       for signaling shutdown events, etc.
 
-        if (listener->event.ops.foo_poll(&listener->event) == true)
+        if (listener->event.ops.fion_poll(&listener->event) == true)
         {
             if (((listener->event.revents & FIONOBJ_REVENT_TIMEOUT) == 0) &&
                 ((listener->event.revents & FIONOBJ_REVENT_ERROR) == 0))
@@ -251,8 +251,8 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                                   obj->sockfd);
                 }
                 else if (((obj->sockfd = sockfd) != sockfd) ||
-                         (obj->event.ops.foo_insertfd(&obj->event, sockfd) == false) ||
-                         (obj->event.ops.foo_setflags(&obj->event) == false))
+                         (obj->event.ops.fion_insertfd(&obj->event, sockfd) == false) ||
+                         (obj->event.ops.fion_setflags(&obj->event) == false))
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: invalid socket fd (%d)\n",
@@ -329,13 +329,13 @@ bool socktcp_connect(struct sockobj * const obj)
             if (errno == EINPROGRESS)
             {
                 obj->event.pevents = FIONOBJ_PEVENT_IN | FIONOBJ_PEVENT_OUT;
-                obj->event.ops.foo_setflags(&obj->event);
+                obj->event.ops.fion_setflags(&obj->event);
 
                 // @todo If timeout is -1 (blocking), then the poll should occur
                 //       in a loop with a small timeout (e.g., 100 ms) or maybe
                 //       a self-pipe for signaling shutdown events, etc.
 
-                if (obj->event.ops.foo_poll(&obj->event) == true)
+                if (obj->event.ops.fion_poll(&obj->event) == true)
                 {
                     if (((obj->event.revents & FIONOBJ_REVENT_ERROR) == 0) &&
                         (obj->event.revents & FIONOBJ_REVENT_OUTREADY))
@@ -345,7 +345,7 @@ bool socktcp_connect(struct sockobj * const obj)
                 }
 
                 obj->event.pevents = FIONOBJ_PEVENT_IN;
-                obj->event.ops.foo_setflags(&obj->event);
+                obj->event.ops.fion_setflags(&obj->event);
             }
             else
             {
@@ -392,7 +392,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
     }
     else
     {
-        if (obj->event.ops.foo_poll(&obj->event) == false)
+        if (obj->event.ops.fion_poll(&obj->event) == false)
         {
             retval = -1;
         }
@@ -504,7 +504,7 @@ int32_t socktcp_send(struct sockobj * const obj,
 
             if (retval == 0)
             {
-                if (obj->event.ops.foo_poll(&obj->event) == false)
+                if (obj->event.ops.fion_poll(&obj->event) == false)
                 {
                     retval = -1;
                 }
