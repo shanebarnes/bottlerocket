@@ -30,12 +30,12 @@ bool fionpoll_create(struct fionobj * const obj)
     }
     else
     {
-        obj->ops.foo_create   = fionpoll_create;
-        obj->ops.foo_destroy  = fionpoll_destroy;
-        obj->ops.foo_insertfd = fionpoll_insertfd;
-        obj->ops.foo_deletefd = fionpoll_deletefd;
-        obj->ops.foo_setflags = fionpoll_setflags;
-        obj->ops.foo_poll     = fionpoll_poll;
+        obj->ops.fion_create   = fionpoll_create;
+        obj->ops.fion_destroy  = fionpoll_destroy;
+        obj->ops.fion_insertfd = fionpoll_insertfd;
+        obj->ops.fion_deletefd = fionpoll_deletefd;
+        obj->ops.fion_setflags = fionpoll_setflags;
+        obj->ops.fion_poll     = fionpoll_poll;
 
         obj->timeoutms = 0;
         obj->pevents   = 0;
@@ -80,12 +80,12 @@ bool fionpoll_destroy(struct fionobj * const obj)
             }
         }
 
-        obj->ops.foo_create   = NULL;
-        obj->ops.foo_destroy  = NULL;
-        obj->ops.foo_insertfd = NULL;
-        obj->ops.foo_deletefd = NULL;
-        obj->ops.foo_setflags = NULL;
-        obj->ops.foo_poll     = NULL;
+        obj->ops.fion_create   = NULL;
+        obj->ops.fion_destroy  = NULL;
+        obj->ops.fion_insertfd = NULL;
+        obj->ops.fion_deletefd = NULL;
+        obj->ops.fion_setflags = NULL;
+        obj->ops.fion_poll     = NULL;
 
         retval = true;
     }

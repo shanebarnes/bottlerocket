@@ -14,32 +14,32 @@
 #include "system_types.h"
 
 /**
- * @see foo_create() for interface comments.
+ * @see fion_create() for interface comments.
  */
 bool fionpoll_create(struct fionobj * const obj);
 
 /**
- * @see foo_destroy() for interface comments.
+ * @see fion_destroy() for interface comments.
  */
 bool fionpoll_destroy(struct fionobj * const obj);
 
 /**
- * @see foo_insertfd() for interface comments.
+ * @see fion_insertfd() for interface comments.
  */
 bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd);
 
 /**
- * @see foo_deletefd() for interface comments.
+ * @see fion_deletefd() for interface comments.
  */
 bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd);
 
 /**
- * @see foo_setflags() for interface comments.
+ * @see fion_setflags() for interface comments.
  */
 bool fionpoll_setflags(struct fionobj * const obj);
 
 /**
- * @see foo_poll() for interface comments.
+ * @see fion_poll() for interface comments.
  */
 bool fionpoll_poll(struct fionobj * const obj);
 
