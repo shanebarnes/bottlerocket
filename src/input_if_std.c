@@ -39,12 +39,12 @@ int32_t input_if_std_recv(void * const buf,
 
         if (fionpoll_create(&event) == true)
         {
-            event.ops.foo_insertfd(&event, fd);
+            event.ops.fion_insertfd(&event, fd);
             event.timeoutms = timeoutms;
             event.pevents   = FIONOBJ_PEVENT_IN;
 
-            if ((event.ops.foo_setflags(&event) == true) &&
-                (event.ops.foo_poll(&event) == true))
+            if ((event.ops.fion_setflags(&event) == true) &&
+                (event.ops.fion_poll(&event) == true))
             {
                 if (event.revents & FIONOBJ_REVENT_INREADY)
                 {
