@@ -38,7 +38,7 @@ struct fionobj_ops
      *
      * @return True on success.
      */
-    bool (*foo_create)(struct fionobj * const obj);
+    bool (*fion_create)(struct fionobj * const obj);
 
     /**
      * @brief Destroy a file I/O event notification object.
@@ -47,7 +47,7 @@ struct fionobj_ops
      *
      * @return True on success.
      */
-    bool (*foo_destroy)(struct fionobj * const obj);
+    bool (*fion_destroy)(struct fionobj * const obj);
 
     /**
      * @brief Insert a file descriptor into a file I/O event notification
@@ -59,7 +59,7 @@ struct fionobj_ops
      * @return True if a file descriptor was inserted into a file I/O event
      *         notification object.
      */
-    bool (*foo_insertfd)(struct fionobj * const obj, const int32_t fd);
+    bool (*fion_insertfd)(struct fionobj * const obj, const int32_t fd);
 
     /**
      * @brief Delete a file descriptor from a file I/O event notification
@@ -71,7 +71,7 @@ struct fionobj_ops
      * @return True if a file descriptor was deleted from a file I/O event
      *         notification object.
      */
-    bool (*foo_deletefd)(struct fionobj * const obj, const int32_t fd);
+    bool (*fion_deletefd)(struct fionobj * const obj, const int32_t fd);
 
     /**
      * @brief Set the file I/O event flags to handle.
@@ -80,7 +80,7 @@ struct fionobj_ops
      *
      * @return True on sucess.
      */
-    bool (*foo_setflags)(struct fionobj * const obj);
+    bool (*fion_setflags)(struct fionobj * const obj);
 
     /**
      * @brief Check a file I/O event object for events of interest. The object
@@ -92,7 +92,7 @@ struct fionobj_ops
      *
      * @return True if the file I/O event object was polled.
      */
-    bool (*foo_poll)(struct fionobj * const obj);
+    bool (*fion_poll)(struct fionobj * const obj);
 };
 
 struct fionobj
