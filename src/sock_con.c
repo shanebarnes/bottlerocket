@@ -103,7 +103,7 @@ bool sockcon_insert(struct sockcon * const con, struct sockobj * const sock)
     }
     else
     {
-        if (con->fion.ops.foo_insertfd(&con->fion, sock->sockfd) == false)
+        if (con->fion.ops.fion_insertfd(&con->fion, sock->sockfd) == false)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to insert socket %d\n",
@@ -112,7 +112,7 @@ bool sockcon_insert(struct sockcon * const con, struct sockobj * const sock)
         }
         else if (vector_inserttail(&con->sock, sock) == false)
         {
-            con->fion.ops.foo_deletefd(&con->fion, sock->sockfd);
+            con->fion.ops.fion_deletefd(&con->fion, sock->sockfd);
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to insert socket %d\n",
                           __FUNCTION__,
@@ -154,7 +154,7 @@ bool sockcon_delete(struct sockcon * const con, const uint32_t index)
         }
         else
         {
-            if (con->fion.ops.foo_deletefd(&con->fion, sock->sockfd) == false)
+            if (con->fion.ops.fion_deletefd(&con->fion, sock->sockfd) == false)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: failed to destroy socket %d fd\n",
@@ -193,7 +193,7 @@ bool sockcon_poll(struct sockcon * const con)
     }
     else
     {
-        retval = con->fion.ops.foo_poll(&con->fion);
+        retval = con->fion.ops.fion_poll(&con->fion);
     }
 
     return retval;
