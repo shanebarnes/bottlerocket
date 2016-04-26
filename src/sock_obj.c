@@ -157,7 +157,7 @@ bool sockobj_destroy(struct sockobj * const obj)
     }
     else
     {
-        retval = obj->event.ops.foo_destroy(&obj->event);
+        retval = obj->event.ops.fion_destroy(&obj->event);
 
         obj->ops.sock_create  = NULL;
         obj->ops.sock_destroy = NULL;
@@ -230,9 +230,9 @@ bool sockobj_open(struct sockobj * const obj)
                     obj->addrpeer.sockaddr.sin_port        = htons(obj->ipport);
 
                     optval = 1;
-                    obj->event.ops.foo_insertfd(&obj->event, obj->sockfd);
+                    obj->event.ops.fion_insertfd(&obj->event, obj->sockfd);
 
-                    if (obj->event.ops.foo_setflags(&obj->event) == false)
+                    if (obj->event.ops.fion_setflags(&obj->event) == false)
                     {
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %d event creation failed\n",
