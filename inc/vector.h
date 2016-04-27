@@ -12,11 +12,11 @@
 
 #include "system_types.h"
 
+struct internals;
+
 struct vector
 {
-    void     **array;
-    uint32_t   asize;
-    uint32_t   vsize;
+    struct internals *internal;
 };
 
 /**
@@ -56,7 +56,16 @@ bool vector_resize(struct vector * const vector, const uint32_t size);
  *
  * @return A pointer to a value (NULL on error).
  */
-void *vector_get(struct vector * const vector, const uint32_t index);
+void *vector_getval(struct vector * const vector, const uint32_t index);
+
+/**
+ * @brief Get the size of a vector.
+ *
+ * @param[in] vector A pointer to a vector.
+ *
+ * @return The size of a vector (0 on error).
+ */
+uint32_t vector_getsize(struct vector * const vector);
 
 /**
  * @brief Insert a value at a position in a vector.

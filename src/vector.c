@@ -12,6 +12,13 @@
 
 #include <errno.h>
 
+struct internals
+{
+    void     **array;
+    uint32_t   asize;
+    uint32_t   vsize;
+};
+
 /**
  * @see See header file for interface comments.
  */
@@ -19,10 +26,7 @@ bool vector_create(struct vector * const vector, const uint32_t size)
 {
     bool retval = false;
 
-    if ((vector == NULL) ||
-        (vector->array != NULL) ||
-        (vector->asize > 0) ||
-        (vector->vsize > 0))
+    if ((vector == NULL) || (vector->internal != NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -30,7 +34,25 @@ bool vector_create(struct vector * const vector, const uint32_t size)
     }
     else
     {
-        retval = vector_resize(vector, size);
+        vector->internal = calloc(1, sizeof(struct internals));
+
+        if (vector->internal == NULL)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to allocate internals (%d)\n",
+                          __FUNCTION__,
+                          errno);
+        }
+        else
+        {
+            vector->internal->array = malloc(sizeof(void *) * 1);
+
+            if (vector->internal->array != NULL)
+            {
+                vector->internal->asize = vector->internal->vsize = 1;
+                retval = vector_resize(vector, size);
+            }
+        }
     }
 
     return retval;
@@ -43,9 +65,7 @@ bool vector_destroy(struct vector * const vector)
 {
     bool retval = false;
 
-    if ((vector == NULL) ||
-        (vector->array == NULL) ||
-        (vector->asize < vector->vsize))
+    if (vector == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -53,9 +73,17 @@ bool vector_destroy(struct vector * const vector)
     }
     else
     {
-        free(vector->array);
-        vector->array = NULL;
-        vector->asize = vector->vsize = 0;
+        if (vector->internal != NULL)
+        {
+            if (vector->internal->array != NULL)
+            {
+                free(vector->internal->array);
+                vector->internal->array = NULL;
+            }
+
+            free(vector->internal);
+            vector->internal = NULL;
+        }
 
         retval = true;
     }
@@ -71,47 +99,49 @@ bool vector_resize(struct vector * const vector, const uint32_t size)
     bool retval = false;
     uint32_t nsize = size;
 
-    if (vector == NULL)
+    if ((vector == NULL) || (vector->internal == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
                       __FUNCTION__);
     }
-    else if (vector->vsize != size)
+    else if (vector->internal->vsize != size)
     {
-        if (((size > vector->vsize) && (size > vector->asize)) ||
-            ((size < vector->vsize) && (size < vector->asize / 2)))
+        if (((size > vector->internal->vsize) &&
+             (size > vector->internal->asize)) ||
+            ((size < vector->internal->vsize) &&
+             (size < vector->internal->asize / 2)))
         {
             // Round the array size up to the nearest power of 2 using a power
             // of two ceiling operation (note: start with a size of 1 for a
             // floor operation).
-            vector->asize = 2;
+            vector->internal->asize = 2;
             while (nsize >>= 1)
             {
-                vector->asize <<= 1;
+                vector->internal->asize <<= 1;
             }
 
-            vector->array = realloc(vector->array,
-                                    sizeof(void *) * vector->asize);
+            vector->internal->array = realloc(vector->internal->array,
+                                              sizeof(void *) * vector->internal->asize);
 
-            if (vector == NULL)
+            if (vector->internal->array == NULL)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: failed to resize vector (%d)\n",
                               __FUNCTION__,
                               errno);
 
-                vector->asize = vector->vsize = 0;
+                vector->internal->asize = vector->internal->vsize = 0;
             }
             else
             {
-                vector->vsize = size;
+                vector->internal->vsize = size;
                 retval = true;
             }
         }
         else
         {
-            vector->vsize = size;
+            vector->internal->vsize = size;
             retval = true;
         }
     }
@@ -126,11 +156,13 @@ bool vector_resize(struct vector * const vector, const uint32_t size)
 /**
  * @see See header file for interface comments.
  */
-void *vector_get(struct vector * const vector, const uint32_t index)
+void *vector_getval(struct vector * const vector, const uint32_t index)
 {
     void *retval = NULL;
 
-    if ((vector == NULL) || (index >= vector->vsize))
+    if ((vector == NULL) ||
+        (vector->internal == NULL) ||
+        (index >= vector->internal->vsize))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -138,7 +170,31 @@ void *vector_get(struct vector * const vector, const uint32_t index)
     }
     else
     {
-        retval = vector->array[index];
+        retval = vector->internal->array[index];
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+uint32_t vector_getsize(struct vector * const vector)
+{
+    uint32_t retval = 0;
+
+    if (vector == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if (vector->internal != NULL)
+        {
+            retval = vector->internal->vsize;
+        }
     }
 
     return retval;
@@ -154,7 +210,9 @@ void *vector_get(struct vector * const vector, const uint32_t index)
     bool retval = false;
     uint32_t i = 0;
 
-    if ((vector == NULL) || (index >= vector->vsize))
+    if ((vector == NULL) ||
+        (vector->internal == NULL) ||
+        (index >= vector->internal->vsize))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -162,18 +220,18 @@ void *vector_get(struct vector * const vector, const uint32_t index)
     }
     else
     {
-        if (vector_resize(vector, vector->vsize + 1) == true)
+        if (vector_resize(vector, vector->internal->vsize + 1) == true)
         {
-            if (vector->vsize > 1)
+            if (vector->internal->vsize > 1)
             {
-                for (i = vector->vsize - 2; i >= index; i--)
+                for (i = vector->internal->vsize - 2; i >= index; i--)
                 {
-                    vector->array[i+1] = vector->array[i];
+                    vector->internal->array[i+1] = vector->internal->array[i];
                 }
             }
 
-            vector->array[index] = val;
-            vector->vsize++;
+            vector->internal->array[index] = val;
+            vector->internal->vsize++;
             retval = true;
         }
     }
@@ -188,7 +246,7 @@ void *vector_get(struct vector * const vector, const uint32_t index)
 {
     bool retval = false;
 
-    if (vector == NULL)
+    if ((vector == NULL) || (vector->internal == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -196,9 +254,9 @@ void *vector_get(struct vector * const vector, const uint32_t index)
     }
     else
     {
-        if (vector_resize(vector, vector->vsize + 1) == true)
+        if (vector_resize(vector, vector->internal->vsize + 1) == true)
         {
-            vector->array[vector->vsize - 1] = val;
+            vector->internal->array[vector->internal->vsize - 1] = val;
             retval = true;
         }
     }
@@ -214,7 +272,9 @@ void *vector_get(struct vector * const vector, const uint32_t index)
     bool retval = false;
     uint32_t i = 0;
 
-    if ((vector == NULL) || (index >= vector->vsize))
+    if ((vector == NULL) ||
+        (vector->internal == NULL) ||
+        (index >= vector->internal->vsize))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -222,15 +282,15 @@ void *vector_get(struct vector * const vector, const uint32_t index)
     }
     else
     {
-        if (vector->vsize > 1)
+        if (vector->internal->vsize > 1)
         {
-            for (i = index; i < vector->vsize - 1; i++)
+            for (i = index; i < vector->internal->vsize - 1; i++)
             {
-                vector->array[i] = vector->array[i+1];
+                vector->internal->array[i] = vector->internal->array[i+1];
             }
         }
 
-        retval = vector_resize(vector, vector->vsize - 1);
+        retval = vector_resize(vector, vector->internal->vsize - 1);
     }
 
     return retval;
@@ -243,7 +303,7 @@ void *vector_get(struct vector * const vector, const uint32_t index)
 {
     bool retval = false;
 
-    if (vector == NULL)
+    if ((vector == NULL) || (vector->internal == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -251,7 +311,7 @@ void *vector_get(struct vector * const vector, const uint32_t index)
     }
     else
     {
-        retval = vector_resize(vector, vector->vsize - 1);
+        retval = vector_resize(vector, vector->internal->vsize - 1);
     }
 
     return retval;
