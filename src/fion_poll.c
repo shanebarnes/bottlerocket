@@ -22,7 +22,7 @@ bool fionpoll_create(struct fionobj * const obj)
 {
     bool retval = false;
 
-    if ((obj == NULL) || (obj->fds.vsize != 0))
+    if ((obj == NULL) || (vector_getsize(&obj->fds) != 0))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -71,11 +71,11 @@ bool fionpoll_destroy(struct fionobj * const obj)
     }
     else
     {
-        while (obj->fds.vsize > 0)
+        while (vector_getsize(&obj->fds) > 0)
         {
-            if (vector_get(&obj->fds, 0) != NULL)
+            if (vector_getval(&obj->fds, 0) != NULL)
             {
-                free(vector_get(&obj->fds, 0));
+                free(vector_getval(&obj->fds, 0));
                 vector_delete(&obj->fds, 0);
             }
         }
@@ -110,9 +110,9 @@ bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
     }
     else
     {
-        for (i = 0; i < obj->fds.vsize; i++)
+        for (i = 0; i < vector_getsize(&obj->fds); i++)
         {
-            pfd = (struct pollfd *)obj->fds.array[i];
+            pfd = (struct pollfd *)vector_getval(&obj->fds, i);
 
             if (pfd->fd == fd)
             {
@@ -153,9 +153,9 @@ bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd)
     }
     else
     {
-        for (i = 0; i < obj->fds.vsize; i++)
+        for (i = 0; i < vector_getsize(&obj->fds); i++)
         {
-            pfd = (struct pollfd *)obj->fds.array[i];
+            pfd = (struct pollfd *)vector_getval(&obj->fds, i);
 
             if (pfd->fd == fd)
             {
@@ -192,7 +192,7 @@ bool fionpoll_setflags(struct fionobj * const obj)
     uint32_t i;
     int32_t flags;
 
-    if ((obj == NULL) || (obj->fds.vsize == 0))
+    if ((obj == NULL) || (vector_getsize(&obj->fds) == 0))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -200,9 +200,9 @@ bool fionpoll_setflags(struct fionobj * const obj)
     }
     else
     {
-        for (i = 0; i < obj->fds.vsize; i++)
+        for (i = 0; i < vector_getsize(&obj->fds); i++)
         {
-            pfd = (struct pollfd *)obj->fds.array[i];
+            pfd = (struct pollfd *)vector_getval(&obj->fds, i);
             pfd->events = POLLPRI |
 #if defined(LINUX)
                           POLLRDHUP |
@@ -249,7 +249,7 @@ bool fionpoll_poll(struct fionobj * const obj)
     uint32_t i;
     int32_t error;
 
-    if ((obj == NULL) || (obj->fds.vsize == 0))
+    if ((obj == NULL) || (vector_getsize(&obj->fds) == 0))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -259,7 +259,9 @@ bool fionpoll_poll(struct fionobj * const obj)
     {
         obj->revents = 0;
 
-        error = poll((struct pollfd *)obj->fds.array[0], obj->fds.vsize, obj->timeoutms);
+        error = poll((struct pollfd *)vector_getval(&obj->fds, 0),
+                     vector_getsize(&obj->fds),
+                     obj->timeoutms);
 
         if (error == 0)
         {
@@ -269,9 +271,9 @@ bool fionpoll_poll(struct fionobj * const obj)
         }
         else if (error > 0)
         {
-            for (i = 0; i < obj->fds.vsize; i++)
+            for (i = 0; i < vector_getsize(&obj->fds); i++)
             {
-                pfd = (struct pollfd *)obj->fds.array[i];
+                pfd = (struct pollfd *)vector_getval(&obj->fds, i);
 
                 // Check for error events.
                 if ((pfd->revents & POLLERR) ||
