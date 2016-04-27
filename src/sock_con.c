@@ -18,7 +18,9 @@ bool sockcon_create(struct sockcon * const con)
 {
     bool retval = false;
 
-    if ((con == NULL) || (con->fion.fds.vsize != 0) || (con->sock.vsize != 0))
+    if ((con == NULL) ||
+        (vector_getsize(&con->fion.fds) != 0) ||
+        (vector_getsize(&con->sock) != 0))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -82,7 +84,7 @@ struct sockobj *sockcon_get(struct sockcon * const con, const uint32_t index)
     }
     else
     {
-        retval = vector_get(&con->sock, index);
+        retval = vector_getval(&con->sock, index);
     }
 
     return retval;
