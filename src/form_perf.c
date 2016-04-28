@@ -9,8 +9,10 @@
 
 #include "form_perf.h"
 #include "logger.h"
+#include "util_date.h"
 #include "util_ioctl.h"
 #include "util_string.h"
+#include "util_unit.h"
 
 /**
  * @see See header file for interface comments.
@@ -37,6 +39,8 @@ int32_t formperf_head(struct formobj * const obj)
         // @todo Format should be responsive based on the number of columns.
         //utilioctl_gettermsize(&rows, &cols);
 
+        obj->timeoutusec = obj->sock->info.startusec;
+
         retval = utilstring_concat(obj->dstbuf,
                                    obj->dstlen,
                                    "%6s %21s   %-21s %17s %27s %25s %17s\n",
@@ -57,7 +61,11 @@ int32_t formperf_head(struct formobj * const obj)
  */
 int32_t formperf_body(struct formobj * const obj)
 {
-    int32_t  retval = -1;
+    int32_t  retval   = -1;
+    uint64_t timeusec = 0;
+    struct util_date_diff diff;
+    char strrecvbytes[16], strsendbytes[16];
+    char strrecvrate[16], strsendrate[16];
 
     if ((obj == NULL) ||
         (obj->sock == NULL) ||
@@ -72,7 +80,54 @@ int32_t formperf_body(struct formobj * const obj)
     }
     else
     {
+        timeusec = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
+        if (timeusec >= obj->timeoutusec)
+        {
+            utildate_gettsdiff(obj->sock->info.startusec,
+                               timeusec,
+                               UNIT_TIME_USEC,
+                               &diff);
+
+            utilunit_getdecformat(10, 3, obj->sock->info.recvbytes, strrecvbytes, sizeof(strrecvbytes));
+            utilunit_getdecformat(10, 3, obj->sock->info.sendbytes, strsendbytes, sizeof(strsendbytes));
+            utilunit_getdecformat(10, 3, 0, strrecvrate, sizeof(strrecvrate));
+            utilunit_getdecformat(10, 3, 0, strsendrate, sizeof(strsendrate));
+
+            retval = utilstring_concat(obj->dstbuf,
+                                       obj->dstlen,
+                                       "[%4u] "
+                                       "%21s > %-21s "
+                                       "%3u "
+                                       "[%.*s%.*s] "
+                                       "%9sbps / "
+                                       "%9sbps | "
+                                       "%9sB / "
+                                       "%9sB | "
+                                       "%02u:%02u:%02u:%02u.%03u\n",
+                                       1,
+                                       obj->sock->addrself.sockaddrstr,
+                                       obj->sock->addrpeer.sockaddrstr,
+                                       0,
+                                       5,
+                                       "==========",
+                                       10 - 5,
+                                       "          ",
+                                       strrecvrate,
+                                       strsendrate,
+                                       strrecvbytes,
+                                       strsendbytes,
+                                       diff.day + (diff.week * 7),
+                                       diff.hour,
+                                       diff.min,
+                                       diff.sec,
+                                       diff.msec);
+            obj->timeoutusec += 1 * UNIT_TIME_USEC;
+        }
+        else
+        {
+            retval = 0;
+        }
     }
 
     return retval;
@@ -98,7 +153,9 @@ int32_t formperf_foot(struct formobj * const obj)
     }
     else
     {
-
+        retval = utilstring_concat(obj->dstbuf,
+                                   obj->dstlen,
+                                   "<add footer>\n");
     }
 
     return retval;
