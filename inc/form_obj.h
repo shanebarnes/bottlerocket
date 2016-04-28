@@ -59,6 +59,7 @@ struct formobj
                        *dstbuf;
     int32_t             srclen,
                         dstlen;
+    uint64_t            timeoutusec;
 };
 
 #endif // _FORM_OBJ_H_
