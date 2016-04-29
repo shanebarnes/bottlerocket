@@ -153,9 +153,8 @@ int32_t formperf_foot(struct formobj * const obj)
     }
     else
     {
-        retval = utilstring_concat(obj->dstbuf,
-                                   obj->dstlen,
-                                   "<add footer>\n");
+        obj->timeoutusec = 0;
+        retval = formperf_body(obj);
     }
 
     return retval;
