@@ -465,7 +465,7 @@ bool args_parse(const int32_t argc,
 
         // Set defaults.
         memset(groupcount, 0, sizeof(groupcount));
-        args->mode = ARGS_MODE_CHAT;
+        args->mode = ARGS_MODE_PERF;
         args->arch = ARGS_ARCH_NULL;
         args_copyipport("5001", "0", "65535", args);
 
