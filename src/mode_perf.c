@@ -27,7 +27,7 @@ static void *modeperf_thread(void * arg)
     struct threadobj *thread = (struct threadobj *)arg;
     struct sockobj server, socket;
     struct formobj form;
-    char    recvbuf[65536], sendbuf[65536];
+    char    recvbuf[65536], sendbuf[65536], c = '\r';
     int32_t count = 0, timeoutms = 500;
     int32_t recvbytes = 0, formbytes = 0;
 
@@ -82,6 +82,13 @@ static void *modeperf_thread(void * arg)
                     output_if_std_send(form.dstbuf, formbytes);
                     count++;
                 }
+                else
+                {
+                    form.sock = &server;
+                    formbytes = formobj_idle(&form);
+                    output_if_std_send(form.dstbuf, formbytes);
+                    output_if_std_send(&c, sizeof(c));
+                }
 
                 // @todo Exit if server socket has fatal error.
             }
@@ -90,6 +97,8 @@ static void *modeperf_thread(void * arg)
                 recvbytes = socket.ops.sock_recv(&socket,
                                                  recvbuf,
                                                  sizeof(recvbuf) - 1);
+
+                // @todo use rate limiting input interface to send data.
 
                 if (recvbytes > 0)
                 {
