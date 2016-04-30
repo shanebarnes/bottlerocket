@@ -6,13 +6,14 @@
  * @copyright Copyright 2016 Shane Barnes. All rights reserved.
  *            This project is released under the MIT license.
  */
-
+#include <stdio.h>
 #include "form_perf.h"
 #include "logger.h"
 #include "mode_perf.h"
 #include "output_if_std.h"
 #include "sock_tcp.h"
 #include "thread_obj.h"
+#include "util_string.h"
 
 #include <string.h>
 
@@ -27,7 +28,7 @@ static void *modeperf_thread(void * arg)
     struct threadobj *thread = (struct threadobj *)arg;
     struct sockobj server, socket;
     struct formobj form;
-    char    recvbuf[65536], sendbuf[65536], c = '\r';
+    char    recvbuf[65536], sendbuf[65536];
     int32_t count = 0, timeoutms = 500;
     int32_t recvbytes = 0, formbytes = 0;
 
@@ -87,7 +88,11 @@ static void *modeperf_thread(void * arg)
                     form.sock = &server;
                     formbytes = formobj_idle(&form);
                     output_if_std_send(form.dstbuf, formbytes);
-                    output_if_std_send(&c, sizeof(c));
+                    formbytes = utilstring_concat(form.dstbuf,
+                                                  form.dstlen,
+                                                  "%c",
+                                                  '\r');
+                    output_if_std_send(form.dstbuf, formbytes);
                 }
 
                 // @todo Exit if server socket has fatal error.
@@ -103,8 +108,6 @@ static void *modeperf_thread(void * arg)
                 if (recvbytes > 0)
                 {
                     form.srclen = recvbytes;
-                    formbytes = form.ops.form_body(&form);
-                    output_if_std_send(form.dstbuf, formbytes);
                 }
                 else if (recvbytes < 0)
                 {
@@ -113,6 +116,9 @@ static void *modeperf_thread(void * arg)
                     formbytes = form.ops.form_foot(&form);
                     output_if_std_send(form.dstbuf, formbytes);
                 }
+
+                formbytes = form.ops.form_body(&form);
+                output_if_std_send(form.dstbuf, formbytes);
             }
         }
     }
