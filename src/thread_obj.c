@@ -28,7 +28,7 @@ bool threadobj_create(struct threadobj * const obj)
 {
     bool retval = false;
 
-    if (obj == NULL)
+    if ((obj == NULL) || (obj->internal != NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
