@@ -7,7 +7,8 @@
  *            This project is released under the MIT license.
  */
 
-#include "form_chat.h"
+//#include "form_chat.h"
+#include "form_perf.h"
 #include "input_if_std.h"
 #include "logger.h"
 #include "mode_chat.h"
@@ -28,7 +29,8 @@ static void *modechat_thread(void * arg)
     struct threadobj *thread = (struct threadobj *)arg;
     struct sockobj server, socket;
     struct formobj form;
-    char    recvbuf[1024], sendbuf[4096];
+    //char    recvbuf[1024], sendbuf[4096];
+    char    recvbuf[65536], sendbuf[65536], c = '\r';
     int32_t count = 0, timeoutms = 500;
     int32_t recvbytes = 0, formbytes = 0;
 
@@ -40,9 +42,9 @@ static void *modechat_thread(void * arg)
     }
     else
     {
-        form.ops.form_head = formchat_head;
-        form.ops.form_body = formchat_body;
-        form.ops.form_foot = formchat_foot;
+        form.ops.form_head = formperf_head;
+        form.ops.form_body = formperf_body;
+        form.ops.form_foot = formperf_foot;
         form.srcbuf = recvbuf;
         form.srclen = sizeof(recvbuf);
         form.dstbuf = sendbuf;
@@ -82,6 +84,13 @@ static void *modechat_thread(void * arg)
                     formbytes = form.ops.form_head(&form);
                     output_if_std_send(form.dstbuf, formbytes);
                     count++;
+                }
+                else
+                {
+                    form.sock = &server;
+                    formbytes = formobj_idle(&form);
+                    output_if_std_send(form.dstbuf, formbytes);
+                    output_if_std_send(&c, sizeof(c));
                 }
 
                 // @todo Exit if server socket has fatal error.
