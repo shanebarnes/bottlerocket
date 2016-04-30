@@ -148,10 +148,10 @@ static struct tuple_element options[] =
 {
     {
      "chat",
-     0,
-     ARGS_GROUP_NONE,
+     1,
+     ARGS_GROUP_MODE,
      "enable chat mode",
-     "enabled",
+     "disabled",
      NULL,
      NULL,
      true,
@@ -160,10 +160,10 @@ static struct tuple_element options[] =
     },
     {
      "perf",
-     0,
-     ARGS_GROUP_NONE,
+     2,
+     ARGS_GROUP_MODE,
      "enable performance benchmarking mode",
-     "disabled",
+     "enabled",
      NULL,
      NULL,
      true,
@@ -287,9 +287,9 @@ static void args_usage(FILE * const stream)
     {
         fprintf(stream,
                 "  %s%c%s %-10s %-40s %s\n",
-                options[i].sname != 0 ? prefix_skey : " ",
-                options[i].sname != 0 ? options[i].sname : ' ',
-                options[i].sname != 0 ? "," : " ",
+                options[i].sname >= '0' ? prefix_skey : " ",
+                options[i].sname >= '0' ? options[i].sname : ' ',
+                options[i].sname >= '0' ? "," : " ",
                 options[i].lname,
                 options[i].desc,
                 options[i].dval == NULL ? "" : options[i].dval);
@@ -352,12 +352,9 @@ static char args_getarg(const int32_t argc,
             }
         }
 
-
         if (retval == 0)
         {
-            fprintf(stderr,
-                    "\nunkown option '%s'\n",
-                    argv[*argi]);
+            fprintf(stderr, "\nunkown option '%s'\n", argv[*argi]);
         }
         else if (options[i].dval == NULL)
         {
@@ -473,6 +470,12 @@ bool args_parse(const int32_t argc,
         {
             switch (args_getarg(argc, argv, &i, args))
             {
+                case 1:
+                    args->mode = ARGS_MODE_CHAT;
+                    break;
+                case 2:
+                    args->mode = ARGS_MODE_PERF;
+                    break;
 #if !defined(__APPLE__)
                 case 'A':
                     break;
@@ -526,10 +529,10 @@ bool args_parse(const int32_t argc,
             {
                 retval = false;
             }
-            else if (groupcount[ARGS_GROUP_ARCH] != 1)
+            else if ((groupcount[ARGS_GROUP_MODE] > 1) ||
+                     (groupcount[ARGS_GROUP_ARCH] != 1))
             {
-                // Arguments in this group are mutually exclusive.
-
+                // Arguments in these groups are mutually exclusive.
                 args_usage(stdout);
                 retval = false;
             }
