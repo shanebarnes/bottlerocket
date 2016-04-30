@@ -11,6 +11,7 @@
 #include "input_if_std.h"
 #include "logger.h"
 #include "mode_chat.h"
+#include "mode_perf.h"
 #include "output_if_instance.h"
 #include "output_if_std.h"
 #include "sock_tcp.h"
@@ -473,6 +474,14 @@ int32_t main(int argc, char **argv)
 
             pause();
             modechat_stop();
+        }
+        else if (args.mode == ARGS_MODE_PERF)
+        {
+            modeperf_create(&args);
+            modeperf_start();
+
+            pause();
+            modeperf_stop();
         }
     }
 
