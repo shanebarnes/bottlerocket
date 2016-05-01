@@ -98,7 +98,7 @@ int32_t formperf_body(struct formobj * const obj)
                                        obj->dstlen,
                                        "[%4u] "
                                        "%21s > %-21s "
-                                       "%3u "
+                                       "%3u%% "
                                        "[%.*s%.*s] "
                                        "%9sbps / "
                                        "%9sbps | "
