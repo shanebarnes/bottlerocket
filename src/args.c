@@ -471,10 +471,26 @@ bool args_parse(const int32_t argc,
             switch (args_getarg(argc, argv, &i, args))
             {
                 case 1:
-                    args->mode = ARGS_MODE_CHAT;
+                    if (i == 1)
+                    {
+                        args->mode = ARGS_MODE_CHAT;
+                    }
+                    else
+                    {
+                        args_usage(stdout);
+                        retval = false;
+                    }
                     break;
                 case 2:
-                    args->mode = ARGS_MODE_PERF;
+                    if (i == 1)
+                    {
+                        args->mode = ARGS_MODE_PERF;
+                    }
+                    else
+                    {
+                        args_usage(stdout);
+                        retval = false;
+                    }
                     break;
 #if !defined(__APPLE__)
                 case 'A':
