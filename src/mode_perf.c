@@ -6,7 +6,7 @@
  * @copyright Copyright 2016 Shane Barnes. All rights reserved.
  *            This project is released under the MIT license.
  */
-#include <stdio.h>
+
 #include "form_perf.h"
 #include "logger.h"
 #include "mode_perf.h"
