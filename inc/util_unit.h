@@ -111,11 +111,13 @@ uint64_t utilunit_getbytes(const char * const bytes);
  *        representation.
  *
  * @param[in] seconds A string representation of a seconds count.
+ * @param[in] units   The units of the equivalent integer value returned.
  *
  * @return An integer value equivalent to the string representation of a seconds
  *         (0 on error).
  */
-uint64_t utilunit_getsecs(const char * const secs);
+uint64_t utilunit_getsecs(const char * const secs,
+                          const enum unit_prefix_time units);
 
 /**
  * @brief Convert a number to decimal notation (e.g., 1200 bytes = 1.200 KB).

@@ -187,8 +187,24 @@ static uint64_t utilunit_getsecsprefix(const char * const prefix)
 {
     uint64_t retval = 0;
 
-    if (utilstring_compare(prefix, "S", 0, true) ||
-        utilstring_compare(prefix, "", 0, true))
+    if (utilstring_compare(prefix, "PS", 0, true))
+    {
+        retval = UNIT_TIME_PSEC;
+    }
+    else if (utilstring_compare(prefix, "NS", 0, true))
+    {
+        retval = UNIT_TIME_NSEC;
+    }
+    else if (utilstring_compare(prefix, "US", 0, true))
+    {
+        retval = UNIT_TIME_USEC;
+    }
+    else if (utilstring_compare(prefix, "MS", 0, true))
+    {
+        retval = UNIT_TIME_MSEC;
+    }
+    else if (utilstring_compare(prefix, "S", 0, true) ||
+             utilstring_compare(prefix, "", 0, true))
     {
         retval = UNIT_TIME_SEC;
     }
@@ -223,7 +239,7 @@ uint64_t utilunit_getbitrate(const char * const bitrate)
 {
     uint64_t retval = 0;
     int32_t  matchcount = 0;
-    char     prefix[80];
+    char     prefix[16];
 
     matchcount = utilstring_parse(bitrate, "%" PRIu64 "%s", &retval, prefix);
 
@@ -251,7 +267,7 @@ uint64_t utilunit_getbytes(const char * const bytes)
 {
     uint64_t retval = 0;
     int32_t  matchcount = 0;
-    char     prefix[80];
+    char     prefix[16];
 
     matchcount = utilstring_parse(bytes, "%" PRIu64 "%s", &retval, prefix);
 
@@ -275,11 +291,13 @@ uint64_t utilunit_getbytes(const char * const bytes)
 /**
  * @see See header file for interface comments.
  */
-uint64_t utilunit_getsecs(const char * const secs)
+uint64_t utilunit_getsecs(const char * const secs,
+                          const enum unit_prefix_time units)
 {
     uint64_t retval = 0;
+    uint64_t scale = 0;
     int32_t  matchcount = 0;
-    char     prefix[80];
+    char     prefix[16];
 
     matchcount = utilstring_parse(secs, "%" PRIu64 "%s", &retval, prefix);
 
@@ -290,7 +308,47 @@ uint64_t utilunit_getsecs(const char * const secs)
            break;
         case 2:
             // @todo Protect against overflow.
-            retval = retval * utilunit_getsecsprefix(prefix);
+            scale = utilunit_getsecsprefix(prefix);
+
+            if (scale == 0)
+            {
+                retval = 0;
+            }
+            else
+            {
+                // Fractional time units (with respect to the seconds base unit)
+                // have prefixes that are multiples of 1000.
+                if (scale % 1000 == 0)
+                {
+                    // Fractional time units (with respect to the seconds base
+                    // unit) have prefixes that are multiples of 1000.
+                    if (units % 1000 == 0)
+                    {
+                        retval *= units;
+                        retval /= scale;
+                    }
+                    else
+                    {
+                        retval /= units;
+                        retval /= scale;
+                    }
+                }
+                else
+                {
+                    // Fractional time units (with respect to the seconds base
+                    // unit) have prefixes that are multiples of 1000.
+                    if (units % 1000 == 0)
+                    {
+                        retval *= scale;
+                        retval *= units;
+                    }
+                    else
+                    {
+                        retval *= scale;
+                        retval /= units;
+                    }
+                }
+            }
             break;
         default:
             // Nothing to do.
