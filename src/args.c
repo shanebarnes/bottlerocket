@@ -11,6 +11,7 @@
 #include "logger.h"
 #include "util_inet.h"
 #include "util_string.h"
+#include "util_unit.h"
 #include "version.h"
 
 #include <stdio.h>
@@ -144,6 +145,57 @@ static bool args_copyipport(const char * const val,
     return retval;
 }
 
+/**
+ * @brief Validate and copy a time value to an arguments object.
+ *
+ * @param[in]     val  A pointer to a value to validate.
+ * @param[in]     min  A pointer to a minimum value (NULL if no minimum value).
+ * @param[in]     max  A pointer to a maximum value (NULL if no maximum value).
+ * @param[in,out] args A pointer to an argument object.
+ *
+ * @return True if a valid time value was copied to an arguments object.
+ */
+static bool args_copytime(const char * const val,
+                          const char * const min,
+                          const char * const max,
+                          struct args_obj *args)
+{
+    bool retval = false;
+    uint64_t dmax, dmin, time;
+
+    if ((val == NULL) || (args == NULL))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if ((time = utilunit_getsecs(val, UNIT_TIME_PSEC)) > 0)
+        {
+            if ((min != NULL) &&
+                (((dmin = utilunit_getsecs(min, UNIT_TIME_PSEC)) == 0) ||
+                 (time < dmin)))
+            {
+                // Do nothing.
+            }
+            else if ((max != NULL) &&
+                    (((dmax = utilunit_getsecs(max, UNIT_TIME_PSEC)) == 0) ||
+                     (time > dmax)))
+            {
+                // Do nothing.
+            }
+            else
+            {
+                args->maxtimeusec = utilunit_getsecs(val, UNIT_TIME_USEC);
+                retval = true;
+            }
+        }
+    }
+
+    return retval;
+}
+
 static struct tuple_element options[] =
 {
     {
@@ -243,6 +295,18 @@ static struct tuple_element options[] =
      false,
      true,
      NULL
+    },
+    {
+     "--time",
+     't',
+     ARGS_GROUP_NONE,
+     "maximum time duration to send data",
+     "10s",
+     "1ps",
+     "1000y",
+     false,
+     true,
+     args_copytime
     },
     {
      "--help",
@@ -354,7 +418,7 @@ static char args_getarg(const int32_t argc,
 
         if (retval == 0)
         {
-            fprintf(stderr, "\nunkown option '%s'\n", argv[*argi]);
+            fprintf(stderr, "\nunknown option '%s'\n", argv[*argi]);
         }
         else if (options[i].dval == NULL)
         {
@@ -464,7 +528,8 @@ bool args_parse(const int32_t argc,
         memset(groupcount, 0, sizeof(groupcount));
         args->mode = ARGS_MODE_PERF;
         args->arch = ARGS_ARCH_NULL;
-        args_copyipport("5001", "0", "65535", args);
+        args_copyipport("5001", "5001", "5001", args);
+        args_copytime("10s", "10s", "10s", args);
 
         for (i = 1; (i < argc) && (retval == true); i++)
         {
@@ -521,6 +586,8 @@ bool args_parse(const int32_t argc,
                     }
                     break;
                 case 'p':
+                    break;
+                case 't':
                     break;
                 case 'h':
                     args_usage(stdout);

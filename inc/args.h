@@ -35,6 +35,7 @@ struct args_obj
     enum args_arch arch;
     char           ipaddr[INET6_ADDRSTRLEN];
     uint16_t       ipport;
+    uint64_t       maxtimeusec;
 };
 
 /**
