@@ -297,6 +297,7 @@ uint64_t utilunit_getsecs(const char * const secs,
     uint64_t retval = 0;
     uint64_t scale = 0;
     int32_t  matchcount = 0;
+    bool     sfraction = false, ufraction = false;
     char     prefix[16];
 
     matchcount = utilstring_parse(secs, "%" PRIu64 "%s", &retval, prefix);
@@ -304,55 +305,50 @@ uint64_t utilunit_getsecs(const char * const secs,
     switch (matchcount)
     {
         case 1:
-            // Nothing to do.
+           scale = UNIT_TIME_SEC;
            break;
         case 2:
             // @todo Protect against overflow.
             scale = utilunit_getsecsprefix(prefix);
-
-            if (scale == 0)
-            {
-                retval = 0;
-            }
-            else
-            {
-                // Fractional time units (with respect to the seconds base unit)
-                // have prefixes that are multiples of 1000.
-                if (scale % 1000 == 0)
-                {
-                    // Fractional time units (with respect to the seconds base
-                    // unit) have prefixes that are multiples of 1000.
-                    if (units % 1000 == 0)
-                    {
-                        retval *= units;
-                        retval /= scale;
-                    }
-                    else
-                    {
-                        retval /= units;
-                        retval /= scale;
-                    }
-                }
-                else
-                {
-                    // Fractional time units (with respect to the seconds base
-                    // unit) have prefixes that are multiples of 1000.
-                    if (units % 1000 == 0)
-                    {
-                        retval *= scale;
-                        retval *= units;
-                    }
-                    else
-                    {
-                        retval *= scale;
-                        retval /= units;
-                    }
-                }
-            }
             break;
         default:
             // Nothing to do.
             break;
+    }
+
+    if (scale > 0)
+    {
+        // Fractional time units (with respect to the seconds base unit) have
+        // prefixes that are multiples of 1000.
+        ufraction = (units % 1000 == 0 ? true : false);
+        sfraction = (scale % 1000 == 0 ? true : false);
+
+        if (sfraction == true)
+        {
+            if (ufraction == true)
+            {
+                retval *= units;
+                retval /= scale;
+            }
+            else
+            {
+                retval /= units;
+                retval /= scale;
+            }
+        }
+        else
+        {
+            if (ufraction == true)
+            {
+                retval *= scale;
+                retval *= units;
+            }
+            else
+            {
+                retval *= scale;
+                retval /= units;
+            }
+        }
     }
 
     return retval;
