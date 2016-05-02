@@ -218,7 +218,7 @@ static uint64_t utilunit_getsecsprefix(const char * const prefix)
     }
     else if (utilstring_compare(prefix, "D", 0, true))
     {
-        retval = UNIT_TIME_HOUR;
+        retval = UNIT_TIME_DAY;
     }
     else if (utilstring_compare(prefix, "W", 0, true))
     {
