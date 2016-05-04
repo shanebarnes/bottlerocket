@@ -122,7 +122,7 @@ bool socktcp_create(struct sockobj * const obj)
             obj->ops.sock_recv    = socktcp_recv;
             obj->ops.sock_send    = socktcp_send;
 
-            obj->socktype = SOCK_STREAM;
+            obj->conf.type = SOCK_STREAM;
 
             retval = true;
         }
@@ -138,7 +138,7 @@ bool socktcp_destroy(struct sockobj * const obj)
 {
     bool retval = false;
 
-    if ((obj == NULL) || (obj->socktype != SOCK_STREAM))
+    if ((obj == NULL) || (obj->conf.type != SOCK_STREAM))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -159,7 +159,7 @@ bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
 {
     bool retval = false;
 
-    if ((obj == NULL) || (obj->socktype != SOCK_STREAM))
+    if ((obj == NULL) || (obj->conf.type != SOCK_STREAM))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -178,8 +178,8 @@ bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
                       "%s: socked %d failed to listen on %s:%u (%d)\n",
                       __FUNCTION__,
                       obj->sockfd,
-                      obj->ipaddr,
-                      obj->ipport,
+                      obj->conf.ipaddr,
+                      obj->conf.ipport,
                       errno);
     }
 
@@ -202,7 +202,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
 
     if ((listener == NULL) ||
         (obj == NULL) ||
-        (listener->socktype != SOCK_STREAM))
+        (listener->conf.type != SOCK_STREAM))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -307,7 +307,7 @@ bool socktcp_connect(struct sockobj * const obj)
 {
     bool retval = false;
 
-    if ((obj == NULL) || (obj->socktype != SOCK_STREAM))
+    if ((obj == NULL) || (obj->conf.type != SOCK_STREAM))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -361,7 +361,14 @@ bool socktcp_connect(struct sockobj * const obj)
         {
             obj->state |= SOCKOBJ_STATE_CONNECT;
 
-            if (sockobj_getaddrpeer(obj) == false)
+            if (sockobj_getaddrself(obj) == false)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d self information is unavailable\n",
+                              obj->sockfd,
+                              __FUNCTION__);
+            }
+            else if (sockobj_getaddrpeer(obj) == false)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %d peer information is unavailable\n",
@@ -392,40 +399,65 @@ int32_t socktcp_recv(struct sockobj * const obj,
     }
     else
     {
-        if (obj->event.ops.fion_poll(&obj->event) == false)
-        {
-            retval = -1;
-        }
-        else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
-        {
-            retval = recv(obj->sockfd, buf, len, flags);
+        retval = recv(obj->sockfd, buf, len, flags);
 
-            if (retval > 0)
-            {
-                logger_printf(LOGGER_LEVEL_TRACE,
-                              "%s: socket %d received %d bytes\n",
-                              __FUNCTION__,
-                              obj->sockfd,
-                              retval);
-                obj->info.recvbytes += retval;
-            }
-            else
-            {
-                logger_printf(LOGGER_LEVEL_TRACE,
-                              "%s: socket %d fatal error (%d)\n",
-                              __FUNCTION__,
-                              obj->sockfd,
-                              errno);
-                retval = -1;
-            }
-        }
-        else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
+        if (retval > 0)
         {
-            retval = -1;
+            logger_printf(LOGGER_LEVEL_TRACE,
+                          "%s: socket %d received %d bytes\n",
+                          __FUNCTION__,
+                          obj->sockfd,
+                          retval);
+            obj->info.recvbytes += retval;
         }
+        // Check for socket errors if receive failed.
         else
         {
-            retval = 0;
+            switch (errno)
+            {
+                // Fatal errors.
+                case EBADF:
+                case ECONNRESET:
+                case EHOSTUNREACH:
+                case EPIPE:
+                case ENOTSOCK:
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: socket %d fatal error (%d)\n",
+                                  __FUNCTION__,
+                                  obj->sockfd,
+                                  errno);
+                    retval = -1;
+                    break;
+                // Non-fatal errors.
+                case EACCES:
+                case EAGAIN:
+                case EFAULT:
+                case EINTR:
+                case EMSGSIZE:
+                case ENETDOWN:
+                case ENETUNREACH:
+                case ENOBUFS:
+                case EOPNOTSUPP:
+                default:
+                    logger_printf(LOGGER_LEVEL_TRACE,
+                                  "%s: socket %d non-fatal error (%d)\n",
+                                  __FUNCTION__,
+                                  obj->sockfd,
+                                  errno);
+                    retval = 0;
+            }
+
+            if (retval == 0)
+            {
+                if (obj->event.ops.fion_poll(&obj->event) == false)
+                {
+                    retval = -1;
+                }
+                else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
+                {
+                    retval = -1;
+                }
+            }
         }
     }
 
