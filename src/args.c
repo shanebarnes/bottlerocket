@@ -527,7 +527,7 @@ bool args_parse(const int32_t argc,
         // Set defaults.
         memset(groupcount, 0, sizeof(groupcount));
         args->mode = ARGS_MODE_PERF;
-        args->arch = ARGS_ARCH_NULL;
+        args->arch = SOCKOBJ_MODEL_NULL;
         args_copyipport("5001", "5001", "5001", args);
         args_copytime("10s", "10s", "10s", args);
 
@@ -564,9 +564,9 @@ bool args_parse(const int32_t argc,
                 case 'B':
                     break;
                 case 'c':
-                    if (args->arch == ARGS_ARCH_NULL)
+                    if (args->arch == SOCKOBJ_MODEL_NULL)
                     {
-                        args->arch = ARGS_ARCH_CLIENT;
+                        args->arch = SOCKOBJ_MODEL_CLIENT;
                     }
                     else
                     {
@@ -575,9 +575,9 @@ bool args_parse(const int32_t argc,
                     }
                     break;
                 case 's':
-                    if (args->arch == ARGS_ARCH_NULL)
+                    if (args->arch == SOCKOBJ_MODEL_NULL)
                     {
-                        args->arch = ARGS_ARCH_SERVER;
+                        args->arch = SOCKOBJ_MODEL_SERVER;
                     }
                     else
                     {

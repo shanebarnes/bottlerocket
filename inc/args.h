@@ -10,6 +10,7 @@
 #ifndef _ARGS_H_
 #define _ARGS_H_
 
+#include "sock_obj.h"
 #include "system_types.h"
 
 #include <netinet/in.h>
@@ -21,21 +22,13 @@ enum args_mode
     ARGS_MODE_CHAT = 0x02
 };
 
-enum args_arch
-{
-    ARGS_ARCH_NULL   = 0x00,
-    ARGS_ARCH_CLIENT = 0x01,
-    ARGS_ARCH_SERVER = 0x02,
-    ARGS_ARCH_PEER2P = 0x03
-};
-
 struct args_obj
 {
-    enum args_mode mode;
-    enum args_arch arch;
-    char           ipaddr[INET6_ADDRSTRLEN];
-    uint16_t       ipport;
-    uint64_t       maxtimeusec;
+    enum args_mode     mode;
+    enum sockobj_model arch;
+    char               ipaddr[INET6_ADDRSTRLEN];
+    uint16_t           ipport;
+    uint64_t           maxtimeusec;
 };
 
 /**
