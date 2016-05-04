@@ -195,20 +195,20 @@ bool sockobj_open(struct sockobj * const obj)
     {
         memset(&ahints, 0, sizeof(struct addrinfo));
         ahints.ai_family    = AF_UNSPEC;     // IPv4 or IPv6
-        ahints.ai_socktype  = obj->socktype;
+        ahints.ai_socktype  = obj->conf.type;
         ahints.ai_flags     = AI_PASSIVE;    // All interfaces
         ahints.ai_protocol  = 0;
         ahints.ai_canonname = NULL;
         ahints.ai_addr      = NULL;
         ahints.ai_next      = NULL;
 
-        portsize = snprintf(ipport, 6, "%d", obj->ipport);
+        portsize = snprintf(ipport, 6, "%d", obj->conf.ipport);
 
         obj->alist = NULL;
 
         if ((portsize > 0) &&
             (portsize < 6) &&
-            (getaddrinfo(obj->ipaddr,
+            (getaddrinfo(obj->conf.ipaddr,
                          ipport,
                          &ahints,
                          &(obj->alist)) == 0))
@@ -222,12 +222,12 @@ bool sockobj_open(struct sockobj * const obj)
                     obj->ainfo = *anext;
 
                     obj->addrself.sockaddr.sin_family      = anext->ai_family;
-                    obj->addrself.sockaddr.sin_addr.s_addr = inet_addr(obj->ipaddr);
-                    obj->addrself.sockaddr.sin_port        = htons(obj->ipport);
+                    obj->addrself.sockaddr.sin_addr.s_addr = inet_addr(obj->conf.ipaddr);
+                    obj->addrself.sockaddr.sin_port        = htons(obj->conf.ipport);
 
                     obj->addrpeer.sockaddr.sin_family      = anext->ai_family;
-                    obj->addrpeer.sockaddr.sin_addr.s_addr = inet_addr(obj->ipaddr);
-                    obj->addrpeer.sockaddr.sin_port        = htons(obj->ipport);
+                    obj->addrpeer.sockaddr.sin_addr.s_addr = inet_addr(obj->conf.ipaddr);
+                    obj->addrpeer.sockaddr.sin_port        = htons(obj->conf.ipport);
 
                     optval = 1;
                     obj->event.ops.fion_insertfd(&obj->event, obj->sockfd);

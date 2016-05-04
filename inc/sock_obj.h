@@ -127,6 +127,14 @@ struct sockobj_ops
                          const uint32_t len);
 };
 
+enum sockobj_model
+{
+    SOCKOBJ_MODEL_NULL   = 0x00,
+    SOCKOBJ_MODEL_CLIENT = 0x01,
+    SOCKOBJ_MODEL_SERVER = 0x02,
+    SOCKOBJ_MODEL_PEER2P = 0x03
+};
+
 enum sockobj_state
 {
     SOCKOBJ_STATE_NULL    = 0x00,
@@ -145,6 +153,15 @@ struct sockobj_addr
     char               sockaddrstr[INET6_ADDRSTRLEN + 6]; // form: <addr>:<port>
 };
 
+struct sockobj_conf
+{
+    int32_t            type; // e.g.: SOCK_DGRAM, SOCK_STREAM
+    char               ipaddr[INET6_ADDRSTRLEN];
+    uint16_t           ipport;
+    enum sockobj_model model;
+    int32_t            timeoutms;
+};
+
 struct sockobj_info
 {
     uint64_t startusec,
@@ -158,14 +175,12 @@ struct sockobj
     struct sockobj_info  info;
     struct sockobj_ops   ops;
     struct fionobj       event;
-    int32_t              socktype, // e.g.: SOCK_DGRAM, SOCK_STREAM
-                         sockfd;
+    int32_t              sockfd;
     struct sockobj_addr  addrself,
                          addrpeer;
     struct addrinfo      ainfo,
                         *alist;
-    char                 ipaddr[INET6_ADDRSTRLEN];
-    uint16_t             ipport;
+    struct sockobj_conf  conf;
     enum sockobj_state   state;
 };
 
