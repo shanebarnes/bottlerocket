@@ -76,9 +76,6 @@ static bool sockmod_initserver(struct sockobj * const sock)
     {
         sock->ops.sock_destroy(sock);
     }
-    else if ((sock->conf.ipport = conf.ipport) != conf.ipport)
-    {
-    }
     else if (sock->ops.sock_open(sock) == false)
     {
         sock->ops.sock_destroy(sock);
