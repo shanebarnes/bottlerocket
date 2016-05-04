@@ -11,10 +11,13 @@
 #include "logger.h"
 #include "mode_perf.h"
 #include "output_if_std.h"
+#include "sock_mod.h"
 #include "sock_tcp.h"
 #include "thread_obj.h"
+#include "util_date.h"
 #include "util_string.h"
 
+#include <signal.h>
 #include <string.h>
 
 static struct threadobj thread;
@@ -25,12 +28,27 @@ static struct args_obj *opts = NULL;
  */
 static void *modeperf_thread(void * arg)
 {
+    bool exit = false;
     struct threadobj *thread = (struct threadobj *)arg;
-    struct sockobj server, socket;
+    struct sockobj client, server, socket;
     struct formobj form;
-    char    recvbuf[65536], sendbuf[65536];
+    char    recvbuf[65536], sendbuf[131072];
     int32_t count = 0, timeoutms = 500;
-    int32_t recvbytes = 0, formbytes = 0;
+    int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
+
+    //??
+    uint64_t timeusec = 0;
+
+    memcpy(client.conf.ipaddr, opts->ipaddr, sizeof(client.conf.ipaddr));
+    client.conf.ipport = opts->ipport;
+    client.conf.timeoutms = 0;
+    client.conf.type = SOCK_STREAM;
+    client.conf.model = SOCKOBJ_MODEL_CLIENT;
+    memcpy(server.conf.ipaddr, opts->ipaddr, sizeof(server.conf.ipaddr));
+    server.conf.ipport = opts->ipport;
+    server.conf.timeoutms = timeoutms;
+    server.conf.type = SOCK_STREAM;
+    server.conf.model = SOCKOBJ_MODEL_SERVER;
 
     if (thread == NULL)
     {
@@ -48,80 +66,115 @@ static void *modeperf_thread(void * arg)
         form.dstbuf = sendbuf;
         form.dstlen = sizeof(sendbuf);
 
-        socktcp_create(&server);
-        memcpy(server.ipaddr, opts->ipaddr, sizeof(server.ipaddr));
-        server.ipport = opts->ipport;
-
-        if ((server.ops.sock_open(&server) == false) ||
-            (server.ops.sock_bind(&server) == false) ||
-            (server.ops.sock_listen(&server, 1) == false))
+        if (opts->arch == SOCKOBJ_MODEL_CLIENT)
         {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to listen on %s:%u\n",
-                          __FUNCTION__,
-                          server.ipaddr,
-                          server.ipport);
+            exit = !sockmod_init(&client);
         }
         else
         {
-            server.event.timeoutms = timeoutms;
+            exit = !sockmod_init(&server);
         }
 
-        while (threadobj_isrunning(thread) == true)
+        while ((exit == false) && (threadobj_isrunning(thread) == true))
         {
             if (count <= 0)
             {
-                if (server.ops.sock_accept(&server, &socket) == true)
+                if (opts->arch == SOCKOBJ_MODEL_CLIENT)
                 {
-                    logger_printf(LOGGER_LEVEL_DEBUG,
-                                  "%s: server accepted connection on %s\n",
-                                  __FUNCTION__,
-                                  server.addrself.sockaddrstr);
-                    socket.event.timeoutms = timeoutms;
-                    form.sock = &socket;
-                    formbytes = form.ops.form_head(&form);
-                    output_if_std_send(form.dstbuf, formbytes);
+                    form.sock = &client;
                     count++;
+                    //formbytes = formobj_idle(&form);
+                    //output_if_std_send(form.dstbuf, formbytes);
+                    //formbytes = utilstring_concat(form.dstbuf,
+                    //                              form.dstlen,
+                    //                              "%c",
+                    //                              '\r');
+                    //output_if_std_send(form.dstbuf, formbytes);
                 }
                 else
                 {
-                    form.sock = &server;
-                    formbytes = formobj_idle(&form);
-                    output_if_std_send(form.dstbuf, formbytes);
-                    formbytes = utilstring_concat(form.dstbuf,
-                                                  form.dstlen,
-                                                  "%c",
-                                                  '\r');
-                    output_if_std_send(form.dstbuf, formbytes);
-                }
+                    if (server.ops.sock_accept(&server, &socket) == true)
+                    {
+                        logger_printf(LOGGER_LEVEL_DEBUG,
+                                      "%s: server accepted connection on %s\n",
+                                      __FUNCTION__,
+                                      server.addrself.sockaddrstr);
+                        socket.event.timeoutms = timeoutms;
+                        form.sock = &socket;
+                        formbytes = form.ops.form_head(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                        count++;
+                    }
+                    else
+                    {
+                        form.sock = &server;
+                        formbytes = formobj_idle(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                        formbytes = utilstring_concat(form.dstbuf,
+                                                      form.dstlen,
+                                                      "%c",
+                                                      '\r');
+                        output_if_std_send(form.dstbuf, formbytes);
+                    }
 
-                // @todo Exit if server socket has fatal error.
+                    // @todo Exit if server socket has fatal error.
+                }
             }
             else
             {
-                recvbytes = socket.ops.sock_recv(&socket,
-                                                 recvbuf,
-                                                 sizeof(recvbuf) - 1);
-
-                // @todo use rate limiting input interface to send data.
-
-                if (recvbytes > 0)
+                if (opts->arch == SOCKOBJ_MODEL_CLIENT)
                 {
-                    form.srclen = recvbytes;
-                }
-                else if (recvbytes < 0)
-                {
-                    socket.ops.sock_close(&socket);
-                    count--;
-                    formbytes = form.ops.form_foot(&form);
-                    output_if_std_send(form.dstbuf, formbytes);
-                }
+                    // @todo use rate limiting input interface to send data.
+                    sendbytes = client.ops.sock_send(&client,
+                                                     sendbuf,
+                                                     sizeof(sendbuf));
 
-                formbytes = form.ops.form_body(&form);
-                output_if_std_send(form.dstbuf, formbytes);
+                    ///?? Make sure time is only getting retrieved once per loop
+                    timeusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                                  UNIT_TIME_USEC);
+                    if ((timeusec - client.info.startusec) > opts->maxtimeusec)
+                    {
+                        exit = true;
+                    }
+
+                    if (sendbytes < 0)
+                    {
+                        formbytes = form.ops.form_foot(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                        client.ops.sock_close(&client);
+                        exit = true;
+                    }
+                    else
+                    {
+                        formbytes = form.ops.form_body(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                    }
+                }
+                else
+                {
+                    recvbytes = socket.ops.sock_recv(&socket,
+                                                     recvbuf,
+                                                     sizeof(recvbuf));
+                    if (recvbytes < 0)
+                    {
+                        formbytes = form.ops.form_foot(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+
+                        socket.ops.sock_close(&socket);
+                        count--;
+                    }
+                    else
+                    {
+                        formbytes = form.ops.form_body(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                    }
+                }
             }
         }
     }
+
+    // Signal main thread to shutdown.
+    raise(SIGTERM);
 
     return NULL;
 }
