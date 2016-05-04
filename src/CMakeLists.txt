@@ -15,6 +15,7 @@ set(BR_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_std.c
     ${CMAKE_CURRENT_SOURCE_DIR}/rwlock_obj.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_con.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sock_mod.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_obj.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_tcp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_udp.c
