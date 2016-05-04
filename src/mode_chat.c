@@ -51,8 +51,8 @@ static void *modechat_thread(void * arg)
         form.dstlen = sizeof(sendbuf);
 
         socktcp_create(&server);
-        memcpy(server.ipaddr, opts->ipaddr, sizeof(server.ipaddr));
-        server.ipport = opts->ipport;
+        memcpy(server.conf.ipaddr, opts->ipaddr, sizeof(server.conf.ipaddr));
+        server.conf.ipport = opts->ipport;
 
         if ((server.ops.sock_open(&server) == false) ||
             (server.ops.sock_bind(&server) == false) ||
@@ -61,8 +61,8 @@ static void *modechat_thread(void * arg)
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to listen on %s:%u\n",
                           __FUNCTION__,
-                          server.ipaddr,
-                          server.ipport);
+                          server.conf.ipaddr,
+                          server.conf.ipport);
         }
         else
         {
