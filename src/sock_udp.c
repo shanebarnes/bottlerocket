@@ -47,7 +47,7 @@ bool sockudp_create(struct sockobj * const obj)
         obj->ops.sock_recv    = sockudp_recv;
         obj->ops.sock_send    = sockudp_send;
 
-        obj->socktype = SOCK_DGRAM;
+        obj->conf.type = SOCK_DGRAM;
 
         retval = true;
     }
@@ -62,7 +62,7 @@ bool sockudp_destroy(struct sockobj * const obj)
 {
     bool retval = false;
 
-    if ((obj == NULL) || (obj->socktype != SOCK_DGRAM))
+    if ((obj == NULL) || (obj->conf.type != SOCK_DGRAM))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -97,7 +97,7 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
     // @todo Consider using this API to create the size of the UDP "connection"
     //       poll.
 
-    if ((obj == NULL) || (obj->socktype != SOCK_DGRAM) || (backlog == 0))
+    if ((obj == NULL) || (obj->conf.type != SOCK_DGRAM) || (backlog == 0))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -121,7 +121,7 @@ bool sockudp_accept(struct sockobj * const listener,
 
     if ((listener == NULL) ||
         (obj == NULL) ||
-        (listener->socktype != SOCK_DGRAM))
+        (listener->conf.type != SOCK_DGRAM))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -153,7 +153,7 @@ bool sockudp_connect(struct sockobj * const obj)
 {
     bool retval = false;
 
-    if ((obj == NULL) || (obj->socktype != SOCK_DGRAM))
+    if ((obj == NULL) || (obj->conf.type != SOCK_DGRAM))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
