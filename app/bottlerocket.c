@@ -108,8 +108,8 @@ void *thread_client_tcp(void * arg)
     {
         memset(&client, 0, sizeof(client));
         socktcp_create(&client);
-        //client.ipaddr = "127.0.0.1";
-        client.ipport = 5001;
+        //client.conf.ipaddr = "127.0.0.1";
+        client.conf.ipport = 5001;
 
         if ((client.ops.sock_open(&client) == true) &&
             ((client.event.timeoutms = 1000) > 0) &&
@@ -148,8 +148,8 @@ void *thread_client_tcp(void * arg)
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: connection to %s:%u failed (%d)\n",
                           __FUNCTION__,
-                          client.ipaddr,
-                          client.ipport,
+                          client.conf.ipaddr,
+                          client.conf.ipport,
                           errno);
         }
 
@@ -193,7 +193,7 @@ void *thread_server_tcp(void * arg)
         memset(&server, 0, sizeof(server));
         socktcp_create(&server);
         //server.ipaddr = "127.0.0.1";
-        server.ipport = 5001;
+        server.conf.ipport = 5001;
 
         if ((server.ops.sock_open(&server) == true) &&
             (server.ops.sock_bind(&server) == true) &&
@@ -293,8 +293,8 @@ void *thread_server_udp(void * arg)
     {
         memset(&server, 0, sizeof(server));
         sockudp_create(&server);
-        //server.ipaddr = "127.0.0.1";
-        server.ipport = 5001;
+        //server.conf.ipaddr = "127.0.0.1";
+        server.conf.ipport = 5001;
 
         if ((server.ops.sock_open(&server) == true) &&
             (server.ops.sock_bind(&server) == true))
@@ -369,8 +369,8 @@ void *thread_client_udp(void * arg)
     {
         memset(&client, 0, sizeof(client));
         sockudp_create(&client);
-        //client.ipaddr = "127.0.0.1";
-        client.ipport = 5001;
+        //client.conf.ipaddr = "127.0.0.1";
+        client.conf.ipport = 5001;
 
         if ((client.ops.sock_open(&client) == true) &&
             ((client.event.timeoutms = 1000) > 0) /*&&
@@ -409,8 +409,8 @@ logger_printf(LOGGER_LEVEL_ERROR, "%s: sending\n", __FUNCTION__); //??
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: connection to %s:%u failed (%d)\n",
                           __FUNCTION__,
-                          client.ipaddr,
-                          client.ipport,
+                          client.conf.ipaddr,
+                          client.conf.ipport,
                           errno);
         }
 
