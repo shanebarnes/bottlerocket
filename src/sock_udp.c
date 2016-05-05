@@ -41,6 +41,8 @@ bool sockudp_create(struct sockobj * const obj)
         obj->ops.sock_open    = sockobj_open;
         obj->ops.sock_close   = sockobj_close;
         obj->ops.sock_bind    = sockobj_bind;
+        obj->ops.sock_getopts = sockobj_getopts;
+        obj->ops.sock_setopts = sockobj_setopts;
         obj->ops.sock_listen  = sockudp_listen;
         obj->ops.sock_accept  = sockudp_accept;
         obj->ops.sock_connect = sockudp_connect;
