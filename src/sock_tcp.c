@@ -116,6 +116,8 @@ bool socktcp_create(struct sockobj * const obj)
             obj->ops.sock_open    = sockobj_open;
             obj->ops.sock_close   = sockobj_close;
             obj->ops.sock_bind    = sockobj_bind;
+            obj->ops.sock_getopts = sockobj_getopts;
+            obj->ops.sock_setopts = sockobj_setopts;
             obj->ops.sock_listen  = socktcp_listen;
             obj->ops.sock_accept  = socktcp_accept;
             obj->ops.sock_connect = socktcp_connect;
