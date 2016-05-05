@@ -12,6 +12,7 @@
 
 #include "fion_obj.h"
 #include "system_types.h"
+#include "vector.h"
 
 #include <netdb.h>
 #include <netinet/in.h>
@@ -99,6 +100,28 @@ struct sockobj_ops
     bool (*sock_connect)(struct sockobj * const obj);
 
     /**
+     * @brief Get socket options.
+     *
+     * @param[in,out] obj  A pointer to a socket object.
+     * @param[in]     opts A pointer to a vector of socket options.
+     *
+     * @return True on success.
+     */
+    bool (*sock_getopts)(struct sockobj * const obj,
+                         struct vector * const opts);
+
+    /**
+     * @brief Set socket options.
+     *
+     * @param[in,out] obj  A pointer to a socket object.
+     * @param[in]     opts A pointer to a vector of socket options.
+     *
+     * @return True on success.
+     */
+    bool (*sock_setopts)(struct sockobj * const obj,
+                         struct vector * const opts);
+
+    /**
      * @brief Receive data from a socket.
      *
      * @param[in,out] obj A pointer to a socket object.
@@ -153,6 +176,14 @@ struct sockobj_addr
     char               sockaddrstr[INET6_ADDRSTRLEN + 6]; // form: <addr>:<port>
 };
 
+struct sockobj_opt
+{
+    int32_t   level;
+    int32_t   name;
+    uint32_t  val;
+    socklen_t len;
+};
+
 struct sockobj_conf
 {
     int32_t            type; // e.g.: SOCK_DGRAM, SOCK_STREAM
@@ -160,6 +191,7 @@ struct sockobj_conf
     uint16_t           ipport;
     enum sockobj_model model;
     int32_t            timeoutms;
+    struct vector      opts;
 };
 
 struct sockobj_info
@@ -226,5 +258,15 @@ bool sockobj_close(struct sockobj * const obj);
  * @see sock_bind() for interface comments.
  */
 bool sockobj_bind(struct sockobj * const obj);
+
+/**
+ * @see sock_getopts() for interface comments.
+ */
+bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts);
+
+/**
+ * @see sock_setopts() for interface comments.
+ */
+bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts);
 
 #endif // _SOCK_OBJ_H_

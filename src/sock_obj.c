@@ -20,6 +20,43 @@
 #include <unistd.h>
 
 /**
+ * @brief Get a string representation of a socket option name.
+ *
+ * @param[in] name A socket option name.
+ *
+ * @return A string representation of a socket option name.
+ */
+static char *sockobj_getoptname(const uint32_t name)
+{
+    char *retval = NULL;
+
+    switch (name)
+    {
+        case SO_REUSEADDR:
+            retval = "SO_REUSEADDR";
+            break;
+        case SO_KEEPALIVE:
+            retval = "SO_KEEPALIVE";
+            break;
+        case SO_LINGER:
+            retval = "SO_LINGER";
+            break;
+        case SO_REUSEPORT:
+            retval = "SO_REUSEPORT";
+            break;
+#if defined(__APPLE__)
+        case SO_NOSIGPIPE:
+            retval = "SO_NOSIGPIPE";
+            break;
+#endif
+        default:
+            retval = "";
+    }
+
+    return retval;
+}
+
+/**
  * @see See header file for interface comments.
  */
 bool sockobj_getaddrpeer(struct sockobj * const obj)
@@ -164,6 +201,8 @@ bool sockobj_destroy(struct sockobj * const obj)
         obj->ops.sock_open    = NULL;
         obj->ops.sock_close   = NULL;
         obj->ops.sock_bind    = NULL;
+        obj->ops.sock_getopts = NULL;
+        obj->ops.sock_setopts = NULL;
         obj->ops.sock_listen  = NULL;
         obj->ops.sock_accept  = NULL;
         obj->ops.sock_connect = NULL;
@@ -347,6 +386,8 @@ bool sockobj_bind(struct sockobj * const obj)
 {
     bool retval = false;
 
+    // @todo Support binding to Ethernet interfaces (e.g., "eth0").
+
     if (obj == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
@@ -368,6 +409,122 @@ bool sockobj_bind(struct sockobj * const obj)
                       __FUNCTION__,
                       obj->sockfd,
                       errno);
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
+{
+    bool retval = false;
+    int32_t errval = 0;
+    struct sockobj_opt *opt = NULL;
+    uint32_t i;
+
+    if ((obj == NULL) || (opts == NULL) || (vector_getsize(opts) == 0))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        retval = true;
+
+        for (i = 0; i < vector_getsize(opts); i++)
+        {
+            opt = (struct sockobj_opt *)vector_getval(opts, i);
+
+            if (opt == NULL)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d option index %u is empty\n",
+                              __FUNCTION__,
+                              obj->sockfd,
+                              i);
+                retval = false;
+            }
+            else
+            {
+                errval = getsockopt(obj->sockfd,
+                                    opt->level,
+                                    opt->name,
+                                    &opt->val,
+                                    &opt->len);
+
+                if (errval != 0)
+                {
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: socket %d '%s' option failed (%d)\n",
+                                  __FUNCTION__,
+                                  obj->sockfd,
+                                  sockobj_getoptname(opt->name),
+                                  errno);
+                    retval = false;
+                }
+            }
+        }
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
+{
+    bool retval = false;
+    int32_t errval = 0;
+    struct sockobj_opt *opt = NULL;
+    uint32_t i;
+
+    if ((obj == NULL) || (opts == NULL) || (vector_getsize(opts) == 0))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        retval = true;
+
+        for (i = 0; i < vector_getsize(opts); i++)
+        {
+            opt = (struct sockobj_opt *)vector_getval(opts, i);
+
+            if (opt == NULL)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d option index %u is empty\n",
+                              __FUNCTION__,
+                              obj->sockfd,
+                              i);
+                retval = false;
+            }
+            else
+            {
+                errval = setsockopt(obj->sockfd,
+                                    opt->level,
+                                    opt->name,
+                                    &opt->val,
+                                    sizeof(opt->val));
+
+                if (errval != 0)
+                {
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: socket %d '%s' option failed (%d)\n",
+                                  __FUNCTION__,
+                                  obj->sockfd,
+                                  sockobj_getoptname(opt->name),
+                                  errno);
+                    retval = false;
+                }
+            }
+        }
     }
 
     return retval;
