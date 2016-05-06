@@ -148,7 +148,7 @@ bool socktcp_destroy(struct sockobj * const obj)
     }
     else
     {
-        retval = sockobj_destroy(obj);
+        retval = obj->ops.sock_destroy(obj);
     }
 
     return retval;
