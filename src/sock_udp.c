@@ -36,22 +36,25 @@ bool sockudp_create(struct sockobj * const obj)
     }
     else
     {
-        obj->ops.sock_create  = sockudp_create;
-        obj->ops.sock_destroy = sockudp_destroy;
-        obj->ops.sock_open    = sockobj_open;
-        obj->ops.sock_close   = sockobj_close;
-        obj->ops.sock_bind    = sockobj_bind;
-        obj->ops.sock_getopts = sockobj_getopts;
-        obj->ops.sock_setopts = sockobj_setopts;
-        obj->ops.sock_listen  = sockudp_listen;
-        obj->ops.sock_accept  = sockudp_accept;
-        obj->ops.sock_connect = sockudp_connect;
-        obj->ops.sock_recv    = sockudp_recv;
-        obj->ops.sock_send    = sockudp_send;
+        if (sockobj_create(obj) == true)
+        {
+            obj->ops.sock_create  = sockudp_create;
+            obj->ops.sock_destroy = sockudp_destroy;
+            obj->ops.sock_open    = sockobj_open;
+            obj->ops.sock_close   = sockobj_close;
+            obj->ops.sock_bind    = sockobj_bind;
+            obj->ops.sock_getopts = sockobj_getopts;
+            obj->ops.sock_setopts = sockobj_setopts;
+            obj->ops.sock_listen  = sockudp_listen;
+            obj->ops.sock_accept  = sockudp_accept;
+            obj->ops.sock_connect = sockudp_connect;
+            obj->ops.sock_recv    = sockudp_recv;
+            obj->ops.sock_send    = sockudp_send;
 
-        obj->conf.type = SOCK_DGRAM;
+            obj->conf.type = SOCK_DGRAM;
 
-        retval = true;
+            retval = true;
+        }
     }
 
     return retval;
@@ -72,18 +75,7 @@ bool sockudp_destroy(struct sockobj * const obj)
     }
     else
     {
-        obj->ops.sock_create  = NULL;
-        obj->ops.sock_destroy = NULL;
-        obj->ops.sock_open    = NULL;
-        obj->ops.sock_close   = NULL;
-        obj->ops.sock_bind    = NULL;
-        obj->ops.sock_listen  = NULL;
-        obj->ops.sock_accept  = NULL;
-        obj->ops.sock_connect = NULL;
-        obj->ops.sock_recv    = NULL;
-        obj->ops.sock_send    = NULL;
-
-        retval = true;
+        retval = obj->ops.sock_destroy(obj);
     }
 
     return retval;
@@ -99,11 +91,17 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
     // @todo Consider using this API to create the size of the UDP "connection"
     //       poll.
 
+    // @todo SO_REUSEPORT could be used on kernels that support its use.
+
     if ((obj == NULL) || (obj->conf.type != SOCK_DGRAM) || (backlog == 0))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
                       __FUNCTION__);
+    }
+    else
+    {
+        retval = true;
     }
 
     return retval;
@@ -140,6 +138,11 @@ bool sockudp_accept(struct sockobj * const listener,
             if (((listener->event.revents & FIONOBJ_REVENT_TIMEOUT) == 0) &&
                 ((listener->event.revents & FIONOBJ_REVENT_ERROR) == 0))
             {
+                // @todo Clone/duplicate listener socket
+                listener->ops.sock_create(obj);
+                listener->ops.sock_open(obj);
+                obj->sockfd = listener->sockfd;
+
                 retval = true;
             }
         }
@@ -164,7 +167,7 @@ bool sockudp_connect(struct sockobj * const obj)
     else
     {
         obj->info.startusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
-                                                       UNIT_TIME_USEC);
+                                                 UNIT_TIME_USEC);
 
         // There are a number of benefits to calling connect() on a UDP socket:
         //    1. the local IP port can be retrieved,
@@ -220,26 +223,19 @@ int32_t sockudp_recv(struct sockobj * const obj,
     }
     else
     {
-        if (obj->event.ops.fion_poll(&obj->event) == false)
+        if (obj->state & SOCKOBJ_STATE_CONNECT)
         {
-            retval = -1;
+            retval = recv(obj->sockfd, buf, len, flags);
         }
-        else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
+        else
         {
-            if (obj->state & SOCKOBJ_STATE_CONNECT)
-            {
-                retval = recv(obj->sockfd, buf, len, flags);
-            }
-            else
-            {
-                socklen  = sizeof(obj->addrpeer.sockaddr);
-                retval = recvfrom(obj->sockfd,
-                                  buf,
-                                  len,
-                                  flags,
-                                  (struct sockaddr *)&(obj->addrpeer.sockaddr),
-                                  &socklen);
-            }
+            socklen = sizeof(obj->addrpeer.sockaddr);
+            retval = recvfrom(obj->sockfd,
+                              buf,
+                              len,
+                              flags,
+                              (struct sockaddr *)&(obj->addrpeer.sockaddr),
+                              &socklen);
 
             if (retval > 0)
             {
@@ -262,23 +258,55 @@ int32_t sockudp_recv(struct sockobj * const obj,
                               obj->addrpeer.ipport);
                 obj->info.recvbytes += retval;
             }
+            // Check for socket errors if receive failed.
             else
             {
-                logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %d fatal error (%d)\n",
-                              __FUNCTION__,
-                              obj->sockfd,
-                              errno);
-                retval = -1;
+                switch (errno)
+                {
+                    // Fatal errors.
+                    case EBADF:
+                    case ECONNRESET:
+                    case EHOSTUNREACH:
+                    case EPIPE:
+                    case ENOTSOCK:
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: socket %d fatal error (%d)\n",
+                                      __FUNCTION__,
+                                      obj->sockfd,
+                                      errno);
+                        retval = -1;
+                        break;
+                    // Non-fatal errors.
+                    case EACCES:
+                    case EAGAIN:
+                    case EFAULT:
+                    case EINTR:
+                    case EMSGSIZE:
+                    case ENETDOWN:
+                    case ENETUNREACH:
+                    case ENOBUFS:
+                    case EOPNOTSUPP:
+                    default:
+                        logger_printf(LOGGER_LEVEL_TRACE,
+                                      "%s: socket %d non-fatal error (%d)\n",
+                                      __FUNCTION__,
+                                      obj->sockfd,
+                                      errno);
+                        retval = 0;
+                }
+
+                if (retval == 0)
+                {
+                    if (obj->event.ops.fion_poll(&obj->event) == false)
+                    {
+                        retval = -1;
+                    }
+                    else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
+                    {
+                        retval = -1;
+                    }
+                }
             }
-        }
-        else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
-        {
-            retval = -1;
-        }
-        else
-        {
-            retval = 0;
         }
     }
 
@@ -331,6 +359,7 @@ int32_t sockudp_send(struct sockobj * const obj,
                           retval);
             obj->info.sendbytes += retval;
         }
+        // Check for socket errors if send failed.
         else
         {
             switch (errno)
