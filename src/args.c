@@ -309,6 +309,18 @@ static struct tuple_element options[] =
      args_copytime
     },
     {
+     "--udp",
+     'u',
+     ARGS_GROUP_NONE,
+     "use UDP sockets instead of TCP sockets",
+     "0.0.0.0",
+     NULL,
+     NULL,
+     true,
+     true,
+     NULL
+    },
+    {
      "--help",
      'h',
      ARGS_GROUP_INFO,
@@ -528,6 +540,7 @@ bool args_parse(const int32_t argc,
         memset(groupcount, 0, sizeof(groupcount));
         args->mode = ARGS_MODE_PERF;
         args->arch = SOCKOBJ_MODEL_NULL;
+        args->type = SOCK_STREAM;
         args_copyipport("5001", "5001", "5001", args);
         args_copytime("10s", "10s", "10s", args);
 
@@ -588,6 +601,9 @@ bool args_parse(const int32_t argc,
                 case 'p':
                     break;
                 case 't':
+                    break;
+                case 'u':
+                    args->type = SOCK_DGRAM;
                     break;
                 case 'h':
                     args_usage(stdout);
