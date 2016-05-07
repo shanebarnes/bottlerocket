@@ -313,7 +313,7 @@ static struct tuple_element options[] =
      'u',
      ARGS_GROUP_NONE,
      "use UDP sockets instead of TCP sockets",
-     "0.0.0.0",
+     "disabled",
      NULL,
      NULL,
      true,
