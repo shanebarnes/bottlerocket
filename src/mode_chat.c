@@ -13,6 +13,7 @@
 #include "mode_chat.h"
 #include "output_if_std.h"
 #include "sock_tcp.h"
+#include "sock_udp.h"
 #include "thread_obj.h"
 #include "util_string.h"
 
@@ -50,7 +51,15 @@ static void *modechat_thread(void * arg)
         form.dstbuf = sendbuf;
         form.dstlen = sizeof(sendbuf);
 
-        socktcp_create(&server);
+        if (opts->type == SOCK_STREAM)
+        {
+            socktcp_create(&server);
+        }
+        else
+        {
+            sockudp_create(&server);
+        }
+
         memcpy(server.conf.ipaddr, opts->ipaddr, sizeof(server.conf.ipaddr));
         server.conf.ipport = opts->ipport;
 
