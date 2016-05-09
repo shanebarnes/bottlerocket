@@ -22,6 +22,13 @@
 int32_t utilioctl_getbytesavail(const int32_t fd);
 
 /**
+ * @brief Get the maximum network interface MTU in bytes.
+ *
+ * @return The maximum network interface MTU in bytes (-1 on error).
+ */
+int32_t utilioctl_getifmaxmtu(void);
+
+/**
  * @brief Get the terminal window size in terms of column size and row size.
  *
  * @param[in,out] rows A pointer to a row size variable to set (0 on error).
