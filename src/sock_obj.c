@@ -256,7 +256,7 @@ bool sockobj_open(struct sockobj * const obj)
             {
                 if ((obj->sockfd = socket(anext->ai_family,
                                           anext->ai_socktype,
-                                          anext->ai_protocol)) != 0)
+                                          anext->ai_protocol)) != -1)
                 {
                     obj->ainfo = *anext;
 
