@@ -29,7 +29,11 @@ static bool sockmod_initclient(struct sockobj * const sock)
     struct sockobj_conf conf;
     memcpy(&conf, &sock->conf, sizeof(conf));
 
-    if (socktcp_create(sock) == false)
+    if ((sock->conf.type == SOCK_STREAM) && (socktcp_create(sock) == false))
+    {
+    }
+    else if ((sock->conf.type == SOCK_DGRAM) &&
+             (sockudp_create(sock) == false))
     {
     }
     else if (memcpy(&sock->conf, &conf, sizeof(sock->conf)) == NULL)
@@ -69,7 +73,11 @@ static bool sockmod_initserver(struct sockobj * const sock)
     struct sockobj_conf conf;
     memcpy(&conf, &sock->conf, sizeof(conf));
 
-    if (socktcp_create(sock) == false)
+    if ((sock->conf.type == SOCK_STREAM) && (socktcp_create(sock) == false))
+    {
+    }
+    else if ((sock->conf.type == SOCK_DGRAM) &&
+             (sockudp_create(sock) == false))
     {
     }
     else if (memcpy(&sock->conf, &conf, sizeof(sock->conf)) == NULL)
