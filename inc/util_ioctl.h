@@ -22,11 +22,27 @@
 int32_t utilioctl_getbytesavail(const int32_t fd);
 
 /**
+ * @brief Get the network interface MTU in bytes.
+ *
+ * @param[in] ifname The network interface name.
+ *
+ * @return The network interface MTU in bytes (-1 on error).
+ */
+int32_t utilioctl_getifmtu(char * const ifname);
+
+/**
  * @brief Get the maximum network interface MTU in bytes.
  *
  * @return The maximum network interface MTU in bytes (-1 on error).
  */
 int32_t utilioctl_getifmaxmtu(void);
+
+/**
+ * @brief Get the minimum network interface MTU in bytes.
+ *
+ * @return The minimum network interface MTU in bytes (-1 on error).
+ */
+int32_t utilioctl_getifminmtu(void);
 
 /**
  * @brief Get the terminal window size in terms of column size and row size.
