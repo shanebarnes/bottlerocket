@@ -28,6 +28,11 @@ enum args_group
     ARGS_GROUP_MAX  = 4
 };
 
+static const bool arg_optional = true;
+static const bool arg_required = false;
+static const bool val_optional = true;
+static const bool val_required = false;
+
 struct tuple_element
 {
   const char             *lname;  // Attribute long name (e.g., --argument)
@@ -206,8 +211,8 @@ static struct tuple_element options[] =
      "disabled",
      NULL,
      NULL,
-     true,
-     true,
+     val_optional,
+     arg_optional,
      NULL
     },
     {
@@ -218,8 +223,8 @@ static struct tuple_element options[] =
      "enabled",
      NULL,
      NULL,
-     true,
-     true,
+     val_optional,
+     arg_optional,
      NULL
     },
 #if !defined(__APPLE__)
@@ -231,8 +236,8 @@ static struct tuple_element options[] =
      "0xFFFFFFFF",
      NULL,
      NULL,
-     false,
-     true,
+     val_required,
+     arg_optional,
      NULL
     },
 #endif
@@ -244,8 +249,8 @@ static struct tuple_element options[] =
      "127.0.0.1:0",
      "0",
      "65535",
-     false,
-     true,
+     val_required,
+     arg_optional,
      args_copyipport
     },
     {
@@ -256,8 +261,8 @@ static struct tuple_element options[] =
      "127.0.0.1",
      NULL,
      NULL,
-     true,
-     false,
+     val_optional,
+     arg_required,
      args_copyipaddr
     },
     {
@@ -268,8 +273,8 @@ static struct tuple_element options[] =
      "0.0.0.0",
      NULL,
      NULL,
-     true,
-     false,
+     val_optional,
+     arg_required,
      args_copyipaddr
     },
     {
@@ -280,8 +285,8 @@ static struct tuple_element options[] =
      "5001",
      "0",
      "65535",
-     false,
-     true,
+     val_required,
+     arg_optional,
      args_copyipport
     },
     {
@@ -292,8 +297,8 @@ static struct tuple_element options[] =
      str_somaxconn,
      "1",
      str_somaxconn,
-     false,
-     true,
+     val_required,
+     arg_optional,
      NULL
     },
     {
@@ -304,8 +309,8 @@ static struct tuple_element options[] =
      "10s",
      "1ps",
      "1000y",
-     false,
-     true,
+     val_required,
+     arg_optional,
      args_copytime
     },
     {
@@ -316,8 +321,8 @@ static struct tuple_element options[] =
      "disabled",
      NULL,
      NULL,
-     true,
-     true,
+     val_optional,
+     arg_optional,
      NULL
     },
     {
@@ -328,8 +333,8 @@ static struct tuple_element options[] =
      NULL,
      NULL,
      NULL,
-     false,
-     true,
+     val_optional,
+     arg_optional,
      NULL
     },
     {
@@ -340,8 +345,8 @@ static struct tuple_element options[] =
      NULL,
      NULL,
      NULL,
-     false,
-     true,
+     val_optional,
+     arg_optional,
      NULL
     }
 };
@@ -470,7 +475,7 @@ static char args_getarg(const int32_t argc,
             }
             else
             {
-                if (options[i].oval == false)
+                if (options[i].oval == val_required)
                 {
                     fprintf(stderr,
                             "\nmissing value for option '%s'\n",
@@ -492,7 +497,7 @@ static char args_getarg(const int32_t argc,
         }
         else
         {
-            if (options[i].oval == false)
+            if (options[i].oval == val_required)
             {
                 fprintf(stderr,
                         "\nmissing value for option '%s'\n",
