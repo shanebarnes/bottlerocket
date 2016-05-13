@@ -31,7 +31,8 @@ static void *modeperf_thread(void * arg)
     struct threadobj *thread = (struct threadobj *)arg;
     struct sockobj client, server, socket;
     struct formobj form;
-    char    recvbuf[65536], sendbuf[131072];
+    //char    recvbuf[65536], sendbuf[131072];
+    char *recvbuf = NULL, *sendbuf = NULL;
     int32_t count = 0, timeoutms = 500;
     int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
 
@@ -55,15 +56,24 @@ static void *modeperf_thread(void * arg)
                       "%s: parameter validation failed\n",
                       __FUNCTION__);
     }
+    else if ((recvbuf = malloc(opts->buflen)) == NULL)
+    {
+
+    }
+    else if ((sendbuf = malloc(opts->buflen)) == NULL)
+    {
+        free(recvbuf);
+        recvbuf = NULL;
+    }
     else
     {
         form.ops.form_head = formperf_head;
         form.ops.form_body = formperf_body;
         form.ops.form_foot = formperf_foot;
         form.srcbuf = recvbuf;
-        form.srclen = sizeof(recvbuf);
+        form.srclen = opts->buflen;
         form.dstbuf = sendbuf;
-        form.dstlen = sizeof(sendbuf);
+        form.dstlen = opts->buflen;
 
         if (opts->arch == SOCKOBJ_MODEL_CLIENT)
         {
@@ -126,7 +136,7 @@ static void *modeperf_thread(void * arg)
                     // @todo use rate limiting input interface to send data.
                     sendbytes = client.ops.sock_send(&client,
                                                      sendbuf,
-                                                     sizeof(sendbuf));
+                                                     opts->buflen);
 
                     ///?? Make sure time is only getting retrieved once per loop
                     timeusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
@@ -153,7 +163,7 @@ static void *modeperf_thread(void * arg)
                 {
                     recvbytes = socket.ops.sock_recv(&socket,
                                                      recvbuf,
-                                                     sizeof(recvbuf));
+                                                     opts->buflen);
                     if (recvbytes < 0)
                     {
                         formbytes = form.ops.form_foot(&form);
@@ -170,6 +180,9 @@ static void *modeperf_thread(void * arg)
                 }
             }
         }
+
+        free(recvbuf);
+        free(sendbuf);
     }
 
     // Signal main thread to shutdown.
