@@ -99,6 +99,59 @@ static bool args_copyipaddr(const char * const val,
 }
 
 /**
+ * @brief Validate and copy a 32-bit integer value to a 32-bit integer variable.
+ *
+ * @param[in]     val A pointer to a value to validate.
+ * @param[in]     min A pointer to a minimum value (NULL if no minimum value).
+ * @param[in]     max A pointer to a maximum value (NULL if no maximum value).
+ * @param[in,out] num A pointer to a 32-bit integer variable.
+ *
+ * @return True if a valid 32-bit integer value was copied to an 32-bit integer
+ *         variable.
+ */
+static bool args_copyint32(const char * const val,
+                           const char * const min,
+                           const char * const max,
+                           int32_t * const num)
+{
+    bool retval = false;
+    int32_t dmax, dmin, tmp;
+
+    if ((val == NULL) || (num == NULL))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if ((utilstring_parse(val, "%d", &tmp) == 1))
+        {
+            if ((min != NULL) &&
+                ((utilstring_parse(min, "%d", &dmin) != 1) ||
+                 (tmp < dmin)))
+            {
+                // Do nothing.
+            }
+            else if ((max != NULL) &&
+                     ((utilstring_parse(max, "%d", &dmax) != 1) ||
+                     (tmp > dmax)))
+            {
+                // Do nothing.
+            }
+            else
+            {
+                *num = tmp;
+                retval = true;
+            }
+        }
+    }
+
+    return retval;
+}
+
+
+/**
  * @brief Validate and copy an IP port number value to an arguments object.
  *
  * @param[in]     val  A pointer to a value to validate.
@@ -115,9 +168,53 @@ static bool args_copyipport(const char * const val,
                             struct args_obj *args)
 {
     bool retval = false;
-    int32_t dmax, dmin, port;
+    int32_t port = -1;
 
-    if ((val == NULL) || (args == NULL))
+    if (args == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (args_copyint32(val, min, max, &port) == true)
+    {
+        args->ipport = (uint16_t)port;
+        retval = true;
+    }
+
+    return retval;
+}
+
+static bool args_copybacklog(const char * const val,
+                             const char * const min,
+                             const char * const max,
+                             struct args_obj *args)
+{
+    bool retval = false;
+
+    if (args == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (args_copyint32(val, min, max, &args->backlog) == true)
+    {
+        retval = true;
+    }
+
+    return retval;
+}
+
+static bool args_copybytes(const char * const val,
+                           const char * const min,
+                           const char * const max,
+                           uint64_t  * const num)
+{
+    bool retval = false;
+    uint64_t dmax, dmin, tmp;
+
+    if ((val == NULL) || (num == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -125,23 +222,23 @@ static bool args_copyipport(const char * const val,
     }
     else
     {
-        if ((utilstring_parse(val, "%d", &port) == 1))
+        if ((tmp = utilunit_getbytes(val)) > 0)
         {
             if ((min != NULL) &&
-                ((utilstring_parse(min, "%d", &dmin) != 1) ||
-                 (port < dmin)))
+                (((dmin = utilunit_getbytes(min)) == 0) ||
+                 (tmp < dmin)))
             {
                 // Do nothing.
             }
             else if ((max != NULL) &&
-                     ((utilstring_parse(max, "%d", &dmax) != 1) ||
-                     (port > dmax)))
+                    (((dmax = utilunit_getbytes(max)) == 0) ||
+                     (tmp > dmax)))
             {
                 // Do nothing.
             }
             else
             {
-                args->ipport = (uint16_t)port;
+                *num = tmp;
                 retval = true;
             }
         }
@@ -150,6 +247,26 @@ static bool args_copyipport(const char * const val,
     return retval;
 }
 
+static bool args_copybuflen(const char * const val,
+                            const char * const min,
+                            const char * const max,
+                            struct args_obj *args)
+{
+    bool retval = false;
+
+    if (args == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (args_copybytes(val, min, max, &args->buflen) == true)
+    {
+        retval = true;
+    }
+
+    return retval;
+}
 /**
  * @brief Validate and copy a time value to an arguments object.
  *
@@ -266,6 +383,18 @@ static struct tuple_element options[] =
      args_copyipaddr
     },
     {
+     "--len",
+     'l',
+     ARGS_GROUP_NONE,
+     "length of buffer to read or write",
+     "128kB",
+     "1",
+     "10MB",
+     val_required,
+     arg_optional,
+     args_copybuflen
+    },
+    {
      "--server",
      's',
      ARGS_GROUP_ARCH,
@@ -299,7 +428,7 @@ static struct tuple_element options[] =
      str_somaxconn,
      val_required,
      arg_optional,
-     NULL
+     args_copybacklog
     },
     {
      "--time",
@@ -548,6 +677,8 @@ bool args_parse(const int32_t argc,
         args->type = SOCK_STREAM;
         args_copyipport("5001", "5001", "5001", args);
         args_copytime("10s", "10s", "10s", args);
+        args_copytime("10s", "10s", "10s", args);
+        args_copybuflen("128kB", "128kB", "128kB", args);
 
         for (i = 1; (i < argc) && (retval == true); i++)
         {
@@ -592,6 +723,8 @@ bool args_parse(const int32_t argc,
                         retval = false;
                     }
                     break;
+                case 'l':
+                    break;
                 case 's':
                     if (args->arch == SOCKOBJ_MODEL_NULL)
                     {
@@ -604,6 +737,8 @@ bool args_parse(const int32_t argc,
                     }
                     break;
                 case 'p':
+                    break;
+                case 'q':
                     break;
                 case 't':
                     break;

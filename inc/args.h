@@ -29,7 +29,9 @@ struct args_obj
     int32_t            type;
     char               ipaddr[INET6_ADDRSTRLEN];
     uint16_t           ipport;
+    int32_t            backlog;
     uint64_t           maxtimeusec;
+    uint64_t           buflen;
 };
 
 /**
