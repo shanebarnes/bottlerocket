@@ -19,4 +19,11 @@
  */
 uint32_t utilsysctl_getcpusavail(void);
 
+/**
+ * @brief Get the maximum UDP datagram size.
+ *
+ * @return The maximum UDP datagram size in bytes (-1 on error).
+ */
+int32_t utilsysctl_getmaxudpsize(void);
+
 #endif // _UTIL_SYSCTL_H_
