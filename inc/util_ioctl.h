@@ -12,6 +12,8 @@
 
 #include "system_types.h"
 
+#include <netinet/in.h>
+
 /**
  * @brief Get the number of bytes that are available to be read.
  *
@@ -22,13 +24,23 @@
 int32_t utilioctl_getbytesavail(const int32_t fd);
 
 /**
- * @brief Get the network interface MTU in bytes.
+ * @brief Get the network interface MTU in bytes for a network interface
+ *        address.
  *
- * @param[in] ifname The network interface name.
+ * @param [in] addr The socket address.
  *
  * @return The network interface MTU in bytes (-1 on error).
  */
-int32_t utilioctl_getifmtu(char * const ifname);
+int32_t utilioctl_getifmtubyaddr(const struct sockaddr_in addr);
+
+/**
+ * @brief Get the network interface MTU in bytes for a network interface name.
+ *
+ * @param[in] name The network interface name.
+ *
+ * @return The network interface MTU in bytes (-1 on error).
+ */
+int32_t utilioctl_getifmtubyname(char * const name);
 
 /**
  * @brief Get the maximum network interface MTU in bytes.

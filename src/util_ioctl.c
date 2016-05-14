@@ -10,6 +10,7 @@
 #include "logger.h"
 #include "util_ioctl.h"
 
+#include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <errno.h>
 #include <net/if.h>
@@ -40,12 +41,61 @@ int32_t utilioctl_getbytesavail(const int32_t fd)
 /**
  * @see See header file for interface comments.
  */
-int32_t utilioctl_getifmtu(char * const ifname)
+int32_t utilioctl_getifmtubyaddr(const struct sockaddr_in addr)
+{
+    int32_t retval = -1;
+    struct ifaddrs *addrs = NULL, *ifa = NULL;
+    struct sockaddr_in *sa = NULL;
+    char buf1[INET6_ADDRSTRLEN], buf2[INET6_ADDRSTRLEN];
+
+    if (getifaddrs(&addrs) == -1)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: failed to get network interface list (%d)\n",
+                      __FUNCTION__,
+                      errno);
+    }
+    else
+    {
+        for (ifa = addrs; ifa != NULL; ifa = ifa->ifa_next)
+        {
+            if (ifa->ifa_addr->sa_family == addr.sin_family)
+            {
+                sa = (struct sockaddr_in *)ifa->ifa_addr;
+
+                inet_ntop(ifa->ifa_addr->sa_family,
+                          (void *)&(sa->sin_addr),
+                          buf1,
+                          sizeof(buf1));
+
+                inet_ntop(addr.sin_family,
+                          (void *)&addr.sin_addr,
+                          buf2,
+                          sizeof(buf2));
+
+                if (strcmp(buf1, buf2) == 0)
+                {
+                    retval = utilioctl_getifmtubyname(ifa->ifa_name);
+                    break;
+                }
+            }
+        }
+
+        freeifaddrs(addrs);
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+int32_t utilioctl_getifmtubyname(char * const name)
 {
     int32_t retval = -1, fd = -1;
     struct ifreq ifr;
 
-    if (ifname == NULL)
+    if (name == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -62,7 +112,7 @@ int32_t utilioctl_getifmtu(char * const ifname)
     {
         memset(&ifr, 0, sizeof(struct ifreq));
         ifr.ifr_addr.sa_family = AF_INET;
-        strncpy(ifr.ifr_name, ifname, IFNAMSIZ-1);
+        strncpy(ifr.ifr_name, name, IFNAMSIZ-1);
 
         if (ioctl(fd, SIOCGIFMTU, &ifr) == 0)
         {
@@ -98,7 +148,7 @@ int32_t utilioctl_getifmaxmtu(void)
                 ((ifa->ifa_addr->sa_family == AF_INET) ||
                  (ifa->ifa_addr->sa_family == AF_INET6)))
             {
-                if ((mtu = utilioctl_getifmtu(ifa->ifa_name)) > -1)
+                if ((mtu = utilioctl_getifmtubyname(ifa->ifa_name)) > -1)
                 {
                     if (mtu > retval)
                     {
@@ -137,7 +187,7 @@ int32_t utilioctl_getifminmtu(void)
                 ((ifa->ifa_addr->sa_family == AF_INET) ||
                  (ifa->ifa_addr->sa_family == AF_INET6)))
             {
-                if ((mtu = utilioctl_getifmtu(ifa->ifa_name)) > -1)
+                if ((mtu = utilioctl_getifmtubyname(ifa->ifa_name)) > -1)
                 {
                     if ((retval == -1) || (mtu < retval))
                     {
