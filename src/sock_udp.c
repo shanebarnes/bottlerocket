@@ -10,6 +10,7 @@
 #include "logger.h"
 #include "sock_udp.h"
 #include "util_date.h"
+#include "util_ioctl.h"
 #include "util_unit.h"
 
 #include <errno.h>
@@ -269,6 +270,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
                     case EHOSTUNREACH:
                     case EPIPE:
                     case ENOTSOCK:
+                    case EMSGSIZE:
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %d fatal error (%d)\n",
                                       __FUNCTION__,
@@ -281,7 +283,6 @@ int32_t sockudp_recv(struct sockobj * const obj,
                     case EAGAIN:
                     case EFAULT:
                     case EINTR:
-                    case EMSGSIZE:
                     case ENETDOWN:
                     case ENETUNREACH:
                     case ENOBUFS:
@@ -369,6 +370,13 @@ int32_t sockudp_send(struct sockobj * const obj,
                 case ECONNRESET:
                 case EHOSTUNREACH:
                 case EPIPE:
+                case EMSGSIZE:
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: datagram payload (%u) is larger than the"
+                                  " MTU (%u)\n",
+                                  __FUNCTION__,
+                                  len,
+                                  utilioctl_getifmtubyaddr(obj->addrself.sockaddr));
                 case ENOTSOCK:
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %d fatal error (%d)\n",
@@ -382,7 +390,6 @@ int32_t sockudp_send(struct sockobj * const obj,
                 case EAGAIN:
                 case EFAULT:
                 case EINTR:
-                case EMSGSIZE:
                 case ENETDOWN:
                 case ENETUNREACH:
                 case ENOBUFS:
