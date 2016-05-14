@@ -11,6 +11,9 @@
 #include "sock_udp.h"
 #include "util_date.h"
 #include "util_ioctl.h"
+#if defined(__APPLE__)
+    #include "util_sysctl.h"
+#endif
 #include "util_unit.h"
 
 #include <errno.h>
@@ -270,7 +273,6 @@ int32_t sockudp_recv(struct sockobj * const obj,
                     case EHOSTUNREACH:
                     case EPIPE:
                     case ENOTSOCK:
-                    case EMSGSIZE:
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %d fatal error (%d)\n",
                                       __FUNCTION__,
@@ -283,6 +285,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
                     case EAGAIN:
                     case EFAULT:
                     case EINTR:
+                    case EMSGSIZE:
                     case ENETDOWN:
                     case ENETUNREACH:
                     case ENOBUFS:
@@ -371,12 +374,19 @@ int32_t sockudp_send(struct sockobj * const obj,
                 case EHOSTUNREACH:
                 case EPIPE:
                 case EMSGSIZE:
+                    // On Mac, the maximum message size may be smaller than the
+                    // the network interface MTU (see sysctl
+                    // net.inet.udp.maxdgram).
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: datagram payload (%u) is larger than the"
-                                  " MTU (%u)\n",
+                                  " maximum message size (%u)\n",
                                   __FUNCTION__,
                                   len,
+#if defined(__APPLE__)
+                                  utilsysctl_getmaxudpsize());
+#else
                                   utilioctl_getifmtubyaddr(obj->addrself.sockaddr));
+#endif
                 case ENOTSOCK:
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %d fatal error (%d)\n",
