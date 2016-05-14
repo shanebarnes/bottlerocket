@@ -677,7 +677,6 @@ bool args_parse(const int32_t argc,
         args->type = SOCK_STREAM;
         args_copyipport("5001", "5001", "5001", args);
         args_copytime("10s", "10s", "10s", args);
-        args_copytime("10s", "10s", "10s", args);
         args_copybuflen("128kB", "128kB", "128kB", args);
 
         for (i = 1; (i < argc) && (retval == true); i++)
