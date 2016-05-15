@@ -26,6 +26,37 @@
 // temp
 
 /**
+ * @brief Get the maximum UDP message size in bytes.
+ *
+ * @param[in] obj A pointer to a socket object.
+ *
+ * @return The maximum UDP message size in bytes (-1 on error).
+ */
+static int32_t sockudp_getmaxmsgsize(struct sockobj * const obj)
+{
+    int32_t retval = -1;
+    int32_t mtu = utilioctl_getifmtubyaddr(obj->addrself.sockaddr);
+    int32_t minhdrlen = 28; // IPv4 header (20) + UDP header (8)
+
+    if (mtu > minhdrlen)
+    {
+        retval = mtu - minhdrlen;
+#if defined(__APPLE__)
+        // The maximum message size may be smaller than the network interface
+        // MTU-derived value (see sysctl net.inet.udp.maxdgram).
+        int32_t size = utilsysctl_getmaxudpsize();
+
+        if ((size > -1) && (size < retval))
+        {
+            retval = size;
+        }
+#endif
+    }
+
+    return retval;
+}
+
+/**
  * @see See header file for interface comments.
  */
 bool sockudp_create(struct sockobj * const obj)
@@ -374,19 +405,12 @@ int32_t sockudp_send(struct sockobj * const obj,
                 case EHOSTUNREACH:
                 case EPIPE:
                 case EMSGSIZE:
-                    // On Mac, the maximum message size may be smaller than the
-                    // the network interface MTU (see sysctl
-                    // net.inet.udp.maxdgram).
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: datagram payload (%u) is larger than the"
                                   " maximum message size (%u)\n",
                                   __FUNCTION__,
                                   len,
-#if defined(__APPLE__)
-                                  utilsysctl_getmaxudpsize());
-#else
-                                  utilioctl_getifmtubyaddr(obj->addrself.sockaddr));
-#endif
+                                  sockudp_getmaxmsgsize(obj));
                 case ENOTSOCK:
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %d fatal error (%d)\n",
