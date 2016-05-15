@@ -14,6 +14,7 @@
 
 #include <errno.h>
 #include <netinet/tcp.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -260,6 +261,14 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                                   "%s: invalid socket fd (%d)\n",
                                   __FUNCTION__,
                                   sockfd);
+                }
+                else if (memcpy(&obj->conf,
+                                &listener->conf,
+                                sizeof(listener->conf)) == NULL)
+                {
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: failed to clone socket configuration\n",
+                                  __FUNCTION__);
                 }
                 else if (sockobj_getaddrself(obj) == false)
                 {
