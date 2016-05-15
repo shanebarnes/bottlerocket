@@ -26,6 +26,7 @@ struct args_obj
 {
     enum args_mode     mode;
     enum sockobj_model arch;
+    int32_t            family;
     int32_t            type;
     char               ipaddr[INET6_ADDRSTRLEN];
     uint16_t           ipport;

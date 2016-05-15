@@ -674,6 +674,7 @@ bool args_parse(const int32_t argc,
         memset(groupcount, 0, sizeof(groupcount));
         args->mode = ARGS_MODE_PERF;
         args->arch = SOCKOBJ_MODEL_NULL;
+        args->family = AF_INET;
         args->type = SOCK_STREAM;
         args_copyipport("5001", "5001", "5001", args);
         args_copytime("10s", "10s", "10s", args);
