@@ -42,11 +42,13 @@ static void *modeperf_thread(void * arg)
     memcpy(client.conf.ipaddr, opts->ipaddr, sizeof(client.conf.ipaddr));
     client.conf.ipport = opts->ipport;
     client.conf.timeoutms = 0;
+    client.conf.family = opts->family;
     client.conf.type = opts->type;
     client.conf.model = SOCKOBJ_MODEL_CLIENT;
     memcpy(server.conf.ipaddr, opts->ipaddr, sizeof(server.conf.ipaddr));
     server.conf.ipport = opts->ipport;
     server.conf.timeoutms = timeoutms;
+    server.conf.family = opts->family;
     server.conf.type = opts->type;
     server.conf.model = SOCKOBJ_MODEL_SERVER;
 
