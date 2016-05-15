@@ -186,7 +186,8 @@ struct sockobj_opt
 
 struct sockobj_conf
 {
-    int32_t            type; // e.g.: SOCK_DGRAM, SOCK_STREAM
+    int32_t            family; // e.g., AF_INET, AF_INET6
+    int32_t            type;   // e.g.: SOCK_DGRAM, SOCK_STREAM
     char               ipaddr[INET6_ADDRSTRLEN];
     uint16_t           ipport;
     enum sockobj_model model;

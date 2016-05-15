@@ -74,7 +74,7 @@ bool sockobj_getaddrpeer(struct sockobj * const obj)
                          (struct sockaddr *)&(obj->addrpeer.sockaddr),
                          &socklen) == 0)
     {
-        inet_ntop(AF_INET,
+        inet_ntop(obj->conf.family,
                   &(obj->addrpeer.sockaddr.sin_addr),
                   obj->addrpeer.ipaddr,
                   sizeof(obj->addrpeer.ipaddr));
@@ -119,7 +119,7 @@ bool sockobj_getaddrself(struct sockobj * const obj)
                          (struct sockaddr *)&(obj->addrself.sockaddr),
                          &socklen) == 0)
     {
-        inet_ntop(AF_INET,
+        inet_ntop(obj->conf.family,
                   &(obj->addrself.sockaddr.sin_addr),
                   obj->addrself.ipaddr,
                   sizeof(obj->addrself.ipaddr));
