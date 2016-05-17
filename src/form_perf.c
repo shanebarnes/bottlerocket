@@ -62,7 +62,7 @@ int32_t formperf_head(struct formobj * const obj)
 int32_t formperf_body(struct formobj * const obj)
 {
     int32_t  retval   = -1;
-    uint64_t /*diffusec = 0,*/ timeusec = 0;
+    uint64_t diffusec = 0, timeusec = 0, progress = 0;
     struct util_date_diff diff;
     char strrecvbytes[16], strsendbytes[16];
     char strrecvrate[16], strsendrate[16];
@@ -84,15 +84,40 @@ int32_t formperf_body(struct formobj * const obj)
 
         if (timeusec >= obj->timeoutusec)
         {
-            /*diffusec = */utildate_gettsdiff(obj->sock->info.startusec,
-                                              timeusec,
-                                              UNIT_TIME_USEC,
-                                              &diff);
+            diffusec = utildate_gettsdiff(obj->sock->info.startusec,
+                                          timeusec,
+                                          UNIT_TIME_USEC,
+                                          &diff);
 
-            utilunit_getdecformat(10, 3, obj->sock->info.recvbytes, strrecvbytes, sizeof(strrecvbytes));
-            utilunit_getdecformat(10, 3, obj->sock->info.sendbytes, strsendbytes, sizeof(strsendbytes));
-            utilunit_getdecformat(10, 3, 0, strrecvrate, sizeof(strrecvrate));
-            utilunit_getdecformat(10, 3, 0, strsendrate, sizeof(strsendrate));
+            if (obj->sock->conf.timelimitusec > 0)
+            {
+                progress = diffusec * 100 / obj->sock->conf.timelimitusec;
+            }
+            else if (obj->sock->conf.datalimitbyte > 0)
+            {
+                progress = obj->sock->info.sendbytes * 100 / obj->sock->conf.datalimitbyte;
+            }
+
+            utilunit_getdecformat(10,
+                                  3,
+                                  obj->sock->info.recvbytes,
+                                  strrecvbytes,
+                                  sizeof(strrecvbytes));
+            utilunit_getdecformat(10,
+                                  3,
+                                  obj->sock->info.sendbytes,
+                                  strsendbytes,
+                                  sizeof(strsendbytes));
+            utilunit_getdecformat(10,
+                                  3,
+                                  obj->sock->info.recvbytes * 8 * UNIT_TIME_USEC / diffusec,
+                                  strrecvrate,
+                                  sizeof(strrecvrate));
+            utilunit_getdecformat(10,
+                                  3,
+                                  obj->sock->info.sendbytes * 8 * UNIT_TIME_USEC / diffusec,
+                                  strsendrate,
+                                  sizeof(strsendrate));
 
             retval = utilstring_concat(obj->dstbuf,
                                        obj->dstlen,
@@ -108,10 +133,10 @@ int32_t formperf_body(struct formobj * const obj)
                                        1,
                                        obj->sock->addrself.sockaddrstr,
                                        obj->sock->addrpeer.sockaddrstr,
-                                       0,
-                                       5,
+                                       progress,
+                                       progress / 10,
                                        "==========",
-                                       10 - 5,
+                                       10 - progress / 10,
                                        "          ",
                                        strrecvrate,
                                        strsendrate,
