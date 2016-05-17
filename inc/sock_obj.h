@@ -192,6 +192,9 @@ struct sockobj_conf
     uint16_t           ipport;
     enum sockobj_model model;
     int32_t            timeoutms;
+    uint64_t           datalimitbyte;
+    uint64_t           ratelimitbps;
+    uint64_t           timelimitusec;
     struct vector      opts;
 };
 
