@@ -267,6 +267,28 @@ static bool args_copybuflen(const char * const val,
 
     return retval;
 }
+
+static bool args_copydatalimit(const char * const val,
+                               const char * const min,
+                               const char * const max,
+                               struct args_obj *args)
+{
+    bool retval = false;
+
+    if (args == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (args_copybytes(val, min, max, &args->datalimitbyte) == true)
+    {
+        retval = true;
+    }
+
+    return retval;
+}
+
 /**
  * @brief Validate and copy a time value to an arguments object.
  *
@@ -309,7 +331,7 @@ static bool args_copytime(const char * const val,
             }
             else
             {
-                args->maxtimeusec = utilunit_getsecs(val, UNIT_TIME_USEC);
+                args->timelimitusec = utilunit_getsecs(val, UNIT_TIME_USEC);
                 retval = true;
             }
         }
@@ -395,16 +417,16 @@ static struct tuple_element options[] =
      args_copybuflen
     },
     {
-     "--server",
-     's',
-     ARGS_GROUP_ARCH,
-     "run as a server",
-     "0.0.0.0",
-     NULL,
-     NULL,
-     val_optional,
-     arg_required,
-     args_copyipaddr
+     "--num",
+     'n',
+     ARGS_GROUP_NONE,
+     "number of bytes to send or receive",
+     "1MB",
+     "1B",
+     "999EB",
+     val_required,
+     arg_optional,
+     args_copydatalimit
     },
     {
      "--port",
@@ -429,6 +451,18 @@ static struct tuple_element options[] =
      val_required,
      arg_optional,
      args_copybacklog
+    },
+    {
+     "--server",
+     's',
+     ARGS_GROUP_ARCH,
+     "run as a server",
+     "0.0.0.0",
+     NULL,
+     NULL,
+     val_optional,
+     arg_required,
+     args_copyipaddr
     },
     {
      "--time",
@@ -676,8 +710,9 @@ bool args_parse(const int32_t argc,
         args->arch = SOCKOBJ_MODEL_NULL;
         args->family = AF_INET;
         args->type = SOCK_STREAM;
+        args->timelimitusec = 0;
         args_copyipport("5001", "5001", "5001", args);
-        args_copytime("10s", "10s", "10s", args);
+        args_copydatalimit("1MB", "1MB", "1MB", args);
         args_copybuflen("128kB", "128kB", "128kB", args);
 
         for (i = 1; (i < argc) && (retval == true); i++)
@@ -724,6 +759,8 @@ bool args_parse(const int32_t argc,
                     }
                     break;
                 case 'l':
+                    break;
+                case 'n':
                     break;
                 case 's':
                     if (args->arch == SOCKOBJ_MODEL_NULL)
