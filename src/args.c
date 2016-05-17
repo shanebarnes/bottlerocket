@@ -17,6 +17,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#define arg_optional true
+#define arg_required false
+#define val_optional true
+#define val_required false
+
 static char str_somaxconn[12];
 
 enum args_group
@@ -27,11 +32,6 @@ enum args_group
     ARGS_GROUP_INFO = 3,
     ARGS_GROUP_MAX  = 4
 };
-
-static const bool arg_optional = true;
-static const bool arg_required = false;
-static const bool val_optional = true;
-static const bool val_required = false;
 
 struct tuple_element
 {
