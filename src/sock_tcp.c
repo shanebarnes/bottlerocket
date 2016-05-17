@@ -357,6 +357,10 @@ bool socktcp_connect(struct sockobj * const obj)
 
                 obj->event.pevents = FIONOBJ_PEVENT_IN;
                 obj->event.ops.fion_setflags(&obj->event);
+
+                sockobj_getaddrself(obj);
+                sockobj_getaddrpeer(obj);
+
             }
             else
             {
@@ -372,20 +376,8 @@ bool socktcp_connect(struct sockobj * const obj)
         {
             obj->state |= SOCKOBJ_STATE_CONNECT;
 
-            if (sockobj_getaddrself(obj) == false)
-            {
-                logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %d self information is unavailable\n",
-                              obj->sockfd,
-                              __FUNCTION__);
-            }
-            else if (sockobj_getaddrpeer(obj) == false)
-            {
-                logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %d peer information is unavailable\n",
-                              __FUNCTION__,
-                              obj->sockfd);
-            }
+            sockobj_getaddrself(obj);
+            sockobj_getaddrpeer(obj);
         }
     }
 
