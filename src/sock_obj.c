@@ -72,9 +72,17 @@ bool sockobj_getaddrpeer(struct sockobj * const obj)
     }
     else if (getpeername(obj->sockfd,
                          (struct sockaddr *)&(obj->addrpeer.sockaddr),
-                         &socklen) == 0)
+                         &socklen) != 0)
     {
-        inet_ntop(obj->conf.family,
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: socket %d getpeername failed (%d)\n",
+                      __FUNCTION__,
+                      obj->sockfd,
+                      errno);
+    }
+    else
+    {
+        inet_ntop(obj->addrpeer.sockaddr.sin_family,
                   &(obj->addrpeer.sockaddr.sin_addr),
                   obj->addrpeer.ipaddr,
                   sizeof(obj->addrpeer.ipaddr));
@@ -88,14 +96,6 @@ bool sockobj_getaddrpeer(struct sockobj * const obj)
                  obj->addrpeer.ipport);
 
         retval = true;
-    }
-    else
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: socket %d getpeername failed (%d)\n",
-                      __FUNCTION__,
-                      obj->sockfd,
-                      errno);
     }
 
     return retval;
@@ -117,9 +117,17 @@ bool sockobj_getaddrself(struct sockobj * const obj)
     }
     else if (getsockname(obj->sockfd,
                          (struct sockaddr *)&(obj->addrself.sockaddr),
-                         &socklen) == 0)
+                         &socklen) != 0)
     {
-        inet_ntop(obj->conf.family,
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: socket %d getsockname failed (%d)\n",
+                      __FUNCTION__,
+                      obj->sockfd,
+                      errno);
+    }
+    else
+    {
+        inet_ntop(obj->addrself.sockaddr.sin_family,
                   &(obj->addrself.sockaddr.sin_addr),
                   obj->addrself.ipaddr,
                   sizeof(obj->addrself.ipaddr));
@@ -133,14 +141,6 @@ bool sockobj_getaddrself(struct sockobj * const obj)
                  obj->addrself.ipport);
 
         retval = true;
-    }
-    else
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: socket %d getsockname failed (%d)\n",
-                      __FUNCTION__,
-                      obj->sockfd,
-                      errno);
     }
 
     return retval;
@@ -385,8 +385,6 @@ bool sockobj_close(struct sockobj * const obj)
 bool sockobj_bind(struct sockobj * const obj)
 {
     bool retval = false;
-
-    // @todo Support binding to Ethernet interfaces (e.g., "eth0").
 
     if (obj == NULL)
     {
