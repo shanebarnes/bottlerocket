@@ -42,6 +42,8 @@ static void *modeperf_thread(void * arg)
     memcpy(client.conf.ipaddr, opts->ipaddr, sizeof(client.conf.ipaddr));
     client.conf.ipport = opts->ipport;
     client.conf.timeoutms = 0;
+    client.conf.timelimitusec = opts->timelimitusec;
+    client.conf.datalimitbyte = opts->datalimitbyte;
     client.conf.family = opts->family;
     client.conf.type = opts->type;
     client.conf.model = SOCKOBJ_MODEL_CLIENT;
@@ -143,8 +145,21 @@ static void *modeperf_thread(void * arg)
                     ///?? Make sure time is only getting retrieved once per loop
                     timeusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
                                                   UNIT_TIME_USEC);
-                    if ((timeusec - client.info.startusec) > opts->maxtimeusec)
+
+                    if ((opts->timelimitusec > 0) &&
+                        ((timeusec - client.info.startusec) >= opts->timelimitusec))
                     {
+                        formbytes = form.ops.form_foot(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                        client.ops.sock_close(&client);
+                        exit = true;
+                    }
+                    else if ((opts->datalimitbyte > 0) &&
+                             (client.info.sendbytes >= opts->datalimitbyte))
+                    {
+                        formbytes = form.ops.form_foot(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                        client.ops.sock_close(&client);
                         exit = true;
                     }
 
