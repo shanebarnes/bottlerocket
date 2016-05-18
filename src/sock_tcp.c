@@ -460,6 +460,26 @@ int32_t socktcp_recv(struct sockobj * const obj,
                 {
                     retval = -1;
                 }
+                else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
+                {
+                    retval = recv(obj->sockfd, buf, len, flags);
+
+                    // Remote peer is closed if input is ready but no bytes are
+                    // received (EOF).
+                    if (retval > 0)
+                    {
+                        logger_printf(LOGGER_LEVEL_TRACE,
+                                      "%s: socket %d received %d bytes\n",
+                                      __FUNCTION__,
+                                      obj->sockfd,
+                                      retval);
+                        obj->info.recvbytes += retval;
+                    }
+                    else
+                    {
+                        retval = -1;
+                    }
+                }
             }
         }
     }
