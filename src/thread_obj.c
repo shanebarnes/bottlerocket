@@ -170,6 +170,39 @@ bool threadobj_isrunning(struct threadobj * const obj)
 /**
  * @see See header file for interface comments.
  */
+bool threadobj_join(struct threadobj * const obj)
+{
+    bool retval = false;
+
+    if (obj == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        errno = pthread_join(obj->handle, NULL);
+
+        if (errno != 0)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to suspend the calling thread (%d)\n",
+                          __FUNCTION__,
+                          errno);
+        }
+        else
+        {
+            retval = true;
+        }
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
 bool threadobj_stop(struct threadobj * const obj)
 {
     bool retval = false;

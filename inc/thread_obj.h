@@ -63,6 +63,15 @@ bool threadobj_start(struct threadobj * const obj);
 bool threadobj_isrunning(struct threadobj * const obj);
 
 /**
+ * @brief Suspend thread object caller.
+ *
+ * @param[in] obj A pointer to a thread object.
+ *
+ * @return True if thread object caller was suspended.
+ */
+bool threadobj_join(struct threadobj * const obj);
+
+/**
  * @brief Stop a thread object.
  *
  * @param[in,out] obj A pointer to a thread object to stop.
