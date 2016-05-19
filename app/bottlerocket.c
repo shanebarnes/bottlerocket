@@ -75,7 +75,7 @@ void signal_handler(int signum)
             logger_printf(LOGGER_LEVEL_INFO, "Caught signal %d\n", signum);
     }
 
-    //exit(signum);
+    exit(signum);
 }
 
 /**
@@ -115,19 +115,11 @@ int32_t main(int argc, char **argv)
     {
         if (args.mode == ARGS_MODE_CHAT)
         {
-            modechat_create(&args);
-            modechat_start();
-
-            pause();
-            modechat_stop();
+            modechat_run(&args);
         }
         else if (args.mode == ARGS_MODE_PERF)
         {
-            modeperf_create(&args);
-            modeperf_start();
-
-            pause();
-            modeperf_stop();
+            modeperf_run(&args);
         }
     }
 
