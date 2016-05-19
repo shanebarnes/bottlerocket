@@ -41,9 +41,11 @@ static char *sockobj_getoptname(const uint32_t name)
         case SO_LINGER:
             retval = "SO_LINGER";
             break;
+#if !defined(__CYGWIN__)
         case SO_REUSEPORT:
             retval = "SO_REUSEPORT";
             break;
+#endif
 #if defined(__APPLE__)
         case SO_NOSIGPIPE:
             retval = "SO_NOSIGPIPE";
