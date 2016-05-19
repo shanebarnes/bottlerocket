@@ -153,7 +153,7 @@ static void *modechat_thread(void * arg)
 /**
  * @see See header file for interface comments.
  */
-bool modechat_create(struct args_obj * const args)
+static bool modechat_init(struct args_obj * const args)
 {
     bool retval = false;
 
@@ -166,6 +166,7 @@ bool modechat_create(struct args_obj * const args)
     else
     {
         opts = args;
+        retval = true;
     }
 
     return retval;
@@ -174,7 +175,7 @@ bool modechat_create(struct args_obj * const args)
 /**
  * @see See header file for interface comments.
  */
-bool modechat_start(void)
+static bool modechat_start(void)
 {
     bool retval = false;
 
@@ -211,7 +212,7 @@ bool modechat_start(void)
 /**
  * @see See header file for interface comments.
  */
-bool modechat_stop(void)
+static bool modechat_stop(void)
 {
     bool retval = false;
 
@@ -230,6 +231,49 @@ bool modechat_stop(void)
     else
     {
         retval = true;
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool modechat_run(struct args_obj * const args)
+{
+    bool retval = false;
+
+    if (args == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if (modechat_init(args) == false)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to initialze mode\n",
+                          __FUNCTION__);
+        }
+        else if (modechat_start() == false)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to start mode\n",
+                          __FUNCTION__);
+        }
+        else if (threadobj_join(&thread) == false)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to suspend caller\n",
+                          __FUNCTION__);
+        }
+        else
+        {
+            modechat_stop();
+            retval = true;
+        }
     }
 
     return retval;

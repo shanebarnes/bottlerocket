@@ -13,10 +13,11 @@
 #include "args.h"
 #include "system_types.h"
 
-bool modechat_create(struct args_obj * const args);
-
-bool modechat_start(void);
-
-bool modechat_stop(void);
+/**
+ * @brief args A pointer to an arguments object.
+ *
+ * @return True if the chat mode of operation was run successfully.
+ */
+bool modechat_run(struct args_obj * const args);
 
 #endif // _MODE_CHAT_H_
