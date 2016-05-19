@@ -16,7 +16,6 @@
 #include "util_date.h"
 #include "util_string.h"
 
-#include <signal.h>
 #include <string.h>
 
 static struct threadobj thread;
@@ -31,7 +30,6 @@ static void *modeperf_thread(void * arg)
     struct threadobj *thread = (struct threadobj *)arg;
     struct sockobj client, server, socket;
     struct formobj form;
-    //char    recvbuf[65536], sendbuf[131072];
     char *recvbuf = NULL, *sendbuf = NULL;
     int32_t count = 0, timeoutms = 500;
     int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
@@ -202,16 +200,13 @@ static void *modeperf_thread(void * arg)
         free(sendbuf);
     }
 
-    // Signal main thread to shutdown.
-    raise(SIGTERM);
-
     return NULL;
 }
 
 /**
  * @see See header file for interface comments.
  */
-bool modeperf_create(struct args_obj * const args)
+static bool modeperf_init(struct args_obj * const args)
 {
     bool retval = false;
 
@@ -224,6 +219,7 @@ bool modeperf_create(struct args_obj * const args)
     else
     {
         opts = args;
+        retval = true;
     }
 
     return retval;
@@ -232,7 +228,7 @@ bool modeperf_create(struct args_obj * const args)
 /**
  * @see See header file for interface comments.
  */
-bool modeperf_start(void)
+static bool modeperf_start(void)
 {
     bool retval = false;
 
@@ -269,7 +265,7 @@ bool modeperf_start(void)
 /**
  * @see See header file for interface comments.
  */
-bool modeperf_stop(void)
+static bool modeperf_stop(void)
 {
     bool retval = false;
 
@@ -288,6 +284,51 @@ bool modeperf_stop(void)
     else
     {
         retval = true;
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool modeperf_run(struct args_obj * const args)
+{
+    bool retval = false;
+
+    if (args == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if (modeperf_init(args) == false)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to initialize mode\n",
+                          __FUNCTION__);
+
+        }
+        else if (modeperf_start() == false)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to start mode\n",
+                          __FUNCTION__);
+
+        }
+        else if (threadobj_join(&thread) == false)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to suspend caller\n",
+                          __FUNCTION__);
+        }
+        else
+        {
+            modeperf_stop();
+            retval = true;
+        }
     }
 
     return retval;

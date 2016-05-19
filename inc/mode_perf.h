@@ -13,10 +13,11 @@
 #include "args.h"
 #include "system_types.h"
 
-bool modeperf_create(struct args_obj * const args);
-
-bool modeperf_start(void);
-
-bool modeperf_stop(void);
+/**
+ * @brief args A pointer to an arguments object.
+ *
+ * @return True if the performance mode of operation was run successfully.
+ */
+bool modeperf_run(struct args_obj * const args);
 
 #endif // _MODE_PERF_H_
