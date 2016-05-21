@@ -22,7 +22,7 @@
 /**
  * @see See header file for interface comments.
  */
-int32_t utilioctl_getbytesavail(const int32_t fd)
+int32_t utilioctl_getrecvqsize(const int32_t fd)
 {
     int32_t retval = 0;
 
@@ -33,6 +33,24 @@ int32_t utilioctl_getbytesavail(const int32_t fd)
                       __FUNCTION__,
                       errno);
         retval = -1;
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+int32_t utilioctl_getsendqsize(const int32_t fd)
+{
+    int32_t retval = -1;
+
+    if (ioctl(fd, TIOCOUTQ, &retval) == -1)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: ioctl request failed (%d)\n",
+                      __FUNCTION__,
+                      errno);
     }
 
     return retval;

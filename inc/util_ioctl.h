@@ -15,13 +15,22 @@
 #include <netinet/in.h>
 
 /**
- * @brief Get the number of bytes that are available to be read.
+ * @brief Get the number of queued bytes in the receive queue.
  *
  * @param[in] fd A file descriptor.
  *
- * @return The number of bytes available to be read (-1 on error).
+ * @return The number of queued bytes in the receive queue (-1 on error).
  */
-int32_t utilioctl_getbytesavail(const int32_t fd);
+int32_t utilioctl_getrecvqsize(const int32_t fd);
+
+/**
+ * @brief Get the number of queued bytes in the send queue.
+ *
+ * @param[in] fd A file descriptor.
+ *
+ * @return The number of queued bytes in the send queue (-1 on error).
+ */
+int32_t utilioctl_getsendqsize(const int32_t fd);
 
 /**
  * @brief Get the network interface MTU in bytes for a network interface
