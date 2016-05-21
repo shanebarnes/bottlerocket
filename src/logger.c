@@ -126,6 +126,7 @@ static char *logger_get_level_string(const enum logger_level level)
             break;
         default:
             retval = NULL;
+            break;
     }
 
     return retval;
