@@ -22,37 +22,45 @@
 #define val_optional true
 #define val_required false
 
-static char str_somaxconn[12];
-
-enum args_group
+enum args_flag
 {
-    ARGS_GROUP_NONE = 0,
-    ARGS_GROUP_MODE = 1,
-    ARGS_GROUP_ARCH = 2,
-    ARGS_GROUP_INFO = 3,
-    ARGS_GROUP_MAX  = 4
+    ARGS_FLAG_NULL     = 0x0000,
+    ARGS_FLAG_CHAT     = 0x0001,
+    ARGS_FLAG_PERF     = 0x0002,
+    ARGS_FLAG_AFFINITY = 0x0004,
+    ARGS_FLAG_BIND     = 0x0008,
+    ARGS_FLAG_CLIENT   = 0x0010,
+    ARGS_FLAG_LEN      = 0x0020,
+    ARGS_FLAG_NUM      = 0x0040,
+    ARGS_FLAG_PORT     = 0x0080,
+    ARGS_FLAG_BACKLOG  = 0x0100,
+    ARGS_FLAG_SERVER   = 0x0200,
+    ARGS_FLAG_TIME     = 0x0400,
+    ARGS_FLAG_UDP      = 0x0800,
+    ARGS_FLAG_HELP     = 0x1000,
+    ARGS_FLAG_VERSION  = 0x2000
 };
 
 struct tuple_element
 {
   const char             *lname;  // Attribute long name (e.g., --argument)
   const char              sname;  // Attribute short name (e.g., -a)
-  const enum  args_group  group;  // Group identification
   const char             *desc;   // Description
   const char             *dval;   // Default value
   const char             *minval; // Minimum value
   const char             *maxval; // Maximum value
   const bool              oval;   // Optional value
   const bool              oarg;   // Optional attribute
+  const uint64_t          cflags; // Conflict flags (i.e., incompatible options)
   bool       (*copy)(const char * const val,
                      const char * const min,
                      const char * const max,
                      struct args_obj *args); // Tuple copy function pointer
 };
 
+static char        str_somaxconn[16];
 static const char *prefix_skey = "-";
 static const char *prefix_lkey = "--";
-static uint16_t    groupcount[ARGS_GROUP_MAX];
 
 /**
  * @brief Validate and copy an IP address value to an arguments object.
@@ -343,174 +351,174 @@ static bool args_copytime(const char * const val,
 static struct tuple_element options[] =
 {
     {
-     "chat",
-     1,
-     ARGS_GROUP_MODE,
-     "enable chat mode",
-     "disabled",
-     NULL,
-     NULL,
-     val_optional,
-     arg_optional,
-     NULL
+        "chat",
+        1,
+        "enable chat mode",
+        "disabled",
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_PERF,
+        NULL
     },
     {
-     "perf",
-     2,
-     ARGS_GROUP_MODE,
-     "enable performance benchmarking mode",
-     "enabled",
-     NULL,
-     NULL,
-     val_optional,
-     arg_optional,
-     NULL
+        "perf",
+        2,
+        "enable performance benchmarking mode",
+        "enabled",
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_CHAT,
+        NULL
     },
-#if !defined(__APPLE__)
+//#if !defined(__APPLE__)
     {
-     "--affinity",
-     'A',
-     ARGS_GROUP_NONE,
-     "set CPU affinity",
-     "0xFFFFFFFF",
-     NULL,
-     NULL,
-     val_required,
-     arg_optional,
-     NULL
+        "--affinity",
+        'A',
+        "set CPU affinity",
+        "0xFFFFFFFF",
+        NULL,
+        NULL,
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        NULL
     },
-#endif
+//#endif
     {
-     "--bind",
-     'B',
-     ARGS_GROUP_NONE,
-     "bind to a specific socket address",
-     "127.0.0.1:0",
-     "0",
-     "65535",
-     val_required,
-     arg_optional,
-     args_copyipport
-    },
-    {
-     "--client",
-     'c',
-     ARGS_GROUP_ARCH,
-     "run as a client",
-     "127.0.0.1",
-     NULL,
-     NULL,
-     val_optional,
-     arg_required,
-     args_copyipaddr
+        "--bind",
+        'B',
+        "bind to a specific socket address",
+        "127.0.0.1:0",
+        "0",
+        "65535",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_SERVER,
+        args_copyipport
     },
     {
-     "--len",
-     'l',
-     ARGS_GROUP_NONE,
-     "length of buffer to read or write",
-     "128kB",
-     "1",
-     "10MB",
-     val_required,
-     arg_optional,
-     args_copybuflen
+        "--client",
+        'c',
+        "run as a client",
+        "127.0.0.1",
+        NULL,
+        NULL,
+        val_optional,
+        arg_required,
+        ARGS_FLAG_SERVER,
+        args_copyipaddr
     },
     {
-     "--num",
-     'n',
-     ARGS_GROUP_NONE,
-     "number of bytes to send or receive",
-     "1MB",
-     "1B",
-     "999EB",
-     val_required,
-     arg_optional,
-     args_copydatalimit
+        "--len",
+        'l',
+        "length of buffer to read or write",
+        "128kB",
+        "1",
+        "10MB",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        args_copybuflen
     },
     {
-     "--port",
-     'p',
-     ARGS_GROUP_NONE,
-     "server port to listen on or connect to",
-     "5001",
-     "0",
-     "65535",
-     val_required,
-     arg_optional,
-     args_copyipport
+        "--num",
+        'n',
+        "number of bytes to send or receive",
+        "1MB",
+        "1B",
+        "999EB",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_TIME,
+        args_copydatalimit
     },
     {
-     "--backlog",
-     'q',
-     ARGS_GROUP_NONE,
-     "server backlog queue length",
-     str_somaxconn,
-     "1",
-     str_somaxconn,
-     val_required,
-     arg_optional,
-     args_copybacklog
+        "--port",
+        'p',
+        "server port to listen on or connect to",
+        "5001",
+        "0",
+        "65535",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        args_copyipport
     },
     {
-     "--server",
-     's',
-     ARGS_GROUP_ARCH,
-     "run as a server",
-     "0.0.0.0",
-     NULL,
-     NULL,
-     val_optional,
-     arg_required,
-     args_copyipaddr
+        "--backlog",
+        'q',
+        "server backlog queue length",
+        str_somaxconn,
+        "1",
+        str_somaxconn,
+        val_required,
+        arg_optional,
+        ARGS_FLAG_CLIENT,
+        args_copybacklog
     },
     {
-     "--time",
-     't',
-     ARGS_GROUP_NONE,
-     "maximum time duration to send data",
-     "10s",
-     "1ps",
-     "1000y",
-     val_required,
-     arg_optional,
-     args_copytime
+        "--server",
+        's',
+        "run as a server",
+        "0.0.0.0",
+        NULL,
+        NULL,
+        val_optional,
+        arg_required,
+        ARGS_FLAG_CLIENT,
+        args_copyipaddr
     },
     {
-     "--udp",
-     'u',
-     ARGS_GROUP_NONE,
-     "use UDP sockets instead of TCP sockets",
-     "disabled",
-     NULL,
-     NULL,
-     val_optional,
-     arg_optional,
-     NULL
+        "--time",
+        't',
+        "maximum time duration to send data",
+        "10s",
+        "1ps",
+        "1000y",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NUM,
+        args_copytime
     },
     {
-     "--help",
-     'h',
-     ARGS_GROUP_INFO,
-     "print help information and quit",
-     NULL,
-     NULL,
-     NULL,
-     val_optional,
-     arg_optional,
-     NULL
+        "--udp",
+        'u',
+        "use UDP sockets instead of TCP sockets",
+        "disabled",
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        NULL
     },
     {
-     "--version",
-     'v',
-     ARGS_GROUP_INFO,
-     "print version information and quit",
-     NULL,
-     NULL,
-     NULL,
-     val_optional,
-     arg_optional,
-     NULL
+        "--help",
+        'h',
+        "print help information and quit",
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        NULL
+    },
+    {
+        "--version",
+        'v',
+        "print version information and quit",
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        NULL
     }
 };
 
@@ -549,6 +557,7 @@ static void args_usage(FILE * const stream)
  * @param[in]     argc An argument count.
  * @param[in]     argv An argument vector.
  * @param[in,out] argi A pointer to an argument vector index.
+ * @param[in,out] mask A pointer to an options mask.
  * @param[in,out] args A pointer to a bottlerocket arguments structure to
  *                     populate.
  *
@@ -558,12 +567,15 @@ static void args_usage(FILE * const stream)
 static char args_getarg(const int32_t argc,
                         char ** const argv,
                         int32_t *argi,
+                        uint64_t *mask,
                         struct args_obj *args)
 {
     char retval = 0, c;
+    char *name = NULL;
+    uint64_t flag;
     uint32_t i;
 
-    if ((argv == NULL) || (argi == NULL) || (args == NULL))
+    if ((argv == NULL) || (argi == NULL) || (mask == NULL) || (args == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -579,7 +591,7 @@ static char args_getarg(const int32_t argc,
                 if (c == options[i].sname)
                 {
                     retval = c;
-                    groupcount[options[i].group]++;
+                    name = argv[*argi];
                     break;
                 }
             }
@@ -591,14 +603,26 @@ static char args_getarg(const int32_t argc,
                                    true) == true)
             {
                 retval = options[i].sname;
-                groupcount[options[i].group]++;
+                name = argv[*argi];
                 break;
             }
         }
 
         if (retval == 0)
         {
-            fprintf(stderr, "\nunknown option '%s'\n", argv[*argi]);
+            fprintf(stderr, "\nunknown option '%s'\n", name);
+        }
+        else if (((flag = (1 << i)) == 0) ||
+                 (*mask & flag) ||
+                 ((*mask = *mask | flag) == 0))
+        {
+            fprintf(stderr, "\nduplicate option '%s'\n", name);
+            retval = 0;
+        }
+        else if ((options[i].cflags & *mask) != 0)
+        {
+             fprintf(stderr, "\nincompatible option '%s'\n", name);
+             retval = 0;
         }
         else if (options[i].dval == NULL)
         {
@@ -631,7 +655,7 @@ static char args_getarg(const int32_t argc,
                 {
                     fprintf(stderr,
                             "\ninvalid option '%s %s'\n",
-                            argv[*argi-1],
+                            name,
                             argv[*argi]);
                     retval = 0;
                 }
@@ -640,9 +664,7 @@ static char args_getarg(const int32_t argc,
             {
                 if (options[i].oval == val_required)
                 {
-                    fprintf(stderr,
-                            "\nmissing value for option '%s'\n",
-                            argv[*argi]);
+                    fprintf(stderr, "\nmissing value for option '%s'\n", name);
                     retval = 0;
                 }
                 else if (options[i].copy(options[i].dval,
@@ -652,7 +674,7 @@ static char args_getarg(const int32_t argc,
                 {
                     fprintf(stderr,
                             "\ninvalid option '%s %s'\n",
-                            argv[*argi],
+                            name,
                             options[i].dval);
                     retval = 0;
                 }
@@ -691,7 +713,8 @@ bool args_parse(const int32_t argc,
                 char ** const argv,
                 struct args_obj * const args)
 {
-    bool retval = true;
+    bool retval = false;
+    uint64_t flags = 0;
     int32_t i;
 
     if ((argv == NULL) || (args == NULL))
@@ -702,22 +725,30 @@ bool args_parse(const int32_t argc,
     }
     else
     {
-        utilstring_fromi32(SOMAXCONN, str_somaxconn, sizeof(str_somaxconn));
-
         // Set defaults.
-        memset(groupcount, 0, sizeof(groupcount));
+        utilstring_fromi32(SOMAXCONN, str_somaxconn, sizeof(str_somaxconn));
         args->mode = ARGS_MODE_PERF;
-        args->arch = SOCKOBJ_MODEL_NULL;
+        args->arch = SOCKOBJ_MODEL_CLIENT;
         args->family = AF_INET;
         args->type = SOCK_STREAM;
-        args->timelimitusec = 0;
+        args_copyipaddr("0.0.0.0", "0.0.0.0", "0.0.0.0", args);
         args_copyipport("5001", "5001", "5001", args);
         args_copydatalimit("1MB", "1MB", "1MB", args);
+        args_copytime("10s", "10s", "10s", args);
         args_copybuflen("128kB", "128kB", "128kB", args);
+
+        if (argc > 1)
+        {
+            retval = true;
+        }
+        else
+        {
+            args_usage(stdout);
+        }
 
         for (i = 1; (i < argc) && (retval == true); i++)
         {
-            switch (args_getarg(argc, argv, &i, args))
+            switch (args_getarg(argc, argv, &i, &flags, args))
             {
                 case 1:
                     if (i == 1)
@@ -748,30 +779,14 @@ bool args_parse(const int32_t argc,
                 case 'B':
                     break;
                 case 'c':
-                    if (args->arch == SOCKOBJ_MODEL_NULL)
-                    {
-                        args->arch = SOCKOBJ_MODEL_CLIENT;
-                    }
-                    else
-                    {
-                        args_usage(stdout);
-                        retval = false;
-                    }
+                    args->arch = SOCKOBJ_MODEL_CLIENT;
                     break;
                 case 'l':
                     break;
                 case 'n':
                     break;
                 case 's':
-                    if (args->arch == SOCKOBJ_MODEL_NULL)
-                    {
-                        args->arch = SOCKOBJ_MODEL_SERVER;
-                    }
-                    else
-                    {
-                        args_usage(stdout);
-                        retval = false;
-                    }
+                    args->arch = SOCKOBJ_MODEL_SERVER;
                     break;
                 case 'p':
                     break;
@@ -784,6 +799,7 @@ bool args_parse(const int32_t argc,
                     break;
                 case 'h':
                     args_usage(stdout);
+                    retval = false;
                     break;
                 case 'v':
                     fprintf(stdout,
@@ -792,25 +808,12 @@ bool args_parse(const int32_t argc,
                             version_minor(),
                             version_patch(),
                             version_date());
+                    retval = false;
                     break;
                 default:
                     args_usage(stdout);
                     retval = false;
-            }
-        }
-
-        if (retval == true)
-        {
-            if (groupcount[ARGS_GROUP_INFO] > 0)
-            {
-                retval = false;
-            }
-            else if ((groupcount[ARGS_GROUP_MODE] > 1) ||
-                     (groupcount[ARGS_GROUP_ARCH] != 1))
-            {
-                // Arguments in these groups are mutually exclusive.
-                args_usage(stdout);
-                retval = false;
+                    break;
             }
         }
     }
