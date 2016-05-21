@@ -133,6 +133,7 @@ bool sockmod_init(struct sockobj * const sock)
                               "%s: unsupported socket model %d\n",
                               __FUNCTION__,
                               sock->conf.model);
+                break;
         }
     }
 
