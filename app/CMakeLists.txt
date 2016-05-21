@@ -1,6 +1,4 @@
-set (CMAKE_LEGACY_CYGWIN_WIN32 0)
 cmake_minimum_required(VERSION 2.8)
-
 project(bottlerocket NONE)
 
 if (${UNIX})
@@ -19,7 +17,7 @@ include_directories(${BR_LIB_INCLUDE_DIR})
 link_directories(${BR_LIB_INCLUDE_DIR})
 link_libraries(pthread)
 
-if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     link_libraries(rt)
 endif ()
 
