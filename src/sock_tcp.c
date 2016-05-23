@@ -112,18 +112,19 @@ bool socktcp_create(struct sockobj * const obj)
     {
         if (sockobj_create(obj) == true)
         {
-            obj->ops.sock_create  = socktcp_create;
-            obj->ops.sock_destroy = socktcp_destroy;
-            obj->ops.sock_open    = sockobj_open;
-            obj->ops.sock_close   = sockobj_close;
-            obj->ops.sock_bind    = sockobj_bind;
-            obj->ops.sock_getopts = sockobj_getopts;
-            obj->ops.sock_setopts = sockobj_setopts;
-            obj->ops.sock_listen  = socktcp_listen;
-            obj->ops.sock_accept  = socktcp_accept;
-            obj->ops.sock_connect = socktcp_connect;
-            obj->ops.sock_recv    = socktcp_recv;
-            obj->ops.sock_send    = socktcp_send;
+            obj->ops.sock_create   = socktcp_create;
+            obj->ops.sock_destroy  = socktcp_destroy;
+            obj->ops.sock_open     = sockobj_open;
+            obj->ops.sock_close    = sockobj_close;
+            obj->ops.sock_bind     = sockobj_bind;
+            obj->ops.sock_getopts  = sockobj_getopts;
+            obj->ops.sock_setopts  = sockobj_setopts;
+            obj->ops.sock_listen   = socktcp_listen;
+            obj->ops.sock_accept   = socktcp_accept;
+            obj->ops.sock_connect  = socktcp_connect;
+            obj->ops.sock_recv     = socktcp_recv;
+            obj->ops.sock_send     = socktcp_send;
+            obj->ops.sock_shutdown = socktcp_shutdown;
 
             obj->conf.type = SOCK_STREAM;
 
@@ -570,6 +571,38 @@ int32_t socktcp_send(struct sockobj * const obj,
                     retval = -1;
                 }
             }
+        }
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool socktcp_shutdown(struct sockobj * const obj, const int32_t how)
+{
+    bool retval = false;
+
+    if (obj == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if (shutdown(obj->sockfd, how) == -1)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to shutdown socket %d (%d)\n",
+                          __FUNCTION__,
+                          obj->sockfd,
+                          errno);
+        }
+        else
+        {
+            retval = true;
         }
     }
 

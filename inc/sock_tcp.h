@@ -88,4 +88,9 @@ int32_t socktcp_send(struct sockobj * const obj,
                      void * const buf,
                      const uint32_t len);
 
+/**
+ * @see sock_shutdown() for interface comments.
+ */
+bool socktcp_shutdown(struct sockobj * const obj, const int32_t how);
+
 #endif // _SOCK_TCP_H_
