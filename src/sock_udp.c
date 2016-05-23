@@ -250,7 +250,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
     int32_t   flags   = MSG_DONTWAIT;
     socklen_t socklen = 0;
 
-    if ((obj == NULL) || (buf == NULL) || (len == 0))
+    if ((obj == NULL) || (buf == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -328,6 +328,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
                                       obj->sockfd,
                                       errno);
                         retval = 0;
+                        break;
                 }
 
                 if (retval == 0)
@@ -361,7 +362,7 @@ int32_t sockudp_send(struct sockobj * const obj,
     flags |= MSG_NOSIGNAL;
 #endif
 
-    if ((obj == NULL) || (buf == NULL) || (len == 0))
+    if ((obj == NULL) || (buf == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -435,6 +436,7 @@ int32_t sockudp_send(struct sockobj * const obj,
                                   obj->sockfd,
                                   errno);
                     retval = 0;
+                    break;
             }
 
             if (retval == 0)
@@ -446,6 +448,26 @@ int32_t sockudp_send(struct sockobj * const obj,
                 else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
                 {
                     retval = -1;
+                }
+                else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
+                {
+                    retval = recv(obj->sockfd, buf, len, flags);
+
+                    // Remote peer is closed if input is ready but no bytes are
+                    // received (EOF).
+                    if (retval > 0)
+                    {
+                        logger_printf(LOGGER_LEVEL_TRACE,
+                                      "%s: socket %d received %d bytes\n",
+                                      __FUNCTION__,
+                                      obj->sockfd,
+                                      retval);
+                        obj->info.recvbytes += retval;
+                    }
+                    else
+                    {
+                        retval = -1;
+                    }
                 }
             }
         }
