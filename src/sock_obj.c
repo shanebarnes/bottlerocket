@@ -198,18 +198,19 @@ bool sockobj_destroy(struct sockobj * const obj)
     {
         retval = obj->event.ops.fion_destroy(&obj->event);
 
-        obj->ops.sock_create  = NULL;
-        obj->ops.sock_destroy = NULL;
-        obj->ops.sock_open    = NULL;
-        obj->ops.sock_close   = NULL;
-        obj->ops.sock_bind    = NULL;
-        obj->ops.sock_getopts = NULL;
-        obj->ops.sock_setopts = NULL;
-        obj->ops.sock_listen  = NULL;
-        obj->ops.sock_accept  = NULL;
-        obj->ops.sock_connect = NULL;
-        obj->ops.sock_recv    = NULL;
-        obj->ops.sock_send    = NULL;
+        obj->ops.sock_create   = NULL;
+        obj->ops.sock_destroy  = NULL;
+        obj->ops.sock_open     = NULL;
+        obj->ops.sock_close    = NULL;
+        obj->ops.sock_bind     = NULL;
+        obj->ops.sock_getopts  = NULL;
+        obj->ops.sock_setopts  = NULL;
+        obj->ops.sock_listen   = NULL;
+        obj->ops.sock_accept   = NULL;
+        obj->ops.sock_connect  = NULL;
+        obj->ops.sock_recv     = NULL;
+        obj->ops.sock_send     = NULL;
+        obj->ops.sock_shutdown = NULL;
     }
 
     return retval;

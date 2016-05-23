@@ -148,6 +148,17 @@ struct sockobj_ops
     int32_t (*sock_send)(struct sockobj * const obj,
                          void * const buf,
                          const uint32_t len);
+
+    /**
+     * @brief Shutdown all or part of a full-duplex socket connection
+     *
+     * @param[in,out] obj A pointer to a socket object.
+     * @param[in]     how The shutdown method to apply (SHUT_RD, SHUT_WR, or
+     *                SHUT_RDWR).
+     *
+     * @return True on success.
+     */
+    bool (*sock_shutdown)(struct sockobj * const obj, const int32_t how);
 };
 
 enum sockobj_model
