@@ -53,4 +53,9 @@ int32_t sockudp_send(struct sockobj * const obj,
                      void * const buf,
                      const uint32_t len);
 
+/**
+ * @see sock_shutdown() for interface comments.
+ */
+bool sockudp_shutdown(struct sockobj * const obj, const int32_t how);
+
 #endif // _SOCK_UDP_H_

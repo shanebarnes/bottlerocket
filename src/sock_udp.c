@@ -73,18 +73,19 @@ bool sockudp_create(struct sockobj * const obj)
     {
         if (sockobj_create(obj) == true)
         {
-            obj->ops.sock_create  = sockudp_create;
-            obj->ops.sock_destroy = sockudp_destroy;
-            obj->ops.sock_open    = sockobj_open;
-            obj->ops.sock_close   = sockobj_close;
-            obj->ops.sock_bind    = sockobj_bind;
-            obj->ops.sock_getopts = sockobj_getopts;
-            obj->ops.sock_setopts = sockobj_setopts;
-            obj->ops.sock_listen  = sockudp_listen;
-            obj->ops.sock_accept  = sockudp_accept;
-            obj->ops.sock_connect = sockudp_connect;
-            obj->ops.sock_recv    = sockudp_recv;
-            obj->ops.sock_send    = sockudp_send;
+            obj->ops.sock_create   = sockudp_create;
+            obj->ops.sock_destroy  = sockudp_destroy;
+            obj->ops.sock_open     = sockobj_open;
+            obj->ops.sock_close    = sockobj_close;
+            obj->ops.sock_bind     = sockobj_bind;
+            obj->ops.sock_getopts  = sockobj_getopts;
+            obj->ops.sock_setopts  = sockobj_setopts;
+            obj->ops.sock_listen   = sockudp_listen;
+            obj->ops.sock_accept   = sockudp_accept;
+            obj->ops.sock_connect  = sockudp_connect;
+            obj->ops.sock_recv     = sockudp_recv;
+            obj->ops.sock_send     = sockudp_send;
+            obj->ops.sock_shutdown = sockudp_shutdown;
 
             obj->conf.type = SOCK_DGRAM;
 
@@ -470,6 +471,36 @@ int32_t sockudp_send(struct sockobj * const obj,
                     }
                 }
             }
+        }
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool sockudp_shutdown(struct sockobj * const obj, const int32_t how)
+{
+    bool retval = false;
+
+    if (obj == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        switch (how)
+        {
+            case SHUT_RD:
+            case SHUT_RDWR:
+            case SHUT_WR:
+            default:
+                // Implement connection-oriented signaling using zero-length
+                // datagrams.
+                break;
         }
     }
 
