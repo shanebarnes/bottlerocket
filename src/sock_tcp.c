@@ -394,7 +394,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
     int32_t retval = -1;
     int32_t flags  = MSG_DONTWAIT;
 
-    if ((obj == NULL) || (buf == NULL) || (len == 0))
+    if ((obj == NULL) || (buf == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -448,6 +448,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
                                   obj->sockfd,
                                   errno);
                     retval = 0;
+                    break;
             }
 
             if (retval == 0)
@@ -501,7 +502,7 @@ int32_t socktcp_send(struct sockobj * const obj,
     flags |= MSG_NOSIGNAL;
 #endif
 
-    if ((obj == NULL) || (buf == NULL) || (len == 0))
+    if ((obj == NULL) || (buf == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -555,6 +556,7 @@ int32_t socktcp_send(struct sockobj * const obj,
                                   obj->sockfd,
                                   errno);
                     retval = 0;
+                    break;
             }
 
             if (retval == 0)
