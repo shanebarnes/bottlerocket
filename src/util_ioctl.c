@@ -44,12 +44,14 @@ int32_t utilioctl_getrecvqsize(const int32_t fd)
 int32_t utilioctl_getsendqsize(const int32_t fd)
 {
     int32_t retval = -1;
-
+#if !defined (__CYGWIN__)
     if (ioctl(fd, TIOCOUTQ, &retval) == -1)
+#endif
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: ioctl request failed (%d)\n",
+                      "%s: fd %d ioctl request failed (%d)\n",
                       __FUNCTION__,
+                      fd,
                       errno);
     }
 
