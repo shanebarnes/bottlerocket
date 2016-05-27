@@ -36,6 +36,7 @@ static void *modeperf_thread(void * arg)
 
     //??
     uint64_t timeusec = 0;
+    uint64_t buflen = 0;
 
     memcpy(client.conf.ipaddr, opts->ipaddr, sizeof(client.conf.ipaddr));
     client.conf.ipport = opts->ipport;
@@ -135,10 +136,29 @@ static void *modeperf_thread(void * arg)
             {
                 if (opts->arch == SOCKOBJ_MODEL_CLIENT)
                 {
+                    buflen = opts->buflen;
+
+                    if (opts->datalimitbyte > 0)
+                    {
+                        if (client.info.send.totalbytes < opts->datalimitbyte)
+                        {
+                            buflen = opts->datalimitbyte - client.info.send.totalbytes;
+
+                            if (buflen > opts->buflen)
+                            {
+                                buflen = opts->buflen;
+                            }
+                        }
+                        else
+                        {
+                            buflen = 0;
+                        }
+                    }
+
                     // @todo use rate limiting input interface to send data.
                     sendbytes = client.ops.sock_send(&client,
                                                      sendbuf,
-                                                     opts->buflen);
+                                                     buflen);
 
                     ///?? Make sure time is only getting retrieved once per loop
                     timeusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
@@ -153,7 +173,7 @@ static void *modeperf_thread(void * arg)
                         exit = true;
                     }
                     else if ((opts->datalimitbyte > 0) &&
-                             (client.info.sendbytes >= opts->datalimitbyte))
+                             (client.info.send.totalbytes >= opts->datalimitbyte))
                     {
                         formbytes = form.ops.form_foot(&form);
                         output_if_std_send(form.dstbuf, formbytes);
