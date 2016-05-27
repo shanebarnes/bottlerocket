@@ -404,6 +404,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
     else
     {
         retval = recv(obj->sockfd, buf, len, flags);
+        sockobj_setstats(&obj->info.recv, retval);
 
         if (retval > 0)
         {
@@ -412,7 +413,6 @@ int32_t socktcp_recv(struct sockobj * const obj,
                           __FUNCTION__,
                           obj->sockfd,
                           retval);
-            obj->info.recvbytes += retval;
         }
         // Check for socket errors if receive failed.
         else
@@ -465,6 +465,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
                 else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
                 {
                     retval = recv(obj->sockfd, buf, len, flags);
+                    sockobj_setstats(&obj->info.recv, retval);
 
                     // Remote peer is closed if input is ready but no bytes are
                     // received (EOF).
@@ -475,7 +476,6 @@ int32_t socktcp_recv(struct sockobj * const obj,
                                       __FUNCTION__,
                                       obj->sockfd,
                                       retval);
-                        obj->info.recvbytes += retval;
                     }
                     else
                     {
@@ -512,6 +512,7 @@ int32_t socktcp_send(struct sockobj * const obj,
     else
     {
         retval = send(obj->sockfd, buf, len, flags);
+        sockobj_setstats(&obj->info.send, retval);
 
         if (retval > 0)
         {
@@ -520,7 +521,6 @@ int32_t socktcp_send(struct sockobj * const obj,
                           __FUNCTION__,
                           obj->sockfd,
                           retval);
-            obj->info.sendbytes += retval;
         }
         // Check for socket errors if send failed.
         else
