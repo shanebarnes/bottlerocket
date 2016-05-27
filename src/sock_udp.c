@@ -272,6 +272,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
                               flags,
                               (struct sockaddr *)&(obj->addrpeer.sockaddr),
                               &socklen);
+            sockobj_setstats(&obj->info.recv, retval);
 
             if (retval > 0)
             {
@@ -292,7 +293,6 @@ int32_t sockudp_recv(struct sockobj * const obj,
                               retval,
                               obj->addrpeer.ipaddr,
                               obj->addrpeer.ipport);
-                obj->info.recvbytes += retval;
             }
             // Check for socket errors if receive failed.
             else
@@ -387,6 +387,8 @@ int32_t sockudp_send(struct sockobj * const obj,
                             sizeof(obj->addrpeer.sockaddr));
         }
 
+        sockobj_setstats(&obj->info.send, retval);
+
         if (retval > 0)
         {
             logger_printf(LOGGER_LEVEL_TRACE,
@@ -394,7 +396,6 @@ int32_t sockudp_send(struct sockobj * const obj,
                           __FUNCTION__,
                           obj->sockfd,
                           retval);
-            obj->info.sendbytes += retval;
         }
         // Check for socket errors if send failed.
         else
@@ -453,6 +454,7 @@ int32_t sockudp_send(struct sockobj * const obj,
                 else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
                 {
                     retval = recv(obj->sockfd, buf, len, flags);
+                    sockobj_setstats(&obj->info.recv, retval);
 
                     // Remote peer is closed if input is ready but no bytes are
                     // received (EOF).
@@ -463,7 +465,6 @@ int32_t sockudp_send(struct sockobj * const obj,
                                       __FUNCTION__,
                                       obj->sockfd,
                                       retval);
-                        obj->info.recvbytes += retval;
                     }
                     else
                     {
