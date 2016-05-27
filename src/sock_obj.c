@@ -530,3 +530,49 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
 
     return retval;
 }
+
+/**
+ * @see See header file for interface comments.
+ */
+bool sockobj_setstats(struct sockobj_flowstats * const stats, const int32_t len)
+{
+    bool retval = false;
+
+    if (stats == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if (len > 0)
+        {
+            stats->totalbytes += (uint32_t)len;
+
+            if ((uint32_t)len > stats->maxbuflen)
+            {
+                stats->maxbuflen = (uint32_t)len;
+            }
+
+            if (((uint32_t)len < stats->minbuflen) || (stats->passedcalls == 0))
+            {
+                stats->minbuflen = (uint32_t)len;
+            }
+
+            stats->passedcalls++;
+
+            stats->avgbuflen = stats->totalbytes / stats->passedcalls;
+        }
+        else
+        {
+            // @note A UDP send of 0 bytes could be considered a successful
+            //       send.
+            stats->failedcalls++;
+        }
+
+        retval = true;
+    }
+
+    return retval;
+}

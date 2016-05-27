@@ -209,12 +209,22 @@ struct sockobj_conf
     struct vector      opts;
 };
 
+struct sockobj_flowstats
+{
+    uint64_t passedcalls; // successful socket function call count
+    uint64_t failedcalls; // failed socket function call count
+    uint64_t totalbytes;  // total bytes passed to/from socket funcion
+    uint32_t avgbuflen;   // average buffer size passed to/from socket function
+    uint32_t maxbuflen;   // maximum buffer size passed to/from socket function
+    uint32_t minbuflen;   // minimum buffer size passed to/from socket function
+};
+
 struct sockobj_info
 {
-    uint64_t startusec,
-             stopusec,
-             recvbytes,
-             sendbytes;
+    uint64_t                 startusec;
+    uint64_t                 stopusec;
+    struct sockobj_flowstats recv;
+    struct sockobj_flowstats send;
 };
 
 struct sockobj
@@ -283,5 +293,15 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts);
  * @see sock_setopts() for interface comments.
  */
 bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts);
+
+/**
+ * @brief Update a flow stats structure.
+ *
+ * @param[in,out] stats A pointer to a flow stats structure to update.
+ * @param[in]     len   The length of buffer passed to/from a socket function.
+ *
+ * @return True if a flow stats structure was updated.
+ */
+bool sockobj_setstats(struct sockobj_flowstats * const stats, const int32_t len);
 
 #endif // _SOCK_OBJ_H_
