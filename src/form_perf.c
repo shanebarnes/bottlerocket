@@ -95,27 +95,27 @@ int32_t formperf_body(struct formobj * const obj)
             }
             else if (obj->sock->conf.datalimitbyte > 0)
             {
-                progress = obj->sock->info.sendbytes * 100 / obj->sock->conf.datalimitbyte;
+                progress = obj->sock->info.send.totalbytes * 100 / obj->sock->conf.datalimitbyte;
             }
 
             utilunit_getdecformat(10,
                                   3,
-                                  obj->sock->info.recvbytes,
+                                  obj->sock->info.recv.totalbytes,
                                   strrecvbytes,
                                   sizeof(strrecvbytes));
             utilunit_getdecformat(10,
                                   3,
-                                  obj->sock->info.sendbytes,
+                                  obj->sock->info.send.totalbytes,
                                   strsendbytes,
                                   sizeof(strsendbytes));
             utilunit_getdecformat(10,
                                   3,
-                                  obj->sock->info.recvbytes * 8 * UNIT_TIME_USEC / diffusec,
+                                  obj->sock->info.recv.totalbytes * 8 * UNIT_TIME_USEC / diffusec,
                                   strrecvrate,
                                   sizeof(strrecvrate));
             utilunit_getdecformat(10,
                                   3,
-                                  obj->sock->info.sendbytes * 8 * UNIT_TIME_USEC / diffusec,
+                                  obj->sock->info.send.totalbytes * 8 * UNIT_TIME_USEC / diffusec,
                                   strsendrate,
                                   sizeof(strsendrate));
 
