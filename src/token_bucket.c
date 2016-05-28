@@ -9,21 +9,17 @@
 
 #include "logger.h"
 #include "token_bucket.h"
+#include "util_date.h"
 #include "util_unit.h"
-
-#include <string.h>
 
 /**
  * @see See header file for interface comments.
  */
-bool tokenbucket_init(struct tokenbucket * const tb,
-                      const uint64_t rate,
-                      const uint64_t burst)
+bool tokenbucket_init(struct tokenbucket * const tb, const uint64_t rate)
 {
     bool retval = false;
-    uint32_t i = 0;
 
-    if ((tb == NULL) || (burst == 0))
+    if (tb == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -31,26 +27,60 @@ bool tokenbucket_init(struct tokenbucket * const tb,
     }
     else
     {
-        memset(tb, 0, sizeof(struct tokenbucket));
+        tb->intrate = rate;
+        tb->inttoks = rate;
+        tb->intusec = UNIT_TIME_USEC;
+        tb->tsusec  = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
+        tb->size    = 0;
 
-        if (rate > 0)
+        retval = true;
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+uint64_t tokenbucket_gettokens(struct tokenbucket * const tb,
+                               const uint64_t reqtoks)
+{
+    uint64_t retval = 0;
+    uint64_t tsusec = 0;
+    uint64_t newtoks = 0;
+
+    if (tb == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if (tb->intrate > 0)
         {
-            do
-            {
-                tb->intusec = burst * ++i * 8 * UNIT_TIME_USEC / rate;
-            }
-            while (tb->intusec < 10000);
+            tsusec = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
+            newtoks = tb->inttoks * (tsusec - tb->tsusec) / tb->intusec;
 
-            tb->inttoks = burst * i;
+            if (newtoks > 0)
+            {
+                tb->size += newtoks;
+                tb->tsusec = tsusec;
+            }
+
+            if (reqtoks > 0)
+            {
+                if (tb->size >= reqtoks)
+                {
+                    tb->size -= reqtoks;
+                    retval    = reqtoks;
+                }
+            }
         }
         else
         {
-            tb->inttoks = burst;
+            retval = reqtoks;
         }
-
-        tb->intrate = rate;
-
-        retval = true;
     }
 
     return retval;

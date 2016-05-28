@@ -14,24 +14,34 @@
 
 struct tokenbucket
 {
-    uint64_t intrate; // data rate per interval (tokens per second)
+    uint64_t intrate; // data rate (tokens per second)
     uint64_t inttoks; // tokens per interval
     uint64_t intusec; // microseconds per interval
-    uint64_t size;    // bucket size
     uint64_t tsusec;  // unix timestamp in microseconds
+    uint64_t size;    // bucket size
 };
 
 /**
  * @brief Initialize a token bucket structure.
  *
  * @param[in,out] tb   A pointer to a token bucket structure.
- * @param[in]     rate The data rate in tokens per second.
- * @param[in]     burst The burst size in tokens.
+ * @param[in]     rate The data rate in tokens per second. The token bucket will
+ *                     be unlimited if the data rate is zero.
  *
  * @return True if a token bucket structure was initialized.
  */
-bool tokenbucket_init(struct tokenbucket * const tb,
-                      const uint64_t rate,
-                      const uint64_t burst);
+bool tokenbucket_init(struct tokenbucket * const tb, const uint64_t rate);
+
+/**
+ * @brief Request a number of tokens from the token bucket.
+ *
+ * @param[in,out] tb      A pointer to a token bucket structure.
+ * @param[in]     reqtoks The number of tokens requested.
+ *
+ * @return The number of tokens requested or zero if the number of available
+ *         tokens in the bucket is less than the number of tokens requested.
+ */
+uint64_t tokenbucket_gettokens(struct tokenbucket * const tb,
+                               const uint64_t reqtoks);
 
 #endif // _TOKEN_BUCKET_H_
