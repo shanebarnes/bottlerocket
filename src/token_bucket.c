@@ -27,14 +27,12 @@ bool tokenbucket_init(struct tokenbucket * const tb, const uint64_t rate)
     }
     else
     {
-        tb->intrate = rate;
-        tb->inttoks = rate;
-        tb->intusec = UNIT_TIME_USEC;
-        tb->tsusec  = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
-        tb->size    = 0;
+        tb->rate = rate;
+        tb->size = 0;
+        tb->tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
         retval = true;
-    }
+    };
 
     return retval;
 }
@@ -43,11 +41,11 @@ bool tokenbucket_init(struct tokenbucket * const tb, const uint64_t rate)
  * @see See header file for interface comments.
  */
 uint64_t tokenbucket_gettokens(struct tokenbucket * const tb,
-                               const uint64_t reqtoks)
+                               const uint64_t gettoks)
 {
     uint64_t retval = 0;
-    uint64_t tsusec = 0;
-    uint64_t newtoks = 0;
+    uint64_t tsus = 0;
+    uint64_t addtoks = 0;
 
     if (tb == NULL)
     {
@@ -57,29 +55,29 @@ uint64_t tokenbucket_gettokens(struct tokenbucket * const tb,
     }
     else
     {
-        if (tb->intrate > 0)
+        if (tb->rate > 0)
         {
-            tsusec = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
-            newtoks = tb->inttoks * (tsusec - tb->tsusec) / tb->intusec;
+            tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
+            addtoks = tb->rate * (tsus - tb->tsus) / UNIT_TIME_USEC;
 
-            if (newtoks > 0)
+            if (addtoks > 0)
             {
-                tb->size += newtoks;
-                tb->tsusec = tsusec;
+                tb->size += addtoks;
+                tb->tsus  = tsus;
             }
 
-            if (reqtoks > 0)
+            if (gettoks > 0)
             {
-                if (tb->size >= reqtoks)
+                if (tb->size >= gettoks)
                 {
-                    tb->size -= reqtoks;
-                    retval    = reqtoks;
+                    tb->size -= gettoks;
+                    retval    = gettoks;
                 }
             }
         }
         else
         {
-            retval = reqtoks;
+            retval = gettoks;
         }
     }
 
