@@ -18,6 +18,7 @@ set(BR_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_tcp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_udp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/thread_obj.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/token_bucket.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_date.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_ioctl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_inet.c
