@@ -20,26 +20,39 @@ struct tokenbucket
 };
 
 /**
- * @brief Initialize a token bucket structure.
+ * @brief Initialize a token bucket.
  *
- * @param[in,out] tb   A pointer to a token bucket structure.
- * @param[in]     rate The data rate in tokens per second. The token bucket will
- *                     be unlimited if the data rate is zero.
+ * @param[in,out] tb   A pointer to a token bucket.
+ * @param[in]     rate The token bucket fill rate in tokens per second. A value
+ *                     of zero signifies an unlimited token bucket fill rate.
  *
- * @return True if a token bucket structure was initialized.
+ * @return True if a token bucket was initialized.
  */
 bool tokenbucket_init(struct tokenbucket * const tb, const uint64_t rate);
 
 /**
- * @brief Request a number of tokens from the token bucket.
+ * @brief Remove a number of tokens from a token bucket.
  *
- * @param[in,out] tb      A pointer to a token bucket structure.
- * @param[in]     gettoks The number of tokens requested.
+ * @param[in,out] tb     A pointer to a token bucket.
+ * @param[in]     tokens The number of tokens to remove from a token bucket.
  *
- * @return The number of tokens requested or zero if the number of available
- *         tokens in the bucket is less than the number of tokens requested.
+ * @return The number of tokens removed from a token bucket or zero if the
+ *         number of tokens available in the bucket is less than the number of
+ *         tokens requested for removal.
  */
-uint64_t tokenbucket_gettokens(struct tokenbucket * const tb,
-                               const uint64_t gettoks);
+uint64_t tokenbucket_remove(struct tokenbucket * const tb,
+                            const uint64_t tokens);
+
+/**
+ * @brief Return a number of unused tokens to a token bucket.
+ *
+ * @param[in,out] tb     A pointer to a token bucket.
+ * @param[in]     tokens The number of unused tokens to return to a token
+ *                       bucket.
+ *
+ * @return The number of unused tokens returned to a token bucket.
+ */
+uint64_t tokenbucket_return(struct tokenbucket * const tb,
+                            const uint64_t tokens);
 
 #endif // _TOKEN_BUCKET_H_

@@ -28,7 +28,7 @@ bool tokenbucket_init(struct tokenbucket * const tb, const uint64_t rate)
     else
     {
         tb->rate = rate;
-        tb->size = 0;
+        tb->size = rate;
         tb->tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
         retval = true;
@@ -40,12 +40,12 @@ bool tokenbucket_init(struct tokenbucket * const tb, const uint64_t rate)
 /**
  * @see See header file for interface comments.
  */
-uint64_t tokenbucket_gettokens(struct tokenbucket * const tb,
-                               const uint64_t gettoks)
+uint64_t tokenbucket_remove(struct tokenbucket * const tb,
+                            const uint64_t tokens)
 {
     uint64_t retval = 0;
     uint64_t tsus = 0;
-    uint64_t addtoks = 0;
+    uint64_t addtokens = 0;
 
     if (tb == NULL)
     {
@@ -58,27 +58,54 @@ uint64_t tokenbucket_gettokens(struct tokenbucket * const tb,
         if (tb->rate > 0)
         {
             tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
-            addtoks = tb->rate * (tsus - tb->tsus) / UNIT_TIME_USEC;
+            addtokens = tb->rate * (tsus - tb->tsus) / UNIT_TIME_USEC;
 
-            if (addtoks > 0)
+            if (addtokens > 0)
             {
-                tb->size += addtoks;
+                tb->size += addtokens;
                 tb->tsus  = tsus;
             }
 
-            if (gettoks > 0)
+            if (tokens > 0)
             {
-                if (tb->size >= gettoks)
+                if (tb->size >= tokens)
                 {
-                    tb->size -= gettoks;
-                    retval    = gettoks;
+                    tb->size -= tokens;
+                    retval    = tokens;
                 }
             }
         }
         else
         {
-            retval = gettoks;
+            retval = tokens;
         }
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+uint64_t tokenbucket_return(struct tokenbucket * const tb,
+                            const uint64_t tokens)
+{
+    uint64_t retval = 0;
+
+    if (tb == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if (tb->rate > 0)
+        {
+            tb->size += tokens;
+        }
+
+        retval = tokens;
     }
 
     return retval;
