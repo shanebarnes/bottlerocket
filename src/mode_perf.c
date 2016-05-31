@@ -13,6 +13,7 @@
 #include "output_if_std.h"
 #include "sock_mod.h"
 #include "thread_obj.h"
+#include "token_bucket.h"
 #include "util_date.h"
 #include "util_string.h"
 
@@ -30,6 +31,7 @@ static void *modeperf_thread(void * arg)
     struct threadobj *thread = (struct threadobj *)arg;
     struct sockobj client, server, socket;
     struct formobj form;
+    struct tokenbucket tb;
     char *recvbuf = NULL, *sendbuf = NULL;
     int32_t count = 0, timeoutms = 500;
     int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
@@ -87,6 +89,8 @@ static void *modeperf_thread(void * arg)
             exit = !sockmod_init(&server);
         }
 
+        tokenbucket_init(&tb, opts->ratelimitbps);//(opts->ratelimitbps - 1) / 8 + 1); // Round up (x + (y-1)) / y or (x-1)/y + 1
+
         while ((exit == false) && (threadobj_isrunning(thread) == true))
         {
             if (count <= 0)
@@ -136,8 +140,6 @@ static void *modeperf_thread(void * arg)
             {
                 if (opts->arch == SOCKOBJ_MODEL_CLIENT)
                 {
-                    buflen = opts->buflen;
-
                     if (opts->datalimitbyte > 0)
                     {
                         if (client.info.send.totalbytes < opts->datalimitbyte)
@@ -148,6 +150,8 @@ static void *modeperf_thread(void * arg)
                             {
                                 buflen = opts->buflen;
                             }
+
+                            buflen = tokenbucket_remove(&tb, buflen * 8) / 8;
                         }
                         else
                         {
@@ -180,6 +184,10 @@ static void *modeperf_thread(void * arg)
                         client.ops.sock_close(&client);
                         exit = true;
                     }
+
+                    tokenbucket_return(&tb, sendbytes < 0 ?
+                                            0 :
+                                            buflen - (uint32_t)sendbytes);
 
                     if (sendbytes < 0)
                     {
