@@ -1,10 +1,14 @@
-# ${1:Project Name}
+# bottlerocket
 
 TODO: Write a project description
 
 ## Installation
 
-TODO: Describe the installation process
+Without unit tests:
+cmake -H. -Bbuild; cd build; make
+
+With unit tests:
+cmake -H. -Bbuild -DBR_TESTS_ENABLE=YES
 
 ## Usage
 
