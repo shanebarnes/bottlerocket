@@ -91,9 +91,9 @@ enum unit_prefix_time
  * @param[in] bitrate A string representation of a bit rate count.
  *
  * @return An integer value equivalent to the string representation of a bit
- *         rate count (0 on error).
+ *         rate count (-1 on error).
  */
-uint64_t utilunit_getbitrate(const char * const bitrate);
+int64_t utilunit_getbitrate(const char * const bitrate);
 
 /**
  * @brief Convert a string representation of a byte count to a numeric

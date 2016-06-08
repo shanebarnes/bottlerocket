@@ -235,13 +235,13 @@ static uint64_t utilunit_getsecsprefix(const char * const prefix)
 /**
  * @see See header file for interface comments.
  */
-uint64_t utilunit_getbitrate(const char * const bitrate)
+int64_t utilunit_getbitrate(const char * const bitrate)
 {
-    uint64_t retval = 0;
-    int32_t  matchcount = 0;
-    char     prefix[16];
+    int64_t retval = -1;
+    int32_t matchcount = 0;
+    char    prefix[16];
 
-    matchcount = utilstring_parse(bitrate, "%" PRIu64 "%s", &retval, prefix);
+    matchcount = utilstring_parse(bitrate, "%" PRIi64 "%s", &retval, prefix);
 
     switch (matchcount)
     {
@@ -253,7 +253,7 @@ uint64_t utilunit_getbitrate(const char * const bitrate)
             retval = retval * utilunit_getbitrateprefix(prefix);
             break;
         default:
-            // Nothing to do.
+            retval = -1;
             break;
     }
 
