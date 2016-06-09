@@ -158,11 +158,22 @@ static void *modeperf_thread(void * arg)
                             buflen = 0;
                         }
                     }
+                    else if (opts->timelimitusec > 0)
+                    {
+                        buflen = tokenbucket_remove(&tb, opts->buflen * 8) / 8;
+                    }
 
                     // @todo use rate limiting input interface to send data.
-                    sendbytes = client.ops.sock_send(&client,
-                                                     sendbuf,
-                                                     buflen);
+                    if (buflen > 0)
+                    {
+                        sendbytes = client.ops.sock_send(&client,
+                                                         sendbuf,
+                                                         buflen);
+                    }
+                    else
+                    {
+                        sendbytes = 0;
+                    }
 
                     ///?? Make sure time is only getting retrieved once per loop
                     timeusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
