@@ -24,21 +24,22 @@
 
 enum args_flag
 {
-    ARGS_FLAG_NULL     = 0x0000,
-    ARGS_FLAG_CHAT     = 0x0001,
-    ARGS_FLAG_PERF     = 0x0002,
-    ARGS_FLAG_AFFINITY = 0x0004,
-    ARGS_FLAG_BIND     = 0x0008,
-    ARGS_FLAG_CLIENT   = 0x0010,
-    ARGS_FLAG_LEN      = 0x0020,
-    ARGS_FLAG_NUM      = 0x0040,
-    ARGS_FLAG_PORT     = 0x0080,
-    ARGS_FLAG_BACKLOG  = 0x0100,
-    ARGS_FLAG_SERVER   = 0x0200,
-    ARGS_FLAG_TIME     = 0x0400,
-    ARGS_FLAG_UDP      = 0x0800,
-    ARGS_FLAG_HELP     = 0x1000,
-    ARGS_FLAG_VERSION  = 0x2000
+    ARGS_FLAG_NULL      = 0x0000,
+    ARGS_FLAG_CHAT      = 0x0001,
+    ARGS_FLAG_PERF      = 0x0002,
+    ARGS_FLAG_AFFINITY  = 0x0004,
+    ARGS_FLAG_BIND      = 0x0008,
+    ARGS_FLAG_BANDWIDTH = 0x0010,
+    ARGS_FLAG_CLIENT    = 0x0020,
+    ARGS_FLAG_LEN       = 0x0040,
+    ARGS_FLAG_NUM       = 0x0080,
+    ARGS_FLAG_PORT      = 0x0100,
+    ARGS_FLAG_BACKLOG   = 0x0200,
+    ARGS_FLAG_SERVER    = 0x0400,
+    ARGS_FLAG_TIME      = 0x0800,
+    ARGS_FLAG_UDP       = 0x1000,
+    ARGS_FLAG_HELP      = 0x2000,
+    ARGS_FLAG_VERSION   = 0x4000
 };
 
 struct tuple_element
@@ -207,6 +208,68 @@ static bool args_copybacklog(const char * const val,
                       __FUNCTION__);
     }
     else if (args_copyint32(val, min, max, &args->backlog) == true)
+    {
+        retval = true;
+    }
+
+    return retval;
+}
+
+static bool args_copybitrate(const char * const val,
+                             const char * const min,
+                             const char * const max,
+                             uint64_t  * const num)
+{
+    bool retval = false;
+    int64_t dmax, dmin, tmp;
+
+    if ((val == NULL) || (num == NULL))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if ((tmp = utilunit_getbitrate(val)) >= 0)
+        {
+            if ((min != NULL) &&
+                (((dmin = utilunit_getbitrate(min)) < 0) ||
+                 (tmp < dmin)))
+            {
+                // Do nothing.
+            }
+            else if ((max != NULL) &&
+                     (((dmax = utilunit_getbitrate(max)) < 0) ||
+                      (tmp > dmax)))
+            {
+                // Do nothing.
+            }
+            else
+            {
+                *num = (uint64_t)tmp;
+                retval = true;
+            }
+        }
+    }
+
+    return retval;
+}
+
+static bool args_copyratelimit(const char * const val,
+                               const char * const min,
+                               const char * const max,
+                               struct args_obj *args)
+{
+    bool retval = false;
+
+    if (args == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (args_copybitrate(val, min, max, &args->ratelimitbps) == true)
     {
         retval = true;
     }
@@ -401,6 +464,18 @@ static struct tuple_element options[] =
         args_copyipport
     },
     {
+        "--bandwidth",
+        'b',
+        "target bandwidth in bits per second",
+        "0bps",
+        "0bps",
+        "999Ebps",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        args_copyratelimit
+    },
+    {
         "--client",
         'c',
         "run as a client",
@@ -538,7 +613,7 @@ static void args_usage(FILE * const stream)
     for (i = 0; i < sizeof(options) / sizeof(struct tuple_element); i++)
     {
         fprintf(stream,
-                "  %s%c%s %-10s %-40s %s\n",
+                "  %s%c%s %-11s %-40s %s\n",
                 options[i].sname >= '0' ? prefix_skey : " ",
                 options[i].sname >= '0' ? options[i].sname : ' ',
                 options[i].sname >= '0' ? "," : " ",
@@ -734,7 +809,8 @@ bool args_parse(const int32_t argc,
         args_copyipaddr("0.0.0.0", "0.0.0.0", "0.0.0.0", args);
         args_copyipport("5001", "5001", "5001", args);
         args_copydatalimit("1MB", "1MB", "1MB", args);
-        args_copytime("10s", "10s", "10s", args);
+        args_copyratelimit("0bps", "0bps", "0bps", args);
+        args_copytime("0s", "0s", "0s", args);
         args_copybuflen("128kB", "128kB", "128kB", args);
 
         if (argc > 1)
@@ -778,6 +854,8 @@ bool args_parse(const int32_t argc,
 #endif
                 case 'B':
                     break;
+                case 'b':
+                    break;
                 case 'c':
                     args->arch = SOCKOBJ_MODEL_CLIENT;
                     break;
@@ -793,9 +871,21 @@ bool args_parse(const int32_t argc,
                 case 'q':
                     break;
                 case 't':
+                    if ((flags & ARGS_FLAG_NUM) == 0)
+                    {
+                        args->datalimitbyte = 0;
+                    }
                     break;
                 case 'u':
                     args->type = SOCK_DGRAM;
+                    if ((flags & ARGS_FLAG_BANDWIDTH) == 0)
+                    {
+                        args_copyratelimit("1Mbps", "1Mbps", "1Mbps", args);
+                    }
+                    if ((flags & ARGS_FLAG_LEN) == 0)
+                    {
+                        args_copybuflen("1kB", "1kB", "1kB", args);
+                    }
                     break;
                 case 'h':
                     args_usage(stdout);
