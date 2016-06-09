@@ -28,7 +28,7 @@ bool tokenbucket_init(struct tokenbucket * const tb, const uint64_t rate)
     else
     {
         tb->rate = rate;
-        tb->size = rate;
+        tb->size = 0;
         tb->tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
         retval = true;
