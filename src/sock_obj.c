@@ -263,13 +263,17 @@ bool sockobj_open(struct sockobj * const obj)
                 {
                     obj->ainfo = *anext;
 
-                    obj->addrself.sockaddr.sin_family      = anext->ai_family;
-                    obj->addrself.sockaddr.sin_addr.s_addr = inet_addr(obj->conf.ipaddr);
-                    obj->addrself.sockaddr.sin_port        = htons(obj->conf.ipport);
+                    obj->addrself.sockaddr.sin_family = anext->ai_family;
+                    obj->addrself.sockaddr.sin_port   = htons(obj->conf.ipport);
+                    inet_pton(obj->addrself.sockaddr.sin_family,
+                              obj->conf.ipaddr,
+                              &obj->addrself.sockaddr.sin_addr.s_addr);
 
-                    obj->addrpeer.sockaddr.sin_family      = anext->ai_family;
-                    obj->addrpeer.sockaddr.sin_addr.s_addr = inet_addr(obj->conf.ipaddr);
-                    obj->addrpeer.sockaddr.sin_port        = htons(obj->conf.ipport);
+                    obj->addrpeer.sockaddr.sin_family = anext->ai_family;
+                    obj->addrpeer.sockaddr.sin_port   = htons(obj->conf.ipport);
+                    inet_pton(obj->addrself.sockaddr.sin_family,
+                              obj->conf.ipaddr,
+                              &obj->addrpeer.sockaddr.sin_addr.s_addr);
 
                     optval = 1;
                     obj->event.ops.fion_insertfd(&obj->event, obj->sockfd);
