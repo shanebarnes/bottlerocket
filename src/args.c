@@ -24,22 +24,24 @@
 
 enum args_flag
 {
-    ARGS_FLAG_NULL      = 0x0000,
-    ARGS_FLAG_CHAT      = 0x0001,
-    ARGS_FLAG_PERF      = 0x0002,
-    ARGS_FLAG_AFFINITY  = 0x0004,
-    ARGS_FLAG_BIND      = 0x0008,
-    ARGS_FLAG_BANDWIDTH = 0x0010,
-    ARGS_FLAG_CLIENT    = 0x0020,
-    ARGS_FLAG_LEN       = 0x0040,
-    ARGS_FLAG_NUM       = 0x0080,
-    ARGS_FLAG_PORT      = 0x0100,
-    ARGS_FLAG_BACKLOG   = 0x0200,
-    ARGS_FLAG_SERVER    = 0x0400,
-    ARGS_FLAG_TIME      = 0x0800,
-    ARGS_FLAG_UDP       = 0x1000,
-    ARGS_FLAG_HELP      = 0x2000,
-    ARGS_FLAG_VERSION   = 0x4000
+    ARGS_FLAG_NULL      = 0x00000,
+    ARGS_FLAG_CHAT      = 0x00001,
+    ARGS_FLAG_PERF      = 0x00002,
+    ARGS_FLAG_IPV4      = 0x00004,
+    ARGS_FLAG_IPV6      = 0x00008,
+    ARGS_FLAG_AFFINITY  = 0x00010,
+    ARGS_FLAG_BIND      = 0x00020,
+    ARGS_FLAG_BANDWIDTH = 0x00040,
+    ARGS_FLAG_CLIENT    = 0x00080,
+    ARGS_FLAG_LEN       = 0x00100,
+    ARGS_FLAG_NUM       = 0x00200,
+    ARGS_FLAG_PORT      = 0x00400,
+    ARGS_FLAG_BACKLOG   = 0x00800,
+    ARGS_FLAG_SERVER    = 0x01000,
+    ARGS_FLAG_TIME      = 0x02000,
+    ARGS_FLAG_UDP       = 0x04000,
+    ARGS_FLAG_HELP      = 0x08000,
+    ARGS_FLAG_VERSION   = 0x10000
 };
 
 struct tuple_element
@@ -435,6 +437,30 @@ static struct tuple_element options[] =
         val_optional,
         arg_optional,
         ARGS_FLAG_CHAT,
+        NULL
+    },
+    {
+        "--ipv4",
+        '4',
+        "only use IPv4",
+        "enabled",
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_IPV6,
+        NULL
+    },
+    {
+        "--ipv6",
+        '6',
+        "only use IPv6",
+        "disabled",
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_IPV4,
         NULL
     },
 //#if !defined(__APPLE__)
@@ -847,6 +873,12 @@ bool args_parse(const int32_t argc,
                         args_usage(stdout);
                         retval = false;
                     }
+                    break;
+                case '4':
+                    args->family = AF_INET;
+                    break;
+                case '6':
+                    args->family = AF_INET6;
                     break;
 #if !defined(__APPLE__)
                 case 'A':
