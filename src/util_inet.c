@@ -103,7 +103,11 @@ bool utilinet_getaddrfromhost(const char * const hostname,
             for (rp = result; rp != NULL; rp = rp->ai_next)
             {
                 saddr = (struct sockaddr_in *)rp->ai_addr;
-                strncpy(addr, inet_ntoa(saddr->sin_addr), len);
+                inet_ntop(AF_INET,
+                          &saddr->sin_addr,
+                          addr,
+                          len);
+
                 retval = true;
                 break;
             }
