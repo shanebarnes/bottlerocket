@@ -118,3 +118,73 @@ bool utilinet_getaddrfromhost(const char * const hostname,
 
     return retval;
 }
+
+/**
+ * @see See header file for interface comments.
+ */
+void *utilinet_getaddrfromstorage(const struct sockaddr_storage * const addr)
+{
+    void *retval = NULL;
+
+    if (addr == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        switch (addr->ss_family)
+        {
+            case AF_INET:
+                retval = &(((struct sockaddr_in*)addr)->sin_addr.s_addr);
+                break;
+            case AF_INET6:
+                retval = &(((struct sockaddr_in6*)addr)->sin6_addr.s6_addr);
+                break;
+            default:
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: invalid family (%d)\n",
+                              __FUNCTION__,
+                              addr->ss_family);
+                break;
+        }
+    }
+
+    return retval;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+uint16_t *utilinet_getportfromstorage(const struct sockaddr_storage * const addr)
+{
+    uint16_t *retval = NULL;
+
+    if (addr == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        switch (addr->ss_family)
+        {
+            case AF_INET:
+                retval = &(((struct sockaddr_in*)addr)->sin_port);
+                break;
+            case AF_INET6:
+                retval = &(((struct sockaddr_in6*)addr)->sin6_port);
+                break;
+            default:
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: invalid family (%d)\n",
+                              __FUNCTION__,
+                              addr->ss_family);
+                break;
+        }
+    }
+
+    return retval;
+}

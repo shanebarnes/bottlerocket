@@ -12,6 +12,8 @@
 
 #include "system_types.h"
 
+#include <sys/socket.h>
+
 /**
  * @brief Check if an IP address is a valid IPv4 address. The check determines
  *        if the address is expressed in valid dot-decimal notation (e.g.,
@@ -47,5 +49,26 @@ bool utilinet_isipv6(const char * const addr);
 bool utilinet_getaddrfromhost(const char * const hostname,
                               char * const addr,
                               const uint32_t len);
+
+/**
+ * @brief Get a pointer to a socket address given an address family (e.g.,
+ *        AF_INET).
+ *
+ * @param[in] addr A pointer to a socket address storage structure.
+ *
+ * @return A pointer to a socket address (e.g., sockaddr_in*) or NULL on error.
+ */
+void *utilinet_getaddrfromstorage(const struct sockaddr_storage * const addr);
+
+/**
+ * @brief Get a pointer to a socket address port number field given an address
+ *        family (e.g., AF_INET).
+ *
+ * @param[in] addr A pointer to a socket address storage structure.
+ *
+ * @return A pointer to a socket address port number field (e.g., &sin_port) or
+ *         NULL on error.
+ */
+uint16_t *utilinet_getportfromstorage(const struct sockaddr_storage * const addr);
 
 #endif // _UTIL_INET_H_
