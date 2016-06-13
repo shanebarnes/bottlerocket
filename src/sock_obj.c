@@ -237,7 +237,7 @@ bool sockobj_open(struct sockobj * const obj)
         memset(&ahints, 0, sizeof(struct addrinfo));
         ahints.ai_family    = obj->conf.family;
         ahints.ai_socktype  = obj->conf.type;
-        ahints.ai_flags     = AI_DEFAULT;
+        ahints.ai_flags     = AI_V4MAPPED | AI_ADDRCONFIG;
         ahints.ai_protocol  = 0;
         ahints.ai_canonname = NULL;
         ahints.ai_addr      = NULL;
