@@ -11,6 +11,7 @@
 #include "logger.h"
 #include "sock_obj.h"
 #include "util_date.h"
+#include "util_inet.h"
 #include "util_unit.h"
 
 #include <arpa/inet.h>
@@ -84,12 +85,11 @@ bool sockobj_getaddrpeer(struct sockobj * const obj)
     }
     else
     {
-        inet_ntop(obj->addrpeer.sockaddr.sin_family,
-                  &(obj->addrpeer.sockaddr.sin_addr),
+        inet_ntop(obj->addrpeer.sockaddr.ss_family,
+                  utilinet_getaddrfromstorage(&obj->addrpeer.sockaddr),
                   obj->addrpeer.ipaddr,
                   sizeof(obj->addrpeer.ipaddr));
-
-        obj->addrpeer.ipport = ntohs(obj->addrpeer.sockaddr.sin_port);
+        obj->addrpeer.ipport = ntohs(*utilinet_getportfromstorage(&obj->addrpeer.sockaddr));
 
         snprintf(obj->addrpeer.sockaddrstr,
                  sizeof(obj->addrpeer.sockaddrstr),
@@ -129,12 +129,11 @@ bool sockobj_getaddrself(struct sockobj * const obj)
     }
     else
     {
-        inet_ntop(obj->addrself.sockaddr.sin_family,
-                  &(obj->addrself.sockaddr.sin_addr),
+        inet_ntop(obj->addrself.sockaddr.ss_family,
+                  utilinet_getaddrfromstorage(&obj->addrself.sockaddr),
                   obj->addrself.ipaddr,
                   sizeof(obj->addrself.ipaddr));
-
-        obj->addrself.ipport = ntohs(obj->addrself.sockaddr.sin_port);
+        obj->addrself.ipport = ntohs(*utilinet_getportfromstorage(&obj->addrself.sockaddr));
 
         snprintf(obj->addrself.sockaddrstr,
                  sizeof(obj->addrself.sockaddrstr),
@@ -236,9 +235,9 @@ bool sockobj_open(struct sockobj * const obj)
     else
     {
         memset(&ahints, 0, sizeof(struct addrinfo));
-        ahints.ai_family    = AF_UNSPEC;     // IPv4 or IPv6
+        ahints.ai_family    = obj->conf.family;
         ahints.ai_socktype  = obj->conf.type;
-        ahints.ai_flags     = AI_PASSIVE;    // All interfaces
+        ahints.ai_flags     = AI_DEFAULT;
         ahints.ai_protocol  = 0;
         ahints.ai_canonname = NULL;
         ahints.ai_addr      = NULL;
@@ -257,23 +256,34 @@ bool sockobj_open(struct sockobj * const obj)
         {
             for (anext = obj->alist; anext != NULL; anext = anext->ai_next)
             {
-                if ((obj->sockfd = socket(anext->ai_family,
-                                          anext->ai_socktype,
-                                          anext->ai_protocol)) != -1)
+                if ((anext->ai_family == obj->conf.family) &&
+                    ((obj->sockfd = socket(anext->ai_family,
+                                           anext->ai_socktype,
+                                           anext->ai_protocol)) != -1))
                 {
                     obj->ainfo = *anext;
 
-                    obj->addrself.sockaddr.sin_family = anext->ai_family;
-                    obj->addrself.sockaddr.sin_port   = htons(obj->conf.ipport);
-                    inet_pton(obj->addrself.sockaddr.sin_family,
-                              obj->conf.ipaddr,
-                              &obj->addrself.sockaddr.sin_addr.s_addr);
+                    if (obj->conf.family == AF_INET6)
+                    {
+                        ((struct sockaddr_in6*)(obj->ainfo.ai_addr))->sin6_addr = in6addr_any;
+                    }
+                    else
+                    {
+                        ((struct sockaddr_in*)(obj->ainfo.ai_addr))->sin_addr.s_addr = INADDR_ANY;
+                    }
 
-                    obj->addrpeer.sockaddr.sin_family = anext->ai_family;
-                    obj->addrpeer.sockaddr.sin_port   = htons(obj->conf.ipport);
-                    inet_pton(obj->addrself.sockaddr.sin_family,
+                    obj->addrself.sockaddr.ss_family = anext->ai_family;
+
+                    inet_pton(obj->addrself.sockaddr.ss_family,
                               obj->conf.ipaddr,
-                              &obj->addrpeer.sockaddr.sin_addr.s_addr);
+                              utilinet_getaddrfromstorage(&obj->addrself.sockaddr));
+                    *utilinet_getportfromstorage(&obj->addrself.sockaddr) = htons(obj->conf.ipport);
+
+                    obj->addrpeer.sockaddr.ss_family = anext->ai_family;
+                    inet_pton(obj->addrpeer.sockaddr.ss_family,
+                              obj->conf.ipaddr,
+                              utilinet_getaddrfromstorage(&obj->addrpeer.sockaddr));
+                    *utilinet_getportfromstorage(&obj->addrpeer.sockaddr) = htons(obj->conf.ipport);
 
                     optval = 1;
                     obj->event.ops.fion_insertfd(&obj->event, obj->sockfd);
@@ -328,8 +338,9 @@ bool sockobj_open(struct sockobj * const obj)
         else
         {
             logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to get address information\n",
-                          __FUNCTION__);
+                          "%s: failed to get address information (%d)\n",
+                          __FUNCTION__,
+                          errno);
         }
     }
 
