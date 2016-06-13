@@ -36,11 +36,11 @@ int32_t utilioctl_getsendqsize(const int32_t fd);
  * @brief Get the network interface MTU in bytes for a network interface
  *        address.
  *
- * @param [in] addr The socket address.
+ * @param [in] addr A pointer to a socket address.
  *
  * @return The network interface MTU in bytes (-1 on error).
  */
-int32_t utilioctl_getifmtubyaddr(const struct sockaddr_in addr);
+int32_t utilioctl_getifmtubyaddr(const struct sockaddr_in * const  addr);
 
 /**
  * @brief Get the network interface MTU in bytes for a network interface name.

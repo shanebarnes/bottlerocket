@@ -61,14 +61,20 @@ int32_t utilioctl_getsendqsize(const int32_t fd)
 /**
  * @see See header file for interface comments.
  */
-int32_t utilioctl_getifmtubyaddr(const struct sockaddr_in addr)
+int32_t utilioctl_getifmtubyaddr(const struct sockaddr_in * const addr)
 {
     int32_t retval = -1;
     struct ifaddrs *addrs = NULL, *ifa = NULL;
     struct sockaddr_in *sa = NULL;
     char buf1[INET6_ADDRSTRLEN], buf2[INET6_ADDRSTRLEN];
 
-    if (getifaddrs(&addrs) == -1)
+    if (addr == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (getifaddrs(&addrs) == -1)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to get network interface list (%d)\n",
@@ -79,7 +85,7 @@ int32_t utilioctl_getifmtubyaddr(const struct sockaddr_in addr)
     {
         for (ifa = addrs; ifa != NULL; ifa = ifa->ifa_next)
         {
-            if (ifa->ifa_addr->sa_family == addr.sin_family)
+            if (ifa->ifa_addr->sa_family == addr->sin_family)
             {
                 sa = (struct sockaddr_in *)ifa->ifa_addr;
 
@@ -88,8 +94,8 @@ int32_t utilioctl_getifmtubyaddr(const struct sockaddr_in addr)
                           buf1,
                           sizeof(buf1));
 
-                inet_ntop(addr.sin_family,
-                          (void *)&addr.sin_addr,
+                inet_ntop(addr->sin_family,
+                          (void *)&addr->sin_addr,
                           buf2,
                           sizeof(buf2));
 
