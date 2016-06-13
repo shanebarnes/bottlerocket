@@ -10,6 +10,7 @@
 #include "logger.h"
 #include "sock_udp.h"
 #include "util_date.h"
+#include "util_inet.h"
 #include "util_ioctl.h"
 #if defined(__APPLE__)
     #include "util_sysctl.h"
@@ -35,7 +36,7 @@
 static int32_t sockudp_getmaxmsgsize(struct sockobj * const obj)
 {
     int32_t retval = -1;
-    int32_t mtu = utilioctl_getifmtubyaddr(obj->addrself.sockaddr);
+    int32_t mtu = utilioctl_getifmtubyaddr((struct sockaddr_in*)&(obj->addrself.sockaddr));
     int32_t minhdrlen = 28; // IPv4 header (20) + UDP header (8)
 
     if (mtu > minhdrlen)
@@ -278,12 +279,11 @@ int32_t sockudp_recv(struct sockobj * const obj,
             {
                 if ((obj->state & SOCKOBJ_STATE_CONNECT) == 0)
                 {
-                    inet_ntop(AF_INET,
-                              &(obj->addrpeer.sockaddr.sin_addr),
+                    inet_ntop(obj->conf.family,
+                              utilinet_getaddrfromstorage(&obj->addrpeer.sockaddr),
                               obj->addrpeer.ipaddr,
                               sizeof(obj->addrpeer.ipaddr));
-
-                    obj->addrpeer.ipport = ntohs(obj->addrpeer.sockaddr.sin_port);
+                    obj->addrpeer.ipport = ntohs(*utilinet_getportfromstorage(&obj->addrpeer.sockaddr));
                 }
 
                 logger_printf(LOGGER_LEVEL_TRACE,
