@@ -33,13 +33,15 @@ int32_t formobj_idle(struct formobj * const obj)
     {
         retval = utilstring_concat(obj->dstbuf,
                                    obj->dstlen,
-                                   "%s %s %s %c",
+                                   "%s %s %s %c%*s",
                                    "Listening on",
                                    (obj->sock->conf.type == SOCK_STREAM ?
                                        "TCP" :
                                        "UDP"),
                                    obj->sock->addrself.sockaddrstr,
-                                   formobj_spin(obj));
+                                   formobj_spin(obj),
+                                   0,
+                                   " ");
     }
 
     return retval;
