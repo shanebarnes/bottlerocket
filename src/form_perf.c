@@ -129,7 +129,7 @@ int32_t formperf_body(struct formobj * const obj)
                                        "%9sbps | "
                                        "%9sB / "
                                        "%9sB | "
-                                       "%02u:%02u:%02u:%02u.%03u\n",
+                                       "%02u:%02u:%02u:%02u.%03u\r",
                                        1,
                                        obj->sock->addrself.sockaddrstr,
                                        obj->sock->addrpeer.sockaddrstr,
@@ -148,7 +148,7 @@ int32_t formperf_body(struct formobj * const obj)
                                        diff.sec,
                                        diff.msec);
 
-            obj->timeoutusec += 1 * UNIT_TIME_USEC;
+            obj->timeoutusec += 1 * UNIT_TIME_USEC / 5;
 
             // Correct timeout in the event that the new timeout has already
             // expired.
@@ -188,6 +188,13 @@ int32_t formperf_foot(struct formobj * const obj)
     {
         obj->timeoutusec = 0;
         retval = formperf_body(obj);
+
+        if ((retval > 0) && (retval < obj->dstlen))
+        {
+            *(char*)(obj->dstbuf + retval)     = '\n';
+            *(char*)(obj->dstbuf + retval + 1) = '\0';
+            retval++;
+        }
     }
 
     return retval;
