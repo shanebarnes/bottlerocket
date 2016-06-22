@@ -2,6 +2,15 @@
 
 TODO: Write a project description
 
+## Build Status
+
+| [Linux][lin-link] |
+| :---------------: |
+| ![lin-badge]      |
+
+[lin-badge]: https://travis-ci.org/shanebarnes/bottlerocket.svg?branch=master "Travis build status"
+[lin-link]:  https://travis-ci.org/shanebarnes/bottlerocket "Travis build status"
+
 ## Installation
 
 Without unit tests:
