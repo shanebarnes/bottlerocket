@@ -42,7 +42,7 @@ static char *sockobj_getoptname(const uint32_t name)
         case SO_LINGER:
             retval = "SO_LINGER";
             break;
-#if !defined(__CYGWIN__)
+#if defined(SO_REUSEPORT)
         case SO_REUSEPORT:
             retval = "SO_REUSEPORT";
             break;
