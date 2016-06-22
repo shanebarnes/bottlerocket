@@ -4,12 +4,14 @@ TODO: Write a project description
 
 ## Build Status
 
-| [Linux][lin-link] |
-| :---------------: |
-| ![lin-badge]      |
+| [Linux][lin-link] | [Mac][mac-link] |
+| :---------------: | :-------------: |
+| ![lin-badge]      | ![mac-badge]    |
 
 [lin-badge]: https://travis-ci.org/shanebarnes/bottlerocket.svg?branch=master "Travis build status"
 [lin-link]:  https://travis-ci.org/shanebarnes/bottlerocket "Travis build status"
+[mac-badge]: https://travis-ci.org/shanebarnes/bottlerocket.svg?branch=master "Travis build status"
+[mac-link]:  https://travis-ci.org/shanebarnes/bottlerocket "Travis build status"
 
 ## Installation
 
