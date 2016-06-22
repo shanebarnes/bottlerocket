@@ -25,7 +25,7 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
 {
     bool retval = false;
     int32_t errval = -1;
-#if defined (__APPLE__)
+#if defined (__APPLE__) && defined(TCP_CONNECTION_INFO)
     struct tcp_connection_info optval;
     int32_t optname = TCP_CONNECTION_INFO;
 #elif defined (LINUX)
@@ -60,21 +60,15 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
         }
         else
         {
-#if defined (__APPLE__) || defined (LINUX)
+#if (defined (__APPLE__) && defined(TCP_CONNECTION_INFO)) || defined (LINUX)
             info->state     = optval.tcpi_state;
             info->sndwscale = optval.tcpi_snd_wscale;
             info->rcvwscale = optval.tcpi_rcv_wscale;
             info->options   = optval.tcpi_options;
             info->flags     = optval.tcpi_flags;
             info->rto       = optval.tcpi_rto;
-    #if defined (__APPLE__)
+    #if defined (__APPLE__) && defined(TCP_CONNECTION_INFO)
             info->mss       = optval.tcpi_maxseg;
-    #else
-            info->mss       = optval.tcpi_snd_mss;
-    #endif
-            info->ssthresh  = optval.tcpi_snd_ssthresh;
-            info->cwnd      = optval.tcpi_snd_cwnd;
-    #if defined (__APPLE__)
             info->sndbuf    = optval.tcpi_snd_sbbytes;
             info->rcvwin    = optval.tcpi_rcv_wnd;
             info->rttcur    = optval.tcpi_rttcur;
@@ -86,7 +80,12 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
             info->rxpackets = optval.tcpi_rxpackets;
             info->rxbytes   = optval.tcpi_rxbytes;
             info->rxoobytes = optval.tcpi_rxoutoforderbytes;
+    #else
+            info->mss       = optval.tcpi_snd_mss;
     #endif
+            info->ssthresh  = optval.tcpi_snd_ssthresh;
+            info->cwnd      = optval.tcpi_snd_cwnd;
+
             retval = true;
 #endif
         }
@@ -358,10 +357,12 @@ bool socktcp_connect(struct sockobj * const obj)
 
                 obj->event.pevents = FIONOBJ_PEVENT_IN;
                 obj->event.ops.fion_setflags(&obj->event);
-
-                sockobj_getaddrself(obj);
-                sockobj_getaddrpeer(obj);
-
+                //sockobj_getaddrself(obj);
+                //sockobj_getaddrpeer(obj);
+            }
+            else if (errno == EISCONN)
+            {
+                retval = true;
             }
             else
             {
