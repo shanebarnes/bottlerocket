@@ -9,10 +9,9 @@ install:
   - wget raw.github.com/transcode-open/apt-cyg/master/apt-cyg
   - chmod +x apt-cyg
   - copy apt-cyg c:\cygwin64\bin
-  - ls -l c:\cygwin64\bin
   - bash c:\cygwin64\bin\apt-cyg install cmake
 
 build_script:
   - cmake -H. -Bbuild
   - cd build
-  - dir
+  - make
