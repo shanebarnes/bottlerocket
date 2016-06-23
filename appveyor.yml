@@ -4,14 +4,16 @@ environment:
     - Config: Release
 
 cache:
-  - C:\mingw64
+  - C:\cygwin64
 
 install:
-  - set PATH=C:\mingw64\bin;%PATH%
+  - set PATH=C:\cygwin64\bin;%PATH%
   - set CC=gcc
 
 build_script:
   - dir c:\
+  - dir c:\cygwin64
+  - dir c:\cygwin64\bin
   - cmake -H. -Bbuild
   - cd build
-  - mingw64-make.exe
+  - make
