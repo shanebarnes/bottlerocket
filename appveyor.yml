@@ -11,9 +11,6 @@ install:
   - set CC=gcc
 
 build_script:
-  - dir c:\
-  - dir c:\cygwin64
-  - dir c:\cygwin64\bin
   - cmake -H. -Bbuild
   - cd build
-  - make
+  - dir
