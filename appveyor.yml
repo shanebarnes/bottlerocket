@@ -1,9 +1,7 @@
 environment:
   matrix:
-    - compiler: cygwin
-      config: Release
     - compiler: cygwin64
-      config: Release
+      config: release
 
 install:
   - set PATH=c:\%compiler%\bin;%PATH%
