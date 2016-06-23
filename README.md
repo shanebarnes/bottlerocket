@@ -6,13 +6,13 @@ TODO: Write a project description
 
 | [Linux][lin-link] | [Macintosh][mac-link] | [Windows][win-link] |
 | :---------------: | :-------------------: | :-----------------: |
-| ![lin-badge]      | ![mac-badge]          | [win-badge]         |
+| ![lin-badge]      | ![mac-badge]          | ![win-badge]        |
 
 [lin-badge]: https://travis-ci.org/shanebarnes/bottlerocket.svg?branch=master "Travis build status"
 [lin-link]:  https://travis-ci.org/shanebarnes/bottlerocket "Travis build status"
 [mac-badge]: https://travis-ci.org/shanebarnes/bottlerocket.svg?branch=master "Travis build status"
 [mac-link]:  https://travis-ci.org/shanebarnes/bottlerocket "Travis build status"
-[win-badge]: https://ci.appveyor.com/api/projects/status/7v1u5mbgu2acqn50/branch/master?svg=true "AppVeyor build status"
+[win-badge]: https://ci.appveyor.com/api/projects/status/7v1u5mbgu2acqn50/branch/master "AppVeyor build status"
 [win-link]:  https://ci.appveyor.com/project/shanebarnes/bottlerocket/branch/master "AppVeyor build status"
 
 ## Installation
