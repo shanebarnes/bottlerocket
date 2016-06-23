@@ -10,7 +10,7 @@ install:
   - chmod +x apt-cyg
   - copy apt-cyg c:\cygwin64\bin
   - ls -l c:\cygwin64\bin
-  - c:\cygwin64\bin\apt-cyg install cmake
+  - bash c:\cygwin64\bin\apt-cyg install cmake
 
 build_script:
   - cmake -H. -Bbuild
