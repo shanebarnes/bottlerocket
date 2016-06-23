@@ -11,6 +11,7 @@ install:
   - set CC=gcc
 
 build_script:
+  - dir c:\
   - cmake -H. -Bbuild
   - cd build
-  - make
+  - mingw64-make.exe
