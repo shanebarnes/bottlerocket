@@ -1,0 +1,16 @@
+environment:
+  matrix:
+    - Compiler: mingw
+    - Config: Release
+
+cache:
+  - C:\mingw64
+
+install:
+  - set PATH=C:\mingw64\bin;%PATH%
+  - set CC=gcc
+
+build_script:
+  - cmake -H. -Bbuild
+  - cd build
+  - make
