@@ -7,6 +7,8 @@ environment:
 
 install:
   - set PATH=c:\%compiler%\bin;%PATH%
+  - echo %PATH%
+  - ls -l c:\%compiler%\bin
   - wget raw.github.com/transcode-open/apt-cyg/master/apt-cyg
   - chmod +x apt-cyg
   - copy apt-cyg c:\%compiler%\bin
