@@ -3,14 +3,16 @@ environment:
     - Compiler: mingw
     - Config: Release
 
-cache:
-  - C:\cygwin64
-
 install:
   - set PATH=C:\cygwin64\bin;%PATH%
   - set CC=gcc
 
 build_script:
+  - wget raw.github.com/transcode-open/apt-cyg/master/apt-cyg
+  - chmod +x apt-cyg
+  - copy apt-cyg C:\cygwin64\bin
+  - dir c:\cygwin64\bin
+  - apt-cyg install cmake
   - cmake -H. -Bbuild
   - cd build
   - dir
