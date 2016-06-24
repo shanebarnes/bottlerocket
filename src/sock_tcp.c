@@ -339,6 +339,11 @@ bool socktcp_connect(struct sockobj * const obj)
         {
             if (errno == EINPROGRESS)
             {
+                logger_printf(LOGGER_LEVEL_DEBUG,
+                              "%s: socket %d connect now in progress\n",
+                              __FUNCTION__,
+                              obj->sockfd);
+
                 obj->event.pevents = FIONOBJ_PEVENT_IN | FIONOBJ_PEVENT_OUT;
                 obj->event.ops.fion_setflags(&obj->event);
 
@@ -357,12 +362,17 @@ bool socktcp_connect(struct sockobj * const obj)
 
                 obj->event.pevents = FIONOBJ_PEVENT_IN;
                 obj->event.ops.fion_setflags(&obj->event);
-                //sockobj_getaddrself(obj);
-                //sockobj_getaddrpeer(obj);
             }
             else if (errno == EISCONN)
             {
                 retval = true;
+            }
+            else if (errno == EALREADY)
+            {
+                logger_printf(LOGGER_LEVEL_DEBUG,
+                              "%s: socket %d connect already in progress\n",
+                              __FUNCTION__,
+                              obj->sockfd);
             }
             else
             {
