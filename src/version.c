@@ -10,9 +10,9 @@
 #include "version.h"
 
 static const uint16_t  major = 0;
-static const uint16_t  minor = 1;
+static const uint16_t  minor = 2;
 static const uint16_t  patch = 0;
-static const char     *date  = "Apr 21 2016 19:41:00";
+static const char     *date  = "Jun 24 2016 16:31:00";
 static const char     *build = __DATE__ " " __TIME__;
 
 /**
