@@ -140,6 +140,11 @@ static void *modeperf_thread(void * arg)
             {
                 if (opts->arch == SOCKOBJ_MODEL_CLIENT)
                 {
+                    if ((client.state & SOCKOBJ_STATE_CONNECT) == 0)
+                    {
+                        client.ops.sock_connect(&client);
+                    }
+
                     if (opts->datalimitbyte > 0)
                     {
                         if (client.info.send.totalbytes < opts->datalimitbyte)
@@ -186,6 +191,17 @@ static void *modeperf_thread(void * arg)
                         output_if_std_send(form.dstbuf, formbytes);
                         client.ops.sock_close(&client);
                         exit = true;
+
+                        logger_printf(LOGGER_LEVEL_INFO,
+                                      "%s: passed %" PRIu64
+                                      ", failed %" PRIu64
+                                      ", avg:%u max:%u min:%u\n",
+                                      __FUNCTION__,
+                                      client.info.send.passedcalls,
+                                      client.info.send.failedcalls,
+                                      client.info.send.avgbuflen,
+                                      client.info.send.maxbuflen,
+                                      client.info.send.minbuflen);
                     }
                     else if ((opts->datalimitbyte > 0) &&
                              (client.info.send.totalbytes >= opts->datalimitbyte))
