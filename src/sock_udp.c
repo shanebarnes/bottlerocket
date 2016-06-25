@@ -359,7 +359,7 @@ int32_t sockudp_send(struct sockobj * const obj,
 {
     int32_t retval = -1;
     int32_t flags  = MSG_DONTWAIT;
-#if defined(LINUX)
+#if defined(__linux__)
     flags |= MSG_NOSIGNAL;
 #endif
 
