@@ -17,7 +17,7 @@
     #include <netinet/udp.h>
     #include <netinet/udp_var.h>
     #include <sys/sysctl.h>
-#elif defined(LINUX)
+#elif defined(__linux__)
     #include <unistd.h>
 #endif
 
@@ -42,7 +42,7 @@ uint32_t utilsysctl_getcpusavail(void)
             break;
         }
     }
-#elif defined(LINUX)
+#elif defined(__linux__)
     retval = sysconf(_SC_NPROCESSORS_ONLN);
 #endif
     return retval;
