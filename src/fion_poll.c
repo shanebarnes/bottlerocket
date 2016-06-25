@@ -204,7 +204,7 @@ bool fionpoll_setflags(struct fionobj * const obj)
         {
             pfd = (struct pollfd *)vector_getval(&obj->fds, i);
             pfd->events = POLLPRI |
-#if defined(LINUX)
+#if defined(__linux__)
                           POLLRDHUP |
 #endif
                           POLLERR |
@@ -277,7 +277,7 @@ bool fionpoll_poll(struct fionobj * const obj)
 
                 // Check for error events.
                 if ((pfd->revents & POLLERR) ||
-#if defined(LINUX)
+#if defined(__linux__)
                     (pfd->revents & POLLRDHUP) ||
 #endif
                     (pfd->revents & POLLHUP) ||
