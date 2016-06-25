@@ -26,4 +26,11 @@ uint32_t utilsysctl_getcpusavail(void);
  */
 int32_t utilsysctl_getmaxudpsize(void);
 
+/**
+ * @brief Get the maximum socket buffer size.
+ *
+ * @return The maximum socket buffer size in bytes (-1 on error).
+ */
+int32_t utilsysctl_getmaxsockbufsize(void);
+
 #endif // _UTIL_SYSCTL_H_
