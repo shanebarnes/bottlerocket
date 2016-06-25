@@ -13,6 +13,9 @@
 #include "util_unit.h"
 
 #include <errno.h>
+#if defined(__linux__)
+    #include <fcntl.h>
+#endif
 #include <netinet/tcp.h>
 #include <string.h>
 #include <sys/types.h>
@@ -28,7 +31,7 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
 #if defined (__APPLE__) && defined(TCP_CONNECTION_INFO)
     struct tcp_connection_info optval;
     int32_t optname = TCP_CONNECTION_INFO;
-#elif defined (LINUX)
+#elif defined (__linux__)
     struct tcp_info optval;
     int32_t optname = TCP_INFO;
 #else
@@ -60,14 +63,14 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
         }
         else
         {
-#if (defined (__APPLE__) && defined(TCP_CONNECTION_INFO)) || defined (LINUX)
+#if (defined (__APPLE__) && defined(TCP_CONNECTION_INFO)) || defined (__linux__)
             info->state     = optval.tcpi_state;
             info->sndwscale = optval.tcpi_snd_wscale;
             info->rcvwscale = optval.tcpi_rcv_wscale;
             info->options   = optval.tcpi_options;
-            info->flags     = optval.tcpi_flags;
             info->rto       = optval.tcpi_rto;
     #if defined (__APPLE__) && defined(TCP_CONNECTION_INFO)
+            info->flags     = optval.tcpi_flags;
             info->mss       = optval.tcpi_maxseg;
             info->sndbuf    = optval.tcpi_snd_sbbytes;
             info->rcvwin    = optval.tcpi_rcv_wnd;
@@ -198,7 +201,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
     socklen_t socklen    = 0;
     bool      sockaccept = false;
     int32_t   sockfd     = -1;
-#if defined(LINUX)
+#if defined(__linux__)
     int32_t   flags      = 0;
 #endif
     uint64_t  ts         = 0;
@@ -214,7 +217,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
     else
     {
         socklen = sizeof(listener->addrpeer.sockaddr);
-#if defined(LINUX)
+#if defined(__linux__)
         flags = (listener->event.timeoutms > -1 ? O_NONBLOCK : 0);
 #endif
         // @todo If timeout is -1 (blocking), then the poll should occur in a
@@ -232,7 +235,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
 
         if (sockaccept == true)
         {
-#if defined(LINUX)
+#if defined(__linux__)
             if ((sockfd = accept4(listener->sockfd,
                                   (struct sockaddr *)&(listener->addrpeer.sockaddr),
                                   &socklen,
@@ -510,7 +513,7 @@ int32_t socktcp_send(struct sockobj * const obj,
     int32_t retval = -1;
     int32_t flags  = MSG_DONTWAIT;
 
-#if defined(LINUX)
+#if defined(__linux__)
     flags |= MSG_NOSIGNAL;
 #endif
 
