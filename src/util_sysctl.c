@@ -74,3 +74,29 @@ int32_t utilsysctl_getmaxudpsize(void)
     return retval;
 }
 
+/**
+ * @see See header file for interface comments.
+ */
+int32_t utilsysctl_getmaxsockbufsize(void)
+{
+    int32_t retval = -1;
+#if defined(__APPLE__)
+    size_t len = sizeof(retval);
+    int32_t mib[] = { CTL_KERN, KERN_IPC, KIPC_MAXSOCKBUF };
+
+    if (sysctl(mib,
+               sizeof(mib) / sizeof(int32_t),
+               &retval,
+               &len,
+               NULL,
+               0) == -1)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: failed to get maximum socket buffer size (%d)\n",
+                      __FUNCTION__,
+                      errno);
+    }
+#endif
+    return retval;
+}
+
