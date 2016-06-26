@@ -115,7 +115,7 @@ static void *modeperf_thread(void * arg)
                                       "%s: server accepted connection on %s\n",
                                       __FUNCTION__,
                                       server.addrself.sockaddrstr);
-                        socket.event.timeoutms = timeoutms;
+                        socket.event.timeoutms = 0;
                         form.sock = &socket;
                         formbytes = form.ops.form_head(&form);
                         output_if_std_send(form.dstbuf, formbytes);
