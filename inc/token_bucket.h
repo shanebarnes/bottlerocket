@@ -55,4 +55,18 @@ uint64_t tokenbucket_remove(struct tokenbucket * const tb,
 uint64_t tokenbucket_return(struct tokenbucket * const tb,
                             const uint64_t tokens);
 
+/**
+ * @brief Get the amount of delay in microseconds required before a minimum
+ *        number of tokens will be available from a token bucket.
+ *
+ * @param[in,out] tb     A pointer to a token bucket.
+ * @param[in]     tokens The minimum number of tokens that must be available
+ *                       from a token bucket.
+ *
+ * @return The amount of delay in microseconds required before a token bucket
+ *         will reach a certain size.
+ */
+uint64_t tokenbucket_delay(struct tokenbucket * const tb,
+                           const uint64_t tokens);
+
 #endif // _TOKEN_BUCKET_H_

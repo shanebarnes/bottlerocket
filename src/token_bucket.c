@@ -110,3 +110,31 @@ uint64_t tokenbucket_return(struct tokenbucket * const tb,
 
     return retval;
 }
+
+/**
+ * @see See header file for interface comments.
+ */
+uint64_t tokenbucket_delay(struct tokenbucket * const tb,
+                           const uint64_t tokens)
+{
+    uint64_t retval = 0;
+    uint64_t deficit = 0;
+
+    if (tb == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if ((tb->rate > 0) && (tb->size < tokens))
+        {
+            deficit = tokens - tb->size;
+
+            retval = deficit * UNIT_TIME_USEC / tb->rate;
+        }
+    }
+
+    return retval;
+}
