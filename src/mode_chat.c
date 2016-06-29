@@ -12,6 +12,7 @@
 #include "logger.h"
 #include "mode_chat.h"
 #include "output_if_std.h"
+#include "sock_mod.h"
 #include "sock_tcp.h"
 #include "sock_udp.h"
 #include "thread_obj.h"
@@ -51,31 +52,20 @@ static void *modechat_thread(void * arg)
         form.dstbuf = sendbuf;
         form.dstlen = sizeof(sendbuf);
 
-        if (opts->type == SOCK_STREAM)
-        {
-            socktcp_create(&server);
-        }
-        else
-        {
-            sockudp_create(&server);
-        }
-
         memcpy(server.conf.ipaddr, opts->ipaddr, sizeof(server.conf.ipaddr));
         server.conf.ipport = opts->ipport;
+        server.conf.timeoutms = timeoutms;
+        server.conf.family = opts->family;
+        server.conf.type = opts->type;
+        server.conf.model = SOCKOBJ_MODEL_SERVER;
 
-        if ((server.ops.sock_open(&server) == false) ||
-            (server.ops.sock_bind(&server) == false) ||
-            (server.ops.sock_listen(&server, 1) == false))
+        if (sockmod_init(&server) == false)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to listen on %s:%u\n",
                           __FUNCTION__,
                           server.conf.ipaddr,
                           server.conf.ipport);
-        }
-        else
-        {
-            server.event.timeoutms = timeoutms;
         }
 
         while (threadobj_isrunning(thread) == true)
