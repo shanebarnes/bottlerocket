@@ -118,7 +118,6 @@ uint64_t tokenbucket_delay(struct tokenbucket * const tb,
                            const uint64_t tokens)
 {
     uint64_t retval = 0;
-    uint64_t deficit = 0;
 
     if (tb == NULL)
     {
@@ -130,9 +129,7 @@ uint64_t tokenbucket_delay(struct tokenbucket * const tb,
     {
         if ((tb->rate > 0) && (tb->size < tokens))
         {
-            deficit = tokens - tb->size;
-
-            retval = deficit * UNIT_TIME_USEC / tb->rate;
+            retval = (tokens - tb->size) * UNIT_TIME_USEC / tb->rate;
         }
     }
 
