@@ -28,13 +28,28 @@ static struct args_obj *opts = NULL;
  */
 static void *modechat_thread(void * arg)
 {
+    bool exit = false;
     struct threadobj *thread = (struct threadobj *)arg;
     struct sockobj server, socket;
     struct formobj form;
-    //char    recvbuf[1024], sendbuf[4096];
-    char    recvbuf[65536], sendbuf[65536];
+    char recvbuf[65536], sendbuf[65536];
     int32_t count = 0, timeoutms = 500;
     int32_t recvbytes = 0, formbytes = 0;
+
+    memcpy(socket.conf.ipaddr, opts->ipaddr, sizeof(socket.conf.ipaddr));
+    socket.conf.ipport = opts->ipport;
+    socket.conf.timeoutms = 0;
+    socket.conf.timelimitusec = opts->timelimitusec;
+    socket.conf.datalimitbyte = opts->datalimitbyte;
+    socket.conf.family = opts->family;
+    socket.conf.type = opts->type;
+    socket.conf.model = SOCKOBJ_MODEL_CLIENT;
+    memcpy(server.conf.ipaddr, opts->ipaddr, sizeof(server.conf.ipaddr));
+    server.conf.ipport = opts->ipport;
+    server.conf.timeoutms = timeoutms;
+    server.conf.family = opts->family;
+    server.conf.type = opts->type;
+    server.conf.model = SOCKOBJ_MODEL_SERVER;
 
     if (thread == NULL)
     {
@@ -52,33 +67,21 @@ static void *modechat_thread(void * arg)
         form.dstbuf = sendbuf;
         form.dstlen = sizeof(sendbuf);
 
-        memcpy(server.conf.ipaddr, opts->ipaddr, sizeof(server.conf.ipaddr));
-        server.conf.ipport = opts->ipport;
-        server.conf.timeoutms = timeoutms;
-        server.conf.family = opts->family;
-        server.conf.type = opts->type;
-        server.conf.model = SOCKOBJ_MODEL_SERVER;
-
-        if (sockmod_init(&server) == false)
+        if (opts->arch == SOCKOBJ_MODEL_CLIENT)
         {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to listen on %s:%u\n",
-                          __FUNCTION__,
-                          server.conf.ipaddr,
-                          server.conf.ipport);
+            exit = !sockmod_init(&socket);
+        }
+        else
+        {
+            exit = !sockmod_init(&server);
         }
 
-        while (threadobj_isrunning(thread) == true)
+        while ((exit == false) && (threadobj_isrunning(thread) == true))
         {
             if (count <= 0)
             {
-                if (server.ops.sock_accept(&server, &socket) == true)
+                if (opts->arch == SOCKOBJ_MODEL_CLIENT)
                 {
-                    logger_printf(LOGGER_LEVEL_DEBUG,
-                                  "%s: server accepted connection on %s\n",
-                                  __FUNCTION__,
-                                  server.addrself.sockaddrstr);
-                    socket.event.timeoutms = timeoutms;
                     form.sock = &socket;
                     formbytes = form.ops.form_head(&form);
                     output_if_std_send(form.dstbuf, formbytes);
@@ -86,21 +89,43 @@ static void *modechat_thread(void * arg)
                 }
                 else
                 {
-                    form.sock = &server;
-                    formbytes = formobj_idle(&form);
-                    output_if_std_send(form.dstbuf, formbytes);
-                    formbytes = utilstring_concat(form.dstbuf,
-                                                  form.dstlen,
-                                                  "%c",
-                                                  '\r');
-                    output_if_std_send(form.dstbuf, formbytes);
+                    if (server.ops.sock_accept(&server, &socket) == true)
+                    {
+                        logger_printf(LOGGER_LEVEL_DEBUG,
+                                      "%s: server accepted connection on %s\n",
+                                      __FUNCTION__,
+                                      server.addrself.sockaddrstr);
+                        socket.event.timeoutms = timeoutms;
+                        form.sock = &socket;
+                        formbytes = form.ops.form_head(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                        count++;
+                    }
+                    else
+                    {
+                        form.sock = &server;
+                        formbytes = formobj_idle(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                        formbytes = utilstring_concat(form.dstbuf,
+                                                      form.dstlen,
+                                                      "%c",
+                                                      '\r');
+                        output_if_std_send(form.dstbuf, formbytes);
+                    }
+
+                    // @todo Exit if server socket has fatal error.
                 }
-
-
-                // @todo Exit if server socket has fatal error.
             }
             else
             {
+                if (opts->arch == SOCKOBJ_MODEL_CLIENT)
+                {
+                    if ((socket.state & SOCKOBJ_STATE_CONNECT) == 0)
+                    {
+                        socket.ops.sock_connect(&socket);
+                    }
+                }
+
                 recvbytes = socket.ops.sock_recv(&socket,
                                                  recvbuf,
                                                  sizeof(recvbuf) - 1);
@@ -121,6 +146,11 @@ static void *modechat_thread(void * arg)
                     count--;
                     formbytes = form.ops.form_foot(&form);
                     output_if_std_send(form.dstbuf, formbytes);
+
+                    if (opts->arch == SOCKOBJ_MODEL_CLIENT)
+                    {
+                        exit = true;
+                    }
                 }
 
                 if ((recvbytes = input_if_std_recv(recvbuf,
