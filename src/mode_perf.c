@@ -18,6 +18,7 @@
 #include "util_string.h"
 
 #include <string.h>
+#include <unistd.h>
 
 static struct threadobj thread;
 static struct args_obj *opts = NULL;
@@ -37,6 +38,7 @@ static void *modeperf_thread(void * arg)
     int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
 
     //??
+    uint64_t activetimeus = 0;
     uint64_t timeusec = 0;
     uint64_t buflen = 0;
 
@@ -98,6 +100,8 @@ static void *modeperf_thread(void * arg)
                 if (opts->arch == SOCKOBJ_MODEL_CLIENT)
                 {
                     form.sock = &client;
+                    formbytes = form.ops.form_head(&form);
+                    output_if_std_send(form.dstbuf, formbytes);
                     count++;
                     //formbytes = formobj_idle(&form);
                     //output_if_std_send(form.dstbuf, formbytes);
@@ -138,6 +142,14 @@ static void *modeperf_thread(void * arg)
             }
             else
             {
+                timeusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                              UNIT_TIME_USEC);
+
+                if (activetimeus == 0)
+                {
+                    activetimeus = timeusec;
+                }
+
                 if (opts->arch == SOCKOBJ_MODEL_CLIENT)
                 {
                     if ((client.state & SOCKOBJ_STATE_CONNECT) == 0)
@@ -179,10 +191,6 @@ static void *modeperf_thread(void * arg)
                     {
                         sendbytes = 0;
                     }
-
-                    ///?? Make sure time is only getting retrieved once per loop
-                    timeusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
-                                                  UNIT_TIME_USEC);
 
                     if ((opts->timelimitusec > 0) &&
                         ((timeusec - client.info.startusec) >= opts->timelimitusec))
@@ -227,13 +235,48 @@ static void *modeperf_thread(void * arg)
                     {
                         formbytes = form.ops.form_body(&form);
                         output_if_std_send(form.dstbuf, formbytes);
+
+                        // Prevent thread spin when no bytes are available.
+                        if (sendbytes == 0)
+                        {
+                            if (tb.rate > 0)
+                            {
+                                // @todo Replace with semaphore.
+                                usleep((uint32_t)tokenbucket_delay(&tb, opts->buflen * 8));
+                            }
+                            else if (timeusec - activetimeus > 2000)
+                            {
+                                client.event.timeoutms = 2;
+                                client.event.pevents = FIONOBJ_PEVENT_OUT;
+                            }
+                        }
+                        else
+                        {
+                            client.event.timeoutms = 0;
+                            client.event.pevents = FIONOBJ_PEVENT_IN;
+                            activetimeus = timeusec;
+                        }
                     }
                 }
                 else
                 {
-                    recvbytes = socket.ops.sock_recv(&socket,
-                                                     recvbuf,
-                                                     opts->buflen);
+                    buflen = tokenbucket_remove(&tb, opts->buflen * 8) / 8;
+
+                    if (buflen > 0)
+                    {
+                        recvbytes = socket.ops.sock_recv(&socket,
+                                                         recvbuf,
+                                                         buflen);
+                    }
+                    else
+                    {
+                        recvbytes = 0;
+                    }
+
+                    tokenbucket_return(&tb, recvbytes < 0 ?
+                                            0 :
+                                            buflen - (uint32_t)recvbytes);
+
                     if (recvbytes < 0)
                     {
                         formbytes = form.ops.form_foot(&form);
@@ -246,6 +289,25 @@ static void *modeperf_thread(void * arg)
                     {
                         formbytes = form.ops.form_body(&form);
                         output_if_std_send(form.dstbuf, formbytes);
+
+                        // Prevent thread spin when no bytes are available.
+                        if (recvbytes == 0)
+                        {
+                            if (tb.rate > 0)
+                            {
+                                // @todo Replace with semaphore.
+                                usleep((uint32_t)tokenbucket_delay(&tb, opts->buflen * 8));
+                            }
+                            else if (timeusec - activetimeus > 2000)
+                            {
+                                socket.event.timeoutms = 2;
+                            }
+                        }
+                        else
+                        {
+                            socket.event.timeoutms = 0;
+                            activetimeus = timeusec;
+                        }
                     }
                 }
             }
