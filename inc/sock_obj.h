@@ -211,6 +211,7 @@ struct sockobj_conf
 
 struct sockobj_flowstats
 {
+    int32_t  winsize;     // socket window size
     uint64_t passedcalls; // successful socket function call count
     uint64_t failedcalls; // failed socket function call count
     uint64_t totalbytes;  // total bytes passed to/from socket funcion

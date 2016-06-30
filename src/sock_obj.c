@@ -223,7 +223,7 @@ bool sockobj_open(struct sockobj * const obj)
     bool             retval   = false;
     int32_t          portsize = 0;
     struct addrinfo *anext    = NULL, ahints;
-    socklen_t        optval;
+    socklen_t        optlen, optval;
     char             ipport[6];
 
     if (obj == NULL)
@@ -263,13 +263,16 @@ bool sockobj_open(struct sockobj * const obj)
                 {
                     obj->ainfo = *anext;
 
-                    if (obj->conf.family == AF_INET6)
+                    if (obj->conf.model == SOCKOBJ_MODEL_SERVER)
                     {
-                        ((struct sockaddr_in6*)(obj->ainfo.ai_addr))->sin6_addr = in6addr_any;
-                    }
-                    else
-                    {
-                        ((struct sockaddr_in*)(obj->ainfo.ai_addr))->sin_addr.s_addr = INADDR_ANY;
+                        if (obj->conf.family == AF_INET6)
+                        {
+                            ((struct sockaddr_in6*)(obj->ainfo.ai_addr))->sin6_addr = in6addr_any;
+                        }
+                        else
+                        {
+                            ((struct sockaddr_in*)(obj->ainfo.ai_addr))->sin_addr.s_addr = INADDR_ANY;
+                        }
                     }
 
                     obj->addrself.sockaddr.ss_family = anext->ai_family;
@@ -285,6 +288,7 @@ bool sockobj_open(struct sockobj * const obj)
                               utilinet_getaddrfromstorage(&obj->addrpeer.sockaddr));
                     *utilinet_getportfromstorage(&obj->addrpeer.sockaddr) = htons(obj->conf.ipport);
 
+                    optlen = sizeof(obj->info.recv.winsize);
                     optval = 1;
                     obj->event.ops.fion_insertfd(&obj->event, obj->sockfd);
 
@@ -296,7 +300,7 @@ bool sockobj_open(struct sockobj * const obj)
                                       obj->sockfd,
                                       errno);
                     }
-                    // @todo - SO_REUSEPORT? SO_LINGER? SO_SNDBUF? SO_RCVBUF? etc
+                    // @todo - SO_REUSEPORT? SO_LINGER? etc
                     else if (setsockopt(obj->sockfd,
                                         SOL_SOCKET,
                                         SO_REUSEADDR,
@@ -325,6 +329,32 @@ bool sockobj_open(struct sockobj * const obj)
                         sockobj_close(obj);
                     }
 #endif
+                    else if (getsockopt(obj->sockfd,
+                                        SOL_SOCKET,
+                                        SO_RCVBUF,
+                                        &obj->info.recv.winsize,
+                                        &optlen) != 0)
+                    {
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: socket %d SO_RCVBUF option failed (%d)\n",
+                                      __FUNCTION__,
+                                      obj->sockfd,
+                                      errno);
+                        sockobj_close(obj);
+                    }
+                    else if (getsockopt(obj->sockfd,
+                                        SOL_SOCKET,
+                                        SO_SNDBUF,
+                                        &obj->info.send.winsize,
+                                        &optlen) != 0)
+                    {
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: socket %d SO_SNDBUF option failed (%d)\n",
+                                      __FUNCTION__,
+                                      obj->sockfd,
+                                      errno);
+                        sockobj_close(obj);
+                    }
                     else
                     {
                         obj->state = SOCKOBJ_STATE_OPEN;
