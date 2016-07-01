@@ -33,15 +33,16 @@ enum args_flag
     ARGS_FLAG_BIND      = 0x00020,
     ARGS_FLAG_BANDWIDTH = 0x00040,
     ARGS_FLAG_CLIENT    = 0x00080,
-    ARGS_FLAG_LEN       = 0x00100,
-    ARGS_FLAG_NUM       = 0x00200,
-    ARGS_FLAG_PORT      = 0x00400,
-    ARGS_FLAG_BACKLOG   = 0x00800,
-    ARGS_FLAG_SERVER    = 0x01000,
-    ARGS_FLAG_TIME      = 0x02000,
-    ARGS_FLAG_UDP       = 0x04000,
-    ARGS_FLAG_HELP      = 0x08000,
-    ARGS_FLAG_VERSION   = 0x10000
+    ARGS_FLAG_INTERVAL  = 0x00100,
+    ARGS_FLAG_LEN       = 0x00200,
+    ARGS_FLAG_NUM       = 0x00400,
+    ARGS_FLAG_PORT      = 0x00800,
+    ARGS_FLAG_BACKLOG   = 0x01000,
+    ARGS_FLAG_SERVER    = 0x02000,
+    ARGS_FLAG_TIME      = 0x04000,
+    ARGS_FLAG_UDP       = 0x08000,
+    ARGS_FLAG_HELP      = 0x10000,
+    ARGS_FLAG_VERSION   = 0x20000
 };
 
 struct tuple_element
@@ -514,6 +515,18 @@ static struct tuple_element options[] =
         args_copyipaddr
     },
     {
+        "--interval",
+        'i',
+        "time between periodic bandwidth reports",
+        "1s",
+        "100ms",
+        "1000y",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        args_copytime
+    },
+    {
         "--len",
         'l',
         "length of buffer to read or write",
@@ -897,6 +910,10 @@ bool args_parse(const int32_t argc,
                     break;
                 case 's':
                     args->arch = SOCKOBJ_MODEL_SERVER;
+                    if ((flags & ARGS_FLAG_NUM) == 0)
+                    {
+                        args->datalimitbyte = 0;
+                    }
                     break;
                 case 'p':
                     break;
