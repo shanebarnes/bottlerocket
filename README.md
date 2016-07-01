@@ -1,6 +1,18 @@
 # bottlerocket
 
-TODO: Write a project description
+| [Latest][tag-link] | [License][lic-link] |
+| :----------------: | :-----------------: |
+| ![tag-badge]       | ![lic-badge]        |
+
+[lic-badge]: https://img.shields.io/github/license/shanebarnes/bottlerocket.svg "License"
+[lic-link]: https://github.com/shanebarnes/bottlerocket/blob/master/LICENSE "License"
+[tag-badge]: https://img.shields.io/github/tag/shanebarnes/bottlerocket.svg "Latest"
+[tag-link]: https://github.com/shanebarnes/bottlerocket/releases "Latest"
+
+A multi-threaded network benchmarking tool capable of generating:
+     high traffic volumes,
+     large numbers of concurrent traffic flows, and
+     detailed network and traffic flow analytics.
 
 ## Build Status
 
