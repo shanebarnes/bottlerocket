@@ -357,6 +357,7 @@ bool sockobj_open(struct sockobj * const obj)
                     }
                     else
                     {
+                        tokenbucket_init(&obj->tb, obj->conf.ratelimitbps);
                         obj->state = SOCKOBJ_STATE_OPEN;
                         retval = true;
                     }

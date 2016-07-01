@@ -12,6 +12,7 @@
 
 #include "fion_obj.h"
 #include "system_types.h"
+#include "token_bucket.h"
 #include "vector.h"
 
 #include <netdb.h>
@@ -233,6 +234,7 @@ struct sockobj
     struct sockobj_info  info;
     struct sockobj_ops   ops;
     struct fionobj       event;
+    struct tokenbucket   tb;
     int32_t              sockfd;
     struct sockobj_addr  addrself,
                          addrpeer;
