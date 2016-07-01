@@ -295,6 +295,8 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                                   obj->sockfd,
                                   obj->addrself.sockaddrstr,
                                   obj->addrpeer.sockaddrstr);
+
+                    tokenbucket_init(&obj->tb, obj->conf.ratelimitbps);
                     obj->state = SOCKOBJ_STATE_OPEN | SOCKOBJ_STATE_CONNECT;
                     obj->info.startusec = ts;
                     retval = true;
