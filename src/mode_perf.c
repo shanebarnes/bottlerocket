@@ -82,12 +82,8 @@ static int32_t modeperf_call(int32_t (*call)(struct sockobj * const obj,
 
             len = tokenbucket_remove(&sock->tb, len * 8) / 8;
         }
-        else
-        {
-            len = 0;
-        }
     }
-    else if (opts->timelimitusec > 0)
+    else
     {
         len = tokenbucket_remove(&sock->tb, buflen * 8) / 8;
     }
@@ -98,8 +94,12 @@ static int32_t modeperf_call(int32_t (*call)(struct sockobj * const obj,
     }
     // @todo poll socket if buflen is zero?
 
-    if ((opts->timelimitusec > 0) &&
-        ((tsus - sock->info.startusec) >= opts->timelimitusec))
+    if (retval < 0)
+    {
+        sock->ops.sock_close(sock);
+    }
+    else if ((opts->timelimitusec > 0) &&
+             ((tsus - sock->info.startusec) >= opts->timelimitusec))
     {
         sock->ops.sock_close(sock);
     }
@@ -113,10 +113,6 @@ static int32_t modeperf_call(int32_t (*call)(struct sockobj * const obj,
                                   0 :
                                   len - (uint32_t)retval);
 
-    if (retval < 0)
-    {
-        sock->ops.sock_close(sock);
-    }
 
     return retval;
 }
