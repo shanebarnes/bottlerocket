@@ -849,7 +849,8 @@ bool args_parse(const int32_t argc,
         args_copyipport("5001", "5001", "5001", args);
         args_copydatalimit("1MB", "1MB", "1MB", args);
         args_copyratelimit("0bps", "0bps", "0bps", args);
-        args_copytime("0s", "0s", "0s", args);
+        //args_copytime("0s", "0s", "0s", args);
+        args->timelimitusec = 0;
         args_copybuflen("128kB", "128kB", "128kB", args);
 
         if (argc > 1)
