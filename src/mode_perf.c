@@ -283,9 +283,9 @@ static void *modeperf_thread(void * arg)
                                 usleep((uint32_t)tokenbucket_delay(&client.tb,
                                                                    opts->buflen * 8));
                             }
-                            else if (tsus - activetimeus > 2000)
+                            else if (tsus - activetimeus > 1000)
                             {
-                                client.event.timeoutms = 2;
+                                client.event.timeoutms = 1;
                                 client.event.pevents = FIONOBJ_PEVENT_OUT;
                             }
                         }
@@ -337,14 +337,18 @@ static void *modeperf_thread(void * arg)
                                 usleep((uint32_t)tokenbucket_delay(&socket.tb,
                                                                    opts->buflen * 8));
                             }
-                            else if (tsus - activetimeus > 2000)
+                            else if (tsus - activetimeus > 1000)
                             {
-                                socket.event.timeoutms = 2;
+                                socket.event.timeoutms = 1;
                             }
                         }
                         else
                         {
+#if defined(__linux__)
+                            socket.event.timeoutms = 1;
+#else
                             socket.event.timeoutms = 0;
+#endif
                             activetimeus = tsus;
                         }
                     }
