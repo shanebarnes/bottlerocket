@@ -27,7 +27,8 @@ bool logger_create(void)
 {
     bool retval = false;
 
-    lock = (struct mutexobj*)malloc(sizeof(struct mutexobj));
+    //@todo Replace with a read/write lock for multiple threads?
+    lock = malloc(sizeof(struct mutexobj));
 
     if (lock != NULL)
     {
