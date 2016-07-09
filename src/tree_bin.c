@@ -29,7 +29,7 @@ bool treebin_insert(const struct treebin tree,
     }
     else if (*node == NULL)
     {
-        *node = (struct treebin_node *)malloc(sizeof(struct treebin_node));
+        *node = malloc(sizeof(struct treebin_node));
 
         if (*node == NULL)
         {
