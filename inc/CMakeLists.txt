@@ -1,5 +1,6 @@
 set(BR_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/args.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/dlist.h
     ${CMAKE_CURRENT_SOURCE_DIR}/fion_obj.h
     ${CMAKE_CURRENT_SOURCE_DIR}/fion_poll.h
     ${CMAKE_CURRENT_SOURCE_DIR}/form_chat.h
@@ -7,7 +8,6 @@ set(BR_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/form_perf.h
     ${CMAKE_CURRENT_SOURCE_DIR}/input_if_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/input_if_std.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/list_dlink.h
     ${CMAKE_CURRENT_SOURCE_DIR}/logger.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_chat.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_perf.h

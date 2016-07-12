@@ -1,11 +1,11 @@
 set(BR_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/args.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/dlist.c
     ${CMAKE_CURRENT_SOURCE_DIR}/fion_poll.c
     ${CMAKE_CURRENT_SOURCE_DIR}/form_chat.c
     ${CMAKE_CURRENT_SOURCE_DIR}/form_obj.c
     ${CMAKE_CURRENT_SOURCE_DIR}/form_perf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/input_if_std.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/list_dlink.c
     ${CMAKE_CURRENT_SOURCE_DIR}/logger.c
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_chat.c
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_perf.c
