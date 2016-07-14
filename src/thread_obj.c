@@ -10,6 +10,7 @@
 #include "logger.h"
 #include "mutex_obj.h"
 #include "thread_obj.h"
+#include "util_mem.h"
 
 #include <errno.h>
 #include <signal.h>
@@ -36,7 +37,7 @@ bool threadobj_create(struct threadobj * const obj)
     }
     else
     {
-        obj->internal = malloc(sizeof(struct internals));
+        obj->internal = UTILMEM_MALLOC(struct internals, 1);
 
         if (obj->internal == NULL)
         {
@@ -98,7 +99,7 @@ bool threadobj_destroy(struct threadobj * const obj)
 
         mutexobj_destroy(&obj->internal->mutex);
         pthread_attr_destroy(&obj->attributes);
-        free(obj->internal);
+        UTILMEM_FREE(obj->internal);
         obj->internal = NULL;
         retval = true;
     }
