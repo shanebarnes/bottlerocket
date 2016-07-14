@@ -14,7 +14,7 @@
 
 #define UTILMEM_FREE(ptr) (free(ptr))
 
-#if defined(__cpluscplus)
+#if defined(__cplusplus)
     #define UTILMEM_MALLOC(type, count) ((type*)malloc(sizeof(type) * count))
 #else
     #define UTILMEM_MALLOC(type, count) (malloc(sizeof(type) * count))
