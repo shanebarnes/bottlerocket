@@ -9,6 +9,7 @@
 
 #include "logger.h"
 #include "util_date.h"
+#include "util_mem.h"
 #include "util_string.h"
 #include "mutex_obj.h"
 
@@ -28,7 +29,7 @@ bool logger_create(void)
     bool retval = false;
 
     //@todo Replace with a read/write lock for multiple threads?
-    lock = (struct mutexobj *)malloc(sizeof(struct mutexobj));
+    lock = UTILMEM_MALLOC(struct mutexobj, 1);
 
     if (lock != NULL)
     {
@@ -48,7 +49,7 @@ bool logger_destroy(void)
     if (lock != NULL)
     {
         retval = mutexobj_destroy(lock);
-        free(lock);
+        UTILMEM_FREE(lock);
         lock = NULL;
     }
 
