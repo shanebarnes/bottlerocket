@@ -9,6 +9,7 @@
 
 #include "logger.h"
 #include "tree_bin.h"
+#include "util_mem.h"
 
 #include <errno.h>
 
@@ -29,7 +30,7 @@ bool treebin_insert(const struct treebin tree,
     }
     else if (*node == NULL)
     {
-        *node = malloc(sizeof(struct treebin_node));
+        *node = UTILMEM_MALLOC(struct treebin_node, 1);
 
         if (*node == NULL)
         {
@@ -86,7 +87,7 @@ bool treebin_delete(const struct treebin tree,
         // @todo Remove node without removing children or sub-trees.
         treebin_delete(tree, &((*node)->left), key);
         treebin_delete(tree, &((*node)->right), key);
-        free(*node);
+        UTILMEM_FREE(*node);
         *node = NULL;
         retval = true;
     }
