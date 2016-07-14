@@ -12,6 +12,12 @@
 
 #include <stdlib.h>
 
+#if defined(__cplusplus)
+    #define UTILMEM_CALLOC(type, count) ((type*)calloc(count, sizeof(type)))
+#else
+    #define UTILMEM_CALLOC(type, count) (calloc(count, sizeof(type)))
+#endif
+
 #define UTILMEM_FREE(ptr) (free(ptr))
 
 #if defined(__cplusplus)
