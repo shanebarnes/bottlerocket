@@ -263,6 +263,15 @@ bool sockobj_getaddrpeer(struct sockobj * const obj);
 bool sockobj_getaddrself(struct sockobj * const obj);
 
 /**
+ * @brief Determine if an error number is fatal.
+ *
+ * @param[in] err An error number set by a system call.
+ *
+ * @return True if the error number is fatal.
+ */
+bool sockobj_iserrfatal(const int32_t err);
+
+/**
  * @see sock_create() for interface comments.
  */
 bool sockobj_create(struct sockobj * const obj);

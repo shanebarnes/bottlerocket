@@ -29,34 +29,34 @@
  */
 static char *sockobj_getoptname(const uint32_t name)
 {
-    char *retval = NULL;
+    char *ret = NULL;
 
     switch (name)
     {
         case SO_REUSEADDR:
-            retval = "SO_REUSEADDR";
+            ret = "SO_REUSEADDR";
             break;
         case SO_KEEPALIVE:
-            retval = "SO_KEEPALIVE";
+            ret = "SO_KEEPALIVE";
             break;
         case SO_LINGER:
-            retval = "SO_LINGER";
+            ret = "SO_LINGER";
             break;
 #if defined(SO_REUSEPORT)
         case SO_REUSEPORT:
-            retval = "SO_REUSEPORT";
+            ret = "SO_REUSEPORT";
             break;
 #endif
 #if defined(__APPLE__)
         case SO_NOSIGPIPE:
-            retval = "SO_NOSIGPIPE";
+            ret = "SO_NOSIGPIPE";
             break;
 #endif
         default:
-            retval = "";
+            ret = "";
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -64,7 +64,7 @@ static char *sockobj_getoptname(const uint32_t name)
  */
 bool sockobj_getaddrpeer(struct sockobj * const obj)
 {
-    bool      retval  = false;
+    bool ret = false;
     socklen_t socklen = 0;
 
     if ((obj == NULL) || ((socklen = sizeof(obj->addrpeer.sockaddr)) == 0))
@@ -97,10 +97,10 @@ bool sockobj_getaddrpeer(struct sockobj * const obj)
                  obj->addrpeer.ipaddr,
                  obj->addrpeer.ipport);
 
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -108,7 +108,7 @@ bool sockobj_getaddrpeer(struct sockobj * const obj)
  */
 bool sockobj_getaddrself(struct sockobj * const obj)
 {
-    bool      retval  = false;
+    bool ret = false;
     socklen_t socklen = 0;
 
     if ((obj == NULL) || ((socklen = sizeof(obj->addrself.sockaddr)) == 0))
@@ -141,10 +141,44 @@ bool sockobj_getaddrself(struct sockobj * const obj)
                  obj->addrself.ipaddr,
                  obj->addrself.ipport);
 
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool sockobj_iserrfatal(const int32_t err)
+{
+    bool ret = false;
+
+    switch (err)
+    {
+        // Fatal errors for both TCP and UDP sockets.
+        case EBADF:
+        case ECONNRESET:
+        case EHOSTUNREACH:
+        case EPIPE:
+        case ENOTSOCK:
+            ret = true;
+            break;
+        // Valid non-fatal errors.
+        case EACCES:
+        case EAGAIN:
+        case EFAULT:
+        case EINTR:
+        case EMSGSIZE:
+        case ENETDOWN:
+        case ENETUNREACH:
+        case ENOBUFS:
+        case EOPNOTSUPP:
+        default:
+            break;
+    }
+
+    return ret;
 }
 
 /**
@@ -152,7 +186,7 @@ bool sockobj_getaddrself(struct sockobj * const obj)
  */
 bool sockobj_create(struct sockobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (obj == NULL)
     {
@@ -173,11 +207,11 @@ bool sockobj_create(struct sockobj * const obj)
         else
         {
             obj->event.pevents = FIONOBJ_PEVENT_IN;
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -185,7 +219,7 @@ bool sockobj_create(struct sockobj * const obj)
  */
 bool sockobj_destroy(struct sockobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (obj == NULL)
     {
@@ -195,7 +229,7 @@ bool sockobj_destroy(struct sockobj * const obj)
     }
     else
     {
-        retval = obj->event.ops.fion_destroy(&obj->event);
+        ret = obj->event.ops.fion_destroy(&obj->event);
 
         obj->ops.sock_create   = NULL;
         obj->ops.sock_destroy  = NULL;
@@ -212,7 +246,7 @@ bool sockobj_destroy(struct sockobj * const obj)
         obj->ops.sock_shutdown = NULL;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -220,7 +254,7 @@ bool sockobj_destroy(struct sockobj * const obj)
  */
 bool sockobj_open(struct sockobj * const obj)
 {
-    bool             retval   = false;
+    bool             ret      = false;
     int32_t          portsize = 0;
     struct addrinfo *anext    = NULL, ahints;
     socklen_t        optlen, optval;
@@ -359,7 +393,7 @@ bool sockobj_open(struct sockobj * const obj)
                     {
                         tokenbucket_init(&obj->tb, obj->conf.ratelimitbps);
                         obj->state = SOCKOBJ_STATE_OPEN;
-                        retval = true;
+                        ret = true;
                     }
 
                     break;
@@ -375,7 +409,7 @@ bool sockobj_open(struct sockobj * const obj)
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -383,7 +417,7 @@ bool sockobj_open(struct sockobj * const obj)
  */
 bool sockobj_close(struct sockobj * const obj)
 {
-    int32_t retval = false;
+    int32_t ret = false;
 
     if (obj == NULL)
     {
@@ -413,7 +447,7 @@ bool sockobj_close(struct sockobj * const obj)
         {
             obj->info.stopusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
                                                     UNIT_TIME_USEC);
-            retval = true;
+            ret = true;
         }
 
         if (obj->alist != NULL)
@@ -425,7 +459,7 @@ bool sockobj_close(struct sockobj * const obj)
         obj->state = SOCKOBJ_STATE_CLOSE;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -433,7 +467,7 @@ bool sockobj_close(struct sockobj * const obj)
  */
 bool sockobj_bind(struct sockobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (obj == NULL)
     {
@@ -447,7 +481,7 @@ bool sockobj_bind(struct sockobj * const obj)
     {
         sockobj_getaddrself(obj);
         obj->state |= SOCKOBJ_STATE_BIND;
-        retval = true;
+        ret = true;
     }
     else
     {
@@ -458,7 +492,7 @@ bool sockobj_bind(struct sockobj * const obj)
                       errno);
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -466,7 +500,7 @@ bool sockobj_bind(struct sockobj * const obj)
  */
 bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
 {
-    bool retval = false;
+    bool ret = false;
     int32_t errval = 0;
     struct sockobj_opt *opt = NULL;
     uint32_t i;
@@ -479,7 +513,7 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
     }
     else
     {
-        retval = true;
+        ret = true;
 
         for (i = 0; i < vector_getsize(opts); i++)
         {
@@ -492,7 +526,7 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
                               __FUNCTION__,
                               obj->sockfd,
                               i);
-                retval = false;
+                ret = false;
             }
             else
             {
@@ -510,13 +544,13 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
                                   obj->sockfd,
                                   sockobj_getoptname(opt->name),
                                   errno);
-                    retval = false;
+                    ret = false;
                 }
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -524,8 +558,8 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
  */
 bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
 {
-    bool retval = false;
-    int32_t errval = 0;
+    bool ret = false;
+    int32_t err = 0;
     struct sockobj_opt *opt = NULL;
     uint32_t i;
 
@@ -537,7 +571,7 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
     }
     else
     {
-        retval = true;
+        ret = true;
 
         for (i = 0; i < vector_getsize(opts); i++)
         {
@@ -550,17 +584,17 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
                               __FUNCTION__,
                               obj->sockfd,
                               i);
-                retval = false;
+                ret = false;
             }
             else
             {
-                errval = setsockopt(obj->sockfd,
-                                    opt->level,
-                                    opt->name,
-                                    &opt->val,
-                                    sizeof(opt->val));
+                err = setsockopt(obj->sockfd,
+                                 opt->level,
+                                 opt->name,
+                                 &opt->val,
+                                 sizeof(opt->val));
 
-                if (errval != 0)
+                if (err != 0)
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %d '%s' option failed (%d)\n",
@@ -568,13 +602,13 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
                                   obj->sockfd,
                                   sockobj_getoptname(opt->name),
                                   errno);
-                    retval = false;
+                    ret = false;
                 }
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -582,7 +616,7 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
  */
 bool sockobj_setstats(struct sockobj_flowstats * const stats, const int32_t len)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (stats == NULL)
     {
@@ -617,8 +651,8 @@ bool sockobj_setstats(struct sockobj_flowstats * const stats, const int32_t len)
             stats->failedcalls++;
         }
 
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
