@@ -8,6 +8,7 @@
  */
 
 #include "logger.h"
+#include "util_mem.h"
 #include "vector.h"
 
 #include <errno.h>
@@ -45,7 +46,7 @@ bool vector_create(struct vector * const vector, const uint32_t size)
         }
         else
         {
-            vector->internal->array = malloc(sizeof(void *) * 1);
+            vector->internal->array = UTILMEM_MALLOC(void*, 1);
 
             if (vector->internal->array != NULL)
             {
@@ -77,11 +78,11 @@ bool vector_destroy(struct vector * const vector)
         {
             if (vector->internal->array != NULL)
             {
-                free(vector->internal->array);
+                UTILMEM_FREE(vector->internal->array);
                 vector->internal->array = NULL;
             }
 
-            free(vector->internal);
+            UTILMEM_FREE(vector->internal);
             vector->internal = NULL;
         }
 
