@@ -9,6 +9,7 @@
 
 #include "dlist.h"
 #include "logger.h"
+#include "util_mem.h"
 
 #include <errno.h>
 
@@ -30,7 +31,7 @@ bool dlist_insertafter(struct dlist * const list,
     }
     else
     {
-        new = malloc(sizeof(struct dlist_node));
+        new = UTILMEM_MALLOC(struct dlist_node, 1);
 
         if (new == NULL)
         {
@@ -90,7 +91,7 @@ bool dlist_insertbefore(struct dlist * const list,
     }
     else
     {
-        new = malloc(sizeof(struct dlist_node));
+        new = UTILMEM_MALLOC(struct dlist_node, 1);
 
         if (new == NULL)
         {
@@ -183,7 +184,7 @@ bool dlist_remove(struct dlist * const list, struct dlist_node * const node)
             (node->prev)->next = node->next;
         }
 
-        free(node);
+        UTILMEM_FREE(node);
 
         list->size--;
         ret = true;
