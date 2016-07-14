@@ -9,6 +9,7 @@
 
 #include "fion_poll.h"
 #include "logger.h"
+#include "util_mem.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -75,7 +76,7 @@ bool fionpoll_destroy(struct fionobj * const obj)
         {
             if (vector_getval(&obj->fds, 0) != NULL)
             {
-                free(vector_getval(&obj->fds, 0));
+                UTILMEM_FREE(vector_getval(&obj->fds, 0));
                 vector_delete(&obj->fds, 0);
             }
         }
@@ -127,7 +128,7 @@ bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
 
         if (found == false)
         {
-            pfd = malloc(sizeof(struct pollfd));
+            pfd = UTILMEM_MALLOC(struct pollfd, 1);
             pfd->fd = fd;
             retval = vector_inserttail(&obj->fds, pfd);
         }
@@ -173,7 +174,7 @@ bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd)
         }
         else
         {
-            free(pfd);
+            UTILMEM_FREE(pfd);
             retval = vector_delete(&obj->fds, i);
         }
     }
