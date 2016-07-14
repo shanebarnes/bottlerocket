@@ -26,8 +26,8 @@
  */
 bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
 {
-    bool retval = false;
-    int32_t errval = -1;
+    bool ret = false;
+    int32_t err = -1;
 #if defined (__APPLE__) && defined(TCP_CONNECTION_INFO)
     struct tcp_connection_info optval;
     int32_t optname = TCP_CONNECTION_INFO;
@@ -48,13 +48,13 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
     }
     else
     {
-        errval = getsockopt(fd,
-                            IPPROTO_TCP,
-                            optname,
-                            &optval,
-                            (socklen_t *)&optlen);
+        err = getsockopt(fd,
+                         IPPROTO_TCP,
+                         optname,
+                         &optval,
+                         (socklen_t *)&optlen);
 
-        if (errval != 0)
+        if (err != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to get TCP info (%d)\n",
@@ -89,12 +89,12 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
             info->ssthresh  = optval.tcpi_snd_ssthresh;
             info->cwnd      = optval.tcpi_snd_cwnd;
 
-            retval = true;
+            ret = true;
 #endif
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -102,7 +102,7 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
  */
 bool socktcp_create(struct sockobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (obj == NULL)
     {
@@ -130,11 +130,11 @@ bool socktcp_create(struct sockobj * const obj)
 
             obj->conf.type = SOCK_STREAM;
 
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -142,7 +142,7 @@ bool socktcp_create(struct sockobj * const obj)
  */
 bool socktcp_destroy(struct sockobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     if ((obj == NULL) || (obj->conf.type != SOCK_STREAM))
     {
@@ -152,10 +152,10 @@ bool socktcp_destroy(struct sockobj * const obj)
     }
     else
     {
-        retval = obj->ops.sock_destroy(obj);
+        ret = obj->ops.sock_destroy(obj);
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -163,7 +163,7 @@ bool socktcp_destroy(struct sockobj * const obj)
  */
 bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
 {
-    bool retval = false;
+    bool ret = false;
 
     if ((obj == NULL) || (obj->conf.type != SOCK_STREAM))
     {
@@ -176,7 +176,7 @@ bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
     {
         obj->state |= SOCKOBJ_STATE_LISTEN;
         sockobj_getaddrself(obj);
-        retval = true;
+        ret = true;
     }
     else
     {
@@ -189,7 +189,7 @@ bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
                       errno);
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -197,7 +197,7 @@ bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
  */
 bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
 {
-    bool      retval     = false;
+    bool      ret        = false;
     socklen_t socklen    = 0;
     bool      sockaccept = false;
     int32_t   sockfd     = -1;
@@ -299,7 +299,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                     tokenbucket_init(&obj->tb, obj->conf.ratelimitbps);
                     obj->state = SOCKOBJ_STATE_OPEN | SOCKOBJ_STATE_CONNECT;
                     obj->info.startusec = ts;
-                    retval = true;
+                    ret = true;
                 }
             }
             else
@@ -313,7 +313,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -321,7 +321,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
  */
 bool socktcp_connect(struct sockobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     if ((obj == NULL) || (obj->conf.type != SOCK_STREAM))
     {
@@ -338,7 +338,7 @@ bool socktcp_connect(struct sockobj * const obj)
                     obj->ainfo.ai_addr,
                     obj->ainfo.ai_addrlen) == 0)
         {
-            retval = true;
+            ret = true;
         }
         else
         {
@@ -361,7 +361,7 @@ bool socktcp_connect(struct sockobj * const obj)
                     if (((obj->event.revents & FIONOBJ_REVENT_ERROR) == 0) &&
                         (obj->event.revents & FIONOBJ_REVENT_OUTREADY))
                     {
-                        retval = true;
+                        ret = true;
                     }
                 }
 
@@ -370,7 +370,7 @@ bool socktcp_connect(struct sockobj * const obj)
             }
             else if (errno == EISCONN)
             {
-                retval = true;
+                ret = true;
             }
             else if (errno == EALREADY)
             {
@@ -389,7 +389,7 @@ bool socktcp_connect(struct sockobj * const obj)
             }
         }
 
-        if (retval == true)
+        if (ret == true)
         {
             obj->state |= SOCKOBJ_STATE_CONNECT;
 
@@ -398,7 +398,7 @@ bool socktcp_connect(struct sockobj * const obj)
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -408,8 +408,8 @@ int32_t socktcp_recv(struct sockobj * const obj,
                      void * const buf,
                      const uint32_t len)
 {
-    int32_t retval = -1;
-    int32_t flags  = MSG_DONTWAIT;
+    int32_t ret   = -1;
+    int32_t flags = MSG_DONTWAIT;
 
     if ((obj == NULL) || (buf == NULL))
     {
@@ -419,90 +419,73 @@ int32_t socktcp_recv(struct sockobj * const obj,
     }
     else
     {
-        retval = recv(obj->sockfd, buf, len, flags);
-        sockobj_setstats(&obj->info.recv, retval);
+        ret = recv(obj->sockfd, buf, len, flags);
+        sockobj_setstats(&obj->info.recv, ret);
 
-        if (retval > 0)
+        if (ret > 0)
         {
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %d received %d bytes\n",
                           __FUNCTION__,
                           obj->sockfd,
-                          retval);
+                          ret);
         }
-        // Check for socket errors if receive failed.
         else
         {
-            switch (errno)
+            if (sockobj_iserrfatal(errno) == true)
             {
-                // Fatal errors.
-                case EBADF:
-                case ECONNRESET:
-                case EHOSTUNREACH:
-                case EPIPE:
-                case ENOTSOCK:
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %d fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  obj->sockfd,
-                                  errno);
-                    retval = -1;
-                    break;
-                // Non-fatal errors.
-                case EACCES:
-                case EAGAIN:
-                case EFAULT:
-                case EINTR:
-                case EMSGSIZE:
-                case ENETDOWN:
-                case ENETUNREACH:
-                case ENOBUFS:
-                case EOPNOTSUPP:
-                default:
-                    logger_printf(LOGGER_LEVEL_TRACE,
-                                  "%s: socket %d non-fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  obj->sockfd,
-                                  errno);
-                    retval = 0;
-                    break;
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d fatal error (%d)\n",
+                              __FUNCTION__,
+                              obj->sockfd,
+                              errno);
+                ret = -1;
+            }
+            else
+            {
+                logger_printf(LOGGER_LEVEL_TRACE,
+                              "%s: socket %d non-fatal error (%d)\n",
+                              __FUNCTION__,
+                              obj->sockfd,
+                              errno);
+                ret = 0;
             }
 
-            if (retval == 0)
+            if (ret == 0)
             {
                 if (obj->event.ops.fion_poll(&obj->event) == false)
                 {
-                    retval = -1;
+                    ret = -1;
                 }
                 else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
                 {
-                    retval = -1;
+                    ret = -1;
                 }
                 else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
                 {
-                    retval = recv(obj->sockfd, buf, len, flags);
-                    sockobj_setstats(&obj->info.recv, retval);
+                    ret = recv(obj->sockfd, buf, len, flags);
+                    sockobj_setstats(&obj->info.recv, ret);
 
                     // Remote peer is closed if input is ready but no bytes are
                     // received (EOF).
-                    if (retval > 0)
+                    if (ret > 0)
                     {
                         logger_printf(LOGGER_LEVEL_TRACE,
                                       "%s: socket %d received %d bytes\n",
                                       __FUNCTION__,
                                       obj->sockfd,
-                                      retval);
+                                      ret);
                     }
                     else
                     {
-                        retval = -1;
+                        ret = -1;
                     }
                 }
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -512,8 +495,8 @@ int32_t socktcp_send(struct sockobj * const obj,
                      void * const buf,
                      const uint32_t len)
 {
-    int32_t retval = -1;
-    int32_t flags  = MSG_DONTWAIT;
+    int32_t ret   = -1;
+    int32_t flags = MSG_DONTWAIT;
 
 #if defined(__linux__)
     flags |= MSG_NOSIGNAL;
@@ -527,70 +510,53 @@ int32_t socktcp_send(struct sockobj * const obj,
     }
     else
     {
-        retval = send(obj->sockfd, buf, len, flags);
-        sockobj_setstats(&obj->info.send, retval);
+        ret = send(obj->sockfd, buf, len, flags);
+        sockobj_setstats(&obj->info.send, ret);
 
-        if (retval > 0)
+        if (ret > 0)
         {
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %d sent %d bytes\n",
                           __FUNCTION__,
                           obj->sockfd,
-                          retval);
+                          ret);
         }
-        // Check for socket errors if send failed.
         else
         {
-            switch (errno)
+            if (sockobj_iserrfatal(errno) == true)
             {
-                // Fatal errors.
-                case EBADF:
-                case ECONNRESET:
-                case EHOSTUNREACH:
-                case EPIPE:
-                case ENOTSOCK:
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %d fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  obj->sockfd,
-                                  errno);
-                    retval = -1;
-                    break;
-                // Non-fatal errors.
-                case EACCES:
-                case EAGAIN:
-                case EFAULT:
-                case EINTR:
-                case EMSGSIZE:
-                case ENETDOWN:
-                case ENETUNREACH:
-                case ENOBUFS:
-                case EOPNOTSUPP:
-                default:
-                    logger_printf(LOGGER_LEVEL_TRACE,
-                                  "%s: socket %d non-fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  obj->sockfd,
-                                  errno);
-                    retval = 0;
-                    break;
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d fatal error (%d)\n",
+                              __FUNCTION__,
+                              obj->sockfd,
+                              errno);
+                ret = -1;
+            }
+            else
+            {
+                logger_printf(LOGGER_LEVEL_TRACE,
+                              "%s: socket %d non-fatal error (%d)\n",
+                              __FUNCTION__,
+                              obj->sockfd,
+                              errno);
+                ret = 0;
             }
 
-            if (retval == 0)
+            if (ret == 0)
             {
                 if (obj->event.ops.fion_poll(&obj->event) == false)
                 {
-                    retval = -1;
+                    ret = -1;
                 }
                 else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
                 {
-                    retval = -1;
+                    ret = -1;
                 }
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -598,7 +564,7 @@ int32_t socktcp_send(struct sockobj * const obj,
  */
 bool socktcp_shutdown(struct sockobj * const obj, const int32_t how)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (obj == NULL)
     {
@@ -618,9 +584,9 @@ bool socktcp_shutdown(struct sockobj * const obj, const int32_t how)
         }
         else
         {
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
