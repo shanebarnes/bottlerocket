@@ -35,26 +35,26 @@
  */
 static int32_t sockudp_getmaxmsgsize(struct sockobj * const obj)
 {
-    int32_t retval = -1;
+    int32_t ret = -1;
     int32_t mtu = utilioctl_getifmtubyaddr((struct sockaddr_in*)&(obj->addrself.sockaddr));
     int32_t minhdrlen = 28; // IPv4 header (20) + UDP header (8)
 
     if (mtu > minhdrlen)
     {
-        retval = mtu - minhdrlen;
+        ret = mtu - minhdrlen;
 #if defined(__APPLE__)
         // The maximum message size may be smaller than the network interface
         // MTU-derived value (see sysctl net.inet.udp.maxdgram).
         int32_t size = utilsysctl_getmaxudpsize();
 
-        if ((size > -1) && (size < retval))
+        if ((size > -1) && (size < ret))
         {
-            retval = size;
+            ret = size;
         }
 #endif
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -62,7 +62,7 @@ static int32_t sockudp_getmaxmsgsize(struct sockobj * const obj)
  */
 bool sockudp_create(struct sockobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (obj == NULL)
     {
@@ -90,11 +90,11 @@ bool sockudp_create(struct sockobj * const obj)
 
             obj->conf.type = SOCK_DGRAM;
 
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -102,7 +102,7 @@ bool sockudp_create(struct sockobj * const obj)
  */
 bool sockudp_destroy(struct sockobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     if ((obj == NULL) || (obj->conf.type != SOCK_DGRAM))
     {
@@ -112,10 +112,10 @@ bool sockudp_destroy(struct sockobj * const obj)
     }
     else
     {
-        retval = obj->ops.sock_destroy(obj);
+        ret = obj->ops.sock_destroy(obj);
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -123,7 +123,7 @@ bool sockudp_destroy(struct sockobj * const obj)
  */
 bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
 {
-    bool retval = false;
+    bool ret = false;
 
     // @todo Consider using this API to create the size of the UDP "connection"
     //       poll.
@@ -138,10 +138,10 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
     }
     else
     {
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -150,7 +150,7 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
 bool sockudp_accept(struct sockobj * const listener,
                     struct sockobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     // @todo Consider using this API to poll for datagrams available to be read.
     //       Once read, the datagrams could be filtered and associated with the
@@ -180,12 +180,12 @@ bool sockudp_accept(struct sockobj * const listener,
                 listener->ops.sock_open(obj);
                 obj->sockfd = listener->sockfd;
 
-                retval = true;
+                ret = true;
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -193,7 +193,7 @@ bool sockudp_accept(struct sockobj * const listener,
  */
 bool sockudp_connect(struct sockobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     if ((obj == NULL) || (obj->conf.type != SOCK_DGRAM))
     {
@@ -218,7 +218,7 @@ bool sockudp_connect(struct sockobj * const obj)
                     obj->ainfo.ai_addrlen) == 0)
         {
             obj->state |= SOCKOBJ_STATE_CONNECT;
-            retval = true;
+            ret = true;
 
             if (sockobj_getaddrself(obj) == false)
             {
@@ -238,7 +238,7 @@ bool sockudp_connect(struct sockobj * const obj)
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -248,7 +248,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
                      void * const buf,
                      const uint32_t len)
 {
-    int32_t   retval  = -1;
+    int32_t   ret     = -1;
     int32_t   flags   = MSG_DONTWAIT;
     socklen_t socklen = 0;
 
@@ -262,20 +262,20 @@ int32_t sockudp_recv(struct sockobj * const obj,
     {
         if (obj->state & SOCKOBJ_STATE_CONNECT)
         {
-            retval = recv(obj->sockfd, buf, len, flags);
+            ret = recv(obj->sockfd, buf, len, flags);
         }
         else
         {
             socklen = sizeof(obj->addrpeer.sockaddr);
-            retval = recvfrom(obj->sockfd,
+            ret = recvfrom(obj->sockfd,
                               buf,
                               len,
                               flags,
                               (struct sockaddr *)&(obj->addrpeer.sockaddr),
                               &socklen);
-            sockobj_setstats(&obj->info.recv, retval);
+            sockobj_setstats(&obj->info.recv, ret);
 
-            if (retval > 0)
+            if (ret > 0)
             {
                 if ((obj->state & SOCKOBJ_STATE_CONNECT) == 0)
                 {
@@ -290,64 +290,47 @@ int32_t sockudp_recv(struct sockobj * const obj,
                               "%s: socket %d received %d bytes from %s:%u\n",
                               __FUNCTION__,
                               obj->sockfd,
-                              retval,
+                              ret,
                               obj->addrpeer.ipaddr,
                               obj->addrpeer.ipport);
             }
-            // Check for socket errors if receive failed.
             else
             {
-                switch (errno)
+                if (sockobj_iserrfatal(errno) == true)
                 {
-                    // Fatal errors.
-                    case EBADF:
-                    case ECONNRESET:
-                    case EHOSTUNREACH:
-                    case EPIPE:
-                    case ENOTSOCK:
-                        logger_printf(LOGGER_LEVEL_ERROR,
-                                      "%s: socket %d fatal error (%d)\n",
-                                      __FUNCTION__,
-                                      obj->sockfd,
-                                      errno);
-                        retval = -1;
-                        break;
-                    // Non-fatal errors.
-                    case EACCES:
-                    case EAGAIN:
-                    case EFAULT:
-                    case EINTR:
-                    case EMSGSIZE:
-                    case ENETDOWN:
-                    case ENETUNREACH:
-                    case ENOBUFS:
-                    case EOPNOTSUPP:
-                    default:
-                        logger_printf(LOGGER_LEVEL_TRACE,
-                                      "%s: socket %d non-fatal error (%d)\n",
-                                      __FUNCTION__,
-                                      obj->sockfd,
-                                      errno);
-                        retval = 0;
-                        break;
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: socket %d fatal error (%d)\n",
+                                  __FUNCTION__,
+                                  obj->sockfd,
+                                  errno);
+                    ret = -1;
+                }
+                else
+                {
+                    logger_printf(LOGGER_LEVEL_TRACE,
+                                  "%s: socket %d non-fatal error (%d)\n",
+                                  __FUNCTION__,
+                                  obj->sockfd,
+                                  errno);
+                    ret = 0;
                 }
 
-                if (retval == 0)
+                if (ret == 0)
                 {
                     if (obj->event.ops.fion_poll(&obj->event) == false)
                     {
-                        retval = -1;
+                        ret = -1;
                     }
                     else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
                     {
-                        retval = -1;
+                        ret = -1;
                     }
                 }
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -357,8 +340,8 @@ int32_t sockudp_send(struct sockobj * const obj,
                      void * const buf,
                      const uint32_t len)
 {
-    int32_t retval = -1;
-    int32_t flags  = MSG_DONTWAIT;
+    int32_t ret   = -1;
+    int32_t flags = MSG_DONTWAIT;
 #if defined(__linux__)
     flags |= MSG_NOSIGNAL;
 #endif
@@ -375,11 +358,11 @@ int32_t sockudp_send(struct sockobj * const obj,
         {
             // sendto() could be used if the last two arguments were set to NULL
             // and 0, respectively.
-            retval = send(obj->sockfd, buf, len, flags);
+            ret = send(obj->sockfd, buf, len, flags);
         }
         else
         {
-            retval = sendto(obj->sockfd,
+            ret = sendto(obj->sockfd,
                             buf,
                             len,
                             flags,
@@ -387,95 +370,82 @@ int32_t sockudp_send(struct sockobj * const obj,
                             sizeof(obj->addrpeer.sockaddr));
         }
 
-        sockobj_setstats(&obj->info.send, retval);
+        sockobj_setstats(&obj->info.send, ret);
 
-        if (retval > 0)
+        if (ret > 0)
         {
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %d sent %d bytes\n",
                           __FUNCTION__,
                           obj->sockfd,
-                          retval);
+                          ret);
         }
-        // Check for socket errors if send failed.
         else
         {
-            switch (errno)
+            if (errno == EMSGSIZE)
             {
-                // Fatal errors.
-                case EBADF:
-                case ECONNRESET:
-                case EHOSTUNREACH:
-                case EPIPE:
-                case EMSGSIZE:
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: datagram payload (%u) is larger than the"
-                                  " maximum message size (%u)\n",
-                                  __FUNCTION__,
-                                  len,
-                                  sockudp_getmaxmsgsize(obj));
-                case ENOTSOCK:
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %d fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  obj->sockfd,
-                                  errno);
-                    retval = -1;
-                    break;
-                // Non-fatal errors.
-                case EACCES:
-                case EAGAIN:
-                case EFAULT:
-                case EINTR:
-                case ENETDOWN:
-                case ENETUNREACH:
-                case ENOBUFS:
-                case EOPNOTSUPP:
-                default:
-                    logger_printf(LOGGER_LEVEL_TRACE,
-                                  "%s: socket %d non-fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  obj->sockfd,
-                                  errno);
-                    retval = 0;
-                    break;
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: datagram payload (%u) is larger than the"
+                              " maximum message size (%u)\n",
+                              __FUNCTION__,
+                              len,
+                              sockudp_getmaxmsgsize(obj));
+                ret = -1;
+            }
+            else if (sockobj_iserrfatal(errno) == true)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d fatal error (%d)\n",
+                              __FUNCTION__,
+                              obj->sockfd,
+                              errno);
+                ret = -1;
+            }
+            else
+            {
+                logger_printf(LOGGER_LEVEL_TRACE,
+                              "%s: socket %d non-fatal error (%d)\n",
+                              __FUNCTION__,
+                              obj->sockfd,
+                              errno);
+                ret = 0;
             }
 
-            if (retval == 0)
+            if (ret == 0)
             {
                 if (obj->event.ops.fion_poll(&obj->event) == false)
                 {
-                    retval = -1;
+                    ret = -1;
                 }
                 else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
                 {
-                    retval = -1;
+                    ret = -1;
                 }
                 else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
                 {
-                    retval = recv(obj->sockfd, buf, len, flags);
-                    sockobj_setstats(&obj->info.recv, retval);
+                    ret = recv(obj->sockfd, buf, len, flags);
+                    sockobj_setstats(&obj->info.recv, ret);
 
                     // Remote peer is closed if input is ready but no bytes are
                     // received (EOF).
-                    if (retval > 0)
+                    if (ret > 0)
                     {
                         logger_printf(LOGGER_LEVEL_TRACE,
                                       "%s: socket %d received %d bytes\n",
                                       __FUNCTION__,
                                       obj->sockfd,
-                                      retval);
+                                      ret);
                     }
                     else
                     {
-                        retval = -1;
+                        ret = -1;
                     }
                 }
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -483,7 +453,7 @@ int32_t sockudp_send(struct sockobj * const obj,
  */
 bool sockudp_shutdown(struct sockobj * const obj, const int32_t how)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (obj == NULL)
     {
@@ -505,5 +475,5 @@ bool sockudp_shutdown(struct sockobj * const obj, const int32_t how)
         }
     }
 
-    return retval;
+    return ret;
 }
