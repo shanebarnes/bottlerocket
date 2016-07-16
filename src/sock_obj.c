@@ -297,18 +297,6 @@ bool sockobj_open(struct sockobj * const obj)
                 {
                     obj->ainfo = *anext;
 
-                    if (obj->conf.model == SOCKOBJ_MODEL_SERVER)
-                    {
-                        if (obj->conf.family == AF_INET6)
-                        {
-                            ((struct sockaddr_in6*)(obj->ainfo.ai_addr))->sin6_addr = in6addr_any;
-                        }
-                        else
-                        {
-                            ((struct sockaddr_in*)(obj->ainfo.ai_addr))->sin_addr.s_addr = INADDR_ANY;
-                        }
-                    }
-
                     obj->addrself.sockaddr.ss_family = anext->ai_family;
 
                     inet_pton(obj->addrself.sockaddr.ss_family,
