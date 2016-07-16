@@ -19,8 +19,8 @@
  */
 bool utilinet_isipv4(const char * const addr)
 {
-    bool retval = false;
-    int32_t error;
+    bool ret = false;
+    int32_t err;
     struct sockaddr_in ipv4;
 
     if (addr == NULL)
@@ -31,15 +31,15 @@ bool utilinet_isipv4(const char * const addr)
     }
     else
     {
-        error = inet_pton(AF_INET, addr, &ipv4);
+        err = inet_pton(AF_INET, addr, &ipv4);
 
-        if (error == 1)
+        if (err == 1)
         {
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -47,8 +47,8 @@ bool utilinet_isipv4(const char * const addr)
  */
 bool utilinet_isipv6(const char * const addr)
 {
-    bool retval = false;
-    int32_t error;
+    bool ret = false;
+    int32_t err;
     struct sockaddr_in6 ipv6;
 
     if (addr == NULL)
@@ -59,29 +59,31 @@ bool utilinet_isipv6(const char * const addr)
     }
     else
     {
-        error = inet_pton(AF_INET6, addr, &ipv6);
+        err = inet_pton(AF_INET6, addr, &ipv6);
 
-        if (error == 1)
+        if (err == 1)
         {
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
  * @see See header file for interface comments.
  */
-bool utilinet_getaddrfromhost(const char * const hostname,
+bool utilinet_getaddrfromhost(const char * const host,
+                              const int32_t family,
                               char * const addr,
                               const uint32_t len)
 {
-    bool retval = false;
-    struct addrinfo hints, *result, *rp;
-    struct sockaddr_in *saddr;
+    bool ret = false;
+    struct addrinfo hints, *res, *rp;
+    struct sockaddr_in  *ipv4;
+    struct sockaddr_in6 *ipv6;
 
-    if ((hostname == NULL) || (addr == NULL) || (len == 0))
+    if ((host == NULL) || (addr == NULL) || (len == 0))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -90,7 +92,7 @@ bool utilinet_getaddrfromhost(const char * const hostname,
     else
     {
         memset(&hints, 0, sizeof(struct addrinfo));
-        hints.ai_family    = AF_UNSPEC;
+        hints.ai_family    = family;
         hints.ai_socktype  = SOCK_STREAM;
         hints.ai_flags     = AI_PASSIVE;
         hints.ai_protocol  = 0;
@@ -98,25 +100,37 @@ bool utilinet_getaddrfromhost(const char * const hostname,
         hints.ai_addr      = NULL;
         hints.ai_next      = NULL;
 
-        if (getaddrinfo(hostname, NULL, &hints, &result) == 0)
+        if (getaddrinfo(host, NULL, &hints, &res) == 0)
         {
-            for (rp = result; rp != NULL; rp = rp->ai_next)
+            for (rp = res; rp != NULL; rp = rp->ai_next)
             {
-                saddr = (struct sockaddr_in *)rp->ai_addr;
-                inet_ntop(AF_INET,
-                          &saddr->sin_addr,
-                          addr,
-                          len);
-
-                retval = true;
-                break;
+                if (rp->ai_family == AF_INET)
+                {
+                    ipv4 = (struct sockaddr_in*)rp->ai_addr;
+                    inet_ntop(AF_INET,
+                              &ipv4->sin_addr,
+                              addr,
+                              len);
+                    ret = true;
+                    break;
+                }
+                else if (rp->ai_family == AF_INET6)
+                {
+                    ipv6 = (struct sockaddr_in6*)rp->ai_addr;
+                    inet_ntop(AF_INET6,
+                              &ipv6->sin6_addr,
+                              addr,
+                              len);
+                    ret = true;
+                    break;
+                }
             }
 
-            freeaddrinfo(result);
+            freeaddrinfo(res);
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -124,7 +138,7 @@ bool utilinet_getaddrfromhost(const char * const hostname,
  */
 void *utilinet_getaddrfromstorage(const struct sockaddr_storage * const addr)
 {
-    void *retval = NULL;
+    void *ret = NULL;
 
     if (addr == NULL)
     {
@@ -137,10 +151,10 @@ void *utilinet_getaddrfromstorage(const struct sockaddr_storage * const addr)
         switch (addr->ss_family)
         {
             case AF_INET:
-                retval = &(((struct sockaddr_in*)addr)->sin_addr.s_addr);
+                ret = &(((struct sockaddr_in*)addr)->sin_addr.s_addr);
                 break;
             case AF_INET6:
-                retval = &(((struct sockaddr_in6*)addr)->sin6_addr.s6_addr);
+                ret = &(((struct sockaddr_in6*)addr)->sin6_addr.s6_addr);
                 break;
             default:
                 logger_printf(LOGGER_LEVEL_ERROR,
@@ -151,7 +165,7 @@ void *utilinet_getaddrfromstorage(const struct sockaddr_storage * const addr)
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -159,7 +173,7 @@ void *utilinet_getaddrfromstorage(const struct sockaddr_storage * const addr)
  */
 uint16_t *utilinet_getportfromstorage(const struct sockaddr_storage * const addr)
 {
-    uint16_t *retval = NULL;
+    uint16_t *ret = NULL;
 
     if (addr == NULL)
     {
@@ -172,10 +186,10 @@ uint16_t *utilinet_getportfromstorage(const struct sockaddr_storage * const addr
         switch (addr->ss_family)
         {
             case AF_INET:
-                retval = &(((struct sockaddr_in*)addr)->sin_port);
+                ret = &(((struct sockaddr_in*)addr)->sin_port);
                 break;
             case AF_INET6:
-                retval = &(((struct sockaddr_in6*)addr)->sin6_port);
+                ret = &(((struct sockaddr_in6*)addr)->sin6_port);
                 break;
             default:
                 logger_printf(LOGGER_LEVEL_ERROR,
@@ -186,5 +200,5 @@ uint16_t *utilinet_getportfromstorage(const struct sockaddr_storage * const addr
         }
     }
 
-    return retval;
+    return ret;
 }
