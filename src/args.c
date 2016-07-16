@@ -102,6 +102,7 @@ static bool args_copyipaddr(const char * const val,
         else
         {
             retval = utilinet_getaddrfromhost(val,
+                                              args->family,
                                               args->ipaddr,
                                               sizeof(args->ipaddr));
         }
@@ -890,9 +891,17 @@ bool args_parse(const int32_t argc,
                     break;
                 case '4':
                     args->family = AF_INET;
+                    utilinet_getaddrfromhost(args->ipaddr,
+                                             args->family,
+                                             args->ipaddr,
+                                             sizeof(args->ipaddr));
                     break;
                 case '6':
                     args->family = AF_INET6;
+                    utilinet_getaddrfromhost(args->ipaddr,
+                                             args->family,
+                                             args->ipaddr,
+                                             sizeof(args->ipaddr));
                     break;
 #if !defined(__APPLE__)
                 case 'A':
