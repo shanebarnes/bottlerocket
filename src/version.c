@@ -11,8 +11,8 @@
 
 static const uint16_t  major = 0;
 static const uint16_t  minor = 2;
-static const uint16_t  patch = 2;
-static const char     *date  = "Jul 07 2016 23:01:00";
+static const uint16_t  patch = 3;
+static const char     *date  = "Jul 15 2016 21:39:00";
 static const char     *build = __DATE__ " " __TIME__;
 
 /**
