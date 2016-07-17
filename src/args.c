@@ -36,30 +36,32 @@ enum args_flag
     ARGS_FLAG_INTERVAL  = 0x00100,
     ARGS_FLAG_LEN       = 0x00200,
     ARGS_FLAG_NUM       = 0x00400,
-    ARGS_FLAG_PORT      = 0x00800,
-    ARGS_FLAG_BACKLOG   = 0x01000,
-    ARGS_FLAG_SERVER    = 0x02000,
-    ARGS_FLAG_TIME      = 0x04000,
-    ARGS_FLAG_UDP       = 0x08000,
-    ARGS_FLAG_HELP      = 0x10000,
-    ARGS_FLAG_VERSION   = 0x20000
+    ARGS_FLAG_PARALLEL  = 0x00800,
+    ARGS_FLAG_PORT      = 0x01000,
+    ARGS_FLAG_BACKLOG   = 0x02000,
+    ARGS_FLAG_SERVER    = 0x04000,
+    ARGS_FLAG_TIME      = 0x08000,
+    ARGS_FLAG_UDP       = 0x10000,
+    ARGS_FLAG_HELP      = 0x20000,
+    ARGS_FLAG_VERSION   = 0x40000
 };
 
 struct tuple_element
 {
-  const char             *lname;  // Attribute long name (e.g., --argument)
-  const char              sname;  // Attribute short name (e.g., -a)
-  const char             *desc;   // Description
-  const char             *dval;   // Default value
-  const char             *minval; // Minimum value
-  const char             *maxval; // Maximum value
-  const bool              oval;   // Optional value
-  const bool              oarg;   // Optional attribute
-  const uint64_t          cflags; // Conflict flags (i.e., incompatible options)
-  bool       (*copy)(const char * const val,
-                     const char * const min,
-                     const char * const max,
-                     struct args_obj *args); // Tuple copy function pointer
+  const char     *lname;  // Attribute long name (e.g., --argument)
+  const char      sname;  // Attribute short name (e.g., -a)
+  const char     *desc;   // Description
+  const char     *dval;   // Default value
+  const char     *minval; // Minimum value
+  const char     *maxval; // Maximum value
+  const bool      oval;   // Optional value
+  const bool      oarg;   // Optional attribute
+  const uint64_t  cflags; // Conflict flags (i.e., incompatible options)
+  bool           (*copy)(const char * const val,
+                         const char * const min,
+                         const char * const max,
+                         struct args_obj *args); // Tuple copy function pointer
+                         //void * const var);
 };
 
 static char        str_somaxconn[16];
@@ -163,6 +165,57 @@ static bool args_copyint32(const char * const val,
     return retval;
 }
 
+/**
+ * @brief Validate and copy a 32-bit integer value to a 32-bit integer variable.
+ *
+ * @param[in]     val A pointer to a value to validate.
+ * @param[in]     min A pointer to a minimum value (NULL if no minimum value).
+ * @param[in]     max A pointer to a maximum value (NULL if no maximum value).
+ * @param[in,out] num A pointer to a 32-bit integer variable.
+ *
+ * @return True if a valid 32-bit integer value was copied to an 32-bit integer
+ *         variable.
+ */
+static bool args_copyuint32(const char * const val,
+                            const char * const min,
+                            const char * const max,
+                            uint32_t * const num)
+{
+    bool retval = false;
+    uint32_t dmax, dmin, tmp;
+
+    if ((val == NULL) || (num == NULL))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        if ((utilstring_parse(val, "%u", &tmp) == 1))
+        {
+            if ((min != NULL) &&
+                ((utilstring_parse(min, "%u", &dmin) != 1) ||
+                 (tmp < dmin)))
+            {
+                // Do nothing.
+            }
+            else if ((max != NULL) &&
+                     ((utilstring_parse(max, "%u", &dmax) != 1) ||
+                     (tmp > dmax)))
+            {
+                // Do nothing.
+            }
+            else
+            {
+                *num = tmp;
+                retval = true;
+            }
+        }
+    }
+
+    return retval;
+}
 
 /**
  * @brief Validate and copy an IP port number value to an arguments object.
@@ -192,6 +245,40 @@ static bool args_copyipport(const char * const val,
     else if (args_copyint32(val, min, max, &port) == true)
     {
         args->ipport = (uint16_t)port;
+        retval = true;
+    }
+
+    return retval;
+}
+
+/**
+ * @brief Validate and copy a parallel connections value to an arguments object.
+ *
+ * @param[in]     val  A pointer to a value to validate.
+ * @param[in]     min  A pointer to a minimum value (NULL if no minimum value).
+ * @param[in]     max  A pointer to a maximum value (NULL if no maximum value).
+ * @param[in,out] args A pointer to an argument object.
+ *
+ * @return True if a valid parallel connections value was copied to an arguments
+ *         object.
+ */
+static bool args_copyparallel(const char * const val,
+                              const char * const min,
+                              const char * const max,
+                              struct args_obj *args)
+{
+    bool retval = false;
+    uint32_t maxcon = 0;
+
+    if (args == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (args_copyuint32(val, min, max, &maxcon) == true)
+    {
+        args->maxcon = (uint32_t)maxcon;
         retval = true;
     }
 
@@ -552,6 +639,18 @@ static struct tuple_element options[] =
         args_copydatalimit
     },
     {
+        "--parallel",
+        'P',
+        "number of concurrent connections to open",
+        "1",
+        "0",
+        "100",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        args_copyparallel
+    },
+    {
         "--port",
         'p',
         "server port to listen on or connect to",
@@ -846,6 +945,7 @@ bool args_parse(const int32_t argc,
         args->arch = SOCKOBJ_MODEL_CLIENT;
         args->family = AF_INET;
         args->type = SOCK_STREAM;
+        args->maxcon = 1;
         args_copyipaddr("0.0.0.0", "0.0.0.0", "0.0.0.0", args);
         args_copyipport("5001", "5001", "5001", args);
         args_copydatalimit("1MB", "1MB", "1MB", args);
@@ -913,6 +1013,10 @@ bool args_parse(const int32_t argc,
                     break;
                 case 'c':
                     args->arch = SOCKOBJ_MODEL_CLIENT;
+                    if ((flags & ARGS_FLAG_PARALLEL) == 0)
+                    {
+                        args->maxcon = 1;
+                    }
                     break;
                 case 'l':
                     break;
@@ -924,6 +1028,12 @@ bool args_parse(const int32_t argc,
                     {
                         args->datalimitbyte = 0;
                     }
+                    if ((flags & ARGS_FLAG_PARALLEL) == 0)
+                    {
+                        args->maxcon = 0;
+                    }
+                    break;
+                case 'P':
                     break;
                 case 'p':
                     break;
