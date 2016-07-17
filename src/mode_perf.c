@@ -7,6 +7,7 @@
  *            This project is released under the MIT license.
  */
 
+#include "dlist.h"
 #include "form_perf.h"
 #include "logger.h"
 #include "mode_perf.h"
@@ -15,6 +16,7 @@
 #include "thread_obj.h"
 #include "token_bucket.h"
 #include "util_date.h"
+#include "util_mem.h"
 #include "util_string.h"
 
 #include <string.h>
@@ -66,7 +68,7 @@ static int32_t modeperf_call(int32_t (*call)(struct sockobj * const obj,
                              const uint32_t buflen,
                              const uint64_t tsus)
 {
-    int32_t retval = 0;
+    int32_t ret = 0;
     uint64_t len = 0;
 
     if (opts->datalimitbyte > 0)
@@ -90,11 +92,11 @@ static int32_t modeperf_call(int32_t (*call)(struct sockobj * const obj,
 
     if (len > 0)
     {
-        retval = call(sock, buf, len);
+        ret = call(sock, buf, len);
     }
     // @todo poll socket if buflen is zero?
 
-    if (retval < 0)
+    if (ret < 0)
     {
         sock->ops.sock_close(sock);
     }
@@ -109,12 +111,10 @@ static int32_t modeperf_call(int32_t (*call)(struct sockobj * const obj,
         sock->ops.sock_close(sock);
     }
 
-    tokenbucket_return(&sock->tb, retval < 0 ?
-                                  0 :
-                                  len - (uint32_t)retval);
+    tokenbucket_return(&sock->tb, ret < 0 ? 0 : len - (uint32_t)ret);
 
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -124,13 +124,14 @@ static void *modeperf_thread(void * arg)
 {
     bool exit = true;
     struct threadobj *thread = (struct threadobj *)arg;
-    struct sockobj client, server, socket;
+    struct dlist list;
+    struct sockobj server, *sock = NULL;
     struct formobj form;
     char *recvbuf = NULL, *sendbuf = NULL;
-    int32_t count = 0;
     int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
 
     //??
+    struct dlist_node *node = NULL;
     uint64_t activetimeus = 0;
     uint64_t tsus = 0;
 
@@ -140,23 +141,26 @@ static void *modeperf_thread(void * arg)
                       "%s: parameter validation failed\n",
                       __FUNCTION__);
     }
-    else if ((recvbuf = malloc(opts->buflen)) == NULL)
+    else if ((recvbuf = UTILMEM_MALLOC(char, opts->buflen)) == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: receive buffer allocation failed\n",
                       __FUNCTION__);
     }
-    else if ((sendbuf = malloc(opts->buflen)) == NULL)
+    else if ((sendbuf = UTILMEM_MALLOC(char, opts->buflen)) == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: send buffer allocation failed\n",
                       __FUNCTION__);
 
-        free(recvbuf);
+        UTILMEM_FREE(recvbuf);
         recvbuf = NULL;
     }
     else
     {
+        exit = false;
+        memset(&list, 0, sizeof(list));
+
         form.ops.form_head = formperf_head;
         form.ops.form_body = formperf_body;
         form.ops.form_foot = formperf_foot;
@@ -165,12 +169,7 @@ static void *modeperf_thread(void * arg)
         form.dstbuf = sendbuf;
         form.dstlen = opts->buflen;
 
-        if (opts->arch == SOCKOBJ_MODEL_CLIENT)
-        {
-            modeperf_conf(&client, 0);
-            exit = !sockmod_init(&client);
-        }
-        else
+        if (opts->arch == SOCKOBJ_MODEL_SERVER)
         {
             modeperf_conf(&server, 500);
             exit = !sockmod_init(&server);
@@ -178,44 +177,85 @@ static void *modeperf_thread(void * arg)
 
         while ((exit == false) && (threadobj_isrunning(thread) == true))
         {
-            if (count <= 0)
+            if ((list.size < opts->maxcon) ||
+                ((opts->maxcon == 0) && (opts->arch == SOCKOBJ_MODEL_SERVER)))
             {
-                if (opts->arch == SOCKOBJ_MODEL_CLIENT)
+                // @todo Do not allocate memory every iteration.
+                sock = UTILMEM_MALLOC(struct sockobj, 1);
+
+                if (sock == NULL)
                 {
-                    form.sock = &client;
-                    formbytes = form.ops.form_head(&form);
-                    output_if_std_send(form.dstbuf, formbytes);
-                    count++;
-                    //formbytes = formobj_idle(&form);
-                    //output_if_std_send(form.dstbuf, formbytes);
-                    //formbytes = utilstring_concat(form.dstbuf,
-                    //                              form.dstlen,
-                    //                              "%c",
-                    //                              '\r');
-                    //output_if_std_send(form.dstbuf, formbytes);
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: failed to allocate memory\n",
+                                  __FUNCTION__);
                 }
-                else
+                else if (dlist_inserttail(&list, sock) == false)
                 {
-                    if (server.ops.sock_accept(&server, &socket) == true)
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: failed to store allocated memory\n",
+                                  __FUNCTION__);
+
+                    UTILMEM_FREE(sock);
+                    sock = NULL;
+                }
+                else if (opts->arch == SOCKOBJ_MODEL_CLIENT)
+                {
+                    modeperf_conf(sock, 0);
+
+                    if (sockmod_init(sock) == false)
                     {
-                        logger_printf(LOGGER_LEVEL_DEBUG,
-                                      "%s: server accepted connection on %s\n",
-                                      __FUNCTION__,
-                                      server.addrself.sockaddrstr);
-                        socket.event.timeoutms = 0;
-                        form.sock = &socket;
-                        formbytes = form.ops.form_head(&form);
-                        output_if_std_send(form.dstbuf, formbytes);
-                        count++;
+                        UTILMEM_FREE(list.tail->val);
+                        dlist_removetail(&list);
+                        sock = NULL;
+                        exit = true;
                     }
                     else
                     {
+                        form.sock = sock;
+                        formbytes = form.ops.form_head(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                        //formbytes = formobj_idle(&form);
+                        //output_if_std_send(form.dstbuf, formbytes);
+                        //formbytes = utilstring_concat(form.dstbuf,
+                        //                              form.dstlen,
+                        //                              "%c",
+                        //                              '\r');
+                        //output_if_std_send(form.dstbuf, formbytes);
+                    }
+                }
+                else
+                {
+                    if (list.size > 1)
+                        server.event.timeoutms = 0;
+                    else
+                        server.event.timeoutms = 500;
+
+                    if (server.ops.sock_accept(&server, sock) == true)
+                    {
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: server accepted connection on %s\n",
+                                      __FUNCTION__,
+                                      server.addrself.sockaddrstr);
+                        sock->event.timeoutms = 0;
+                        form.sock = sock;
+                        formbytes = form.ops.form_head(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                    }
+                    else
+                    {
+                        UTILMEM_FREE(list.tail->val);
+                        dlist_removetail(&list);
+                        sock = NULL;
+
                         if (server.event.revents & FIONOBJ_REVENT_ERROR)
                         {
-                            // @todo Wait for any sockets to exit?
-                            exit = true;
+                            // Wait for any open sockets to complete.
+                            if (list.size == 0)
+                            {
+                                exit = true;
+                            }
                         }
-                        else
+                        else if (list.size == 0)
                         {
                             form.sock = &server;
                             formbytes = formobj_idle(&form);
@@ -229,8 +269,19 @@ static void *modeperf_thread(void * arg)
                     }
                 }
             }
-            else
+            else if ((opts->maxcon == 0) && (opts->arch == SOCKOBJ_MODEL_CLIENT))
             {
+                exit = true;
+            }
+
+            node = list.head;
+
+            while (node != NULL)
+            {
+                sock = node->val;
+                form.sock = sock;
+
+                // @todo Perform once per iteration?
                 tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
                 if (activetimeus == 0)
@@ -240,34 +291,42 @@ static void *modeperf_thread(void * arg)
 
                 if (opts->arch == SOCKOBJ_MODEL_CLIENT)
                 {
-                    if ((client.state & SOCKOBJ_STATE_CONNECT) == 0)
+                    if ((sock->state & SOCKOBJ_STATE_CONNECT) == 0)
                     {
-                        client.ops.sock_connect(&client);
+                        sock->ops.sock_connect(sock);
                     }
 
-                    sendbytes = modeperf_call(client.ops.sock_send,
-                                              &client.info.send,
-                                              &client,
+                    sendbytes = modeperf_call(sock->ops.sock_send,
+                                              &sock->info.send,
+                                              sock,
                                               sendbuf,
                                               opts->buflen,
                                               tsus);
 
-                    if (client.state & SOCKOBJ_STATE_CLOSE)
+                    if (sock->state & SOCKOBJ_STATE_CLOSE)
                     {
                         formbytes = form.ops.form_foot(&form);
                         output_if_std_send(form.dstbuf, formbytes);
-                        exit = true;
 
                         logger_printf(LOGGER_LEVEL_INFO,
                                       "%s: passed %" PRIu64
                                       ", failed %" PRIu64
                                       ", avg:%u max:%u min:%u\n",
                                       __FUNCTION__,
-                                      client.info.send.passedcalls,
-                                      client.info.send.failedcalls,
-                                      client.info.send.avgbuflen,
-                                      client.info.send.maxbuflen,
-                                      client.info.send.minbuflen);
+                                      sock->info.send.passedcalls,
+                                      sock->info.send.failedcalls,
+                                      sock->info.send.avgbuflen,
+                                      sock->info.send.maxbuflen,
+                                      sock->info.send.minbuflen);
+
+                        UTILMEM_FREE(node->val);
+                        dlist_remove(&list, node);
+                        // @bug Fix next node retrieval.
+
+                        if (list.size == 0)
+                        {
+                            exit = true;
+                        }
                     }
                     else
                     {
@@ -277,51 +336,55 @@ static void *modeperf_thread(void * arg)
                         // Prevent thread spin when no bytes are available.
                         if (sendbytes == 0)
                         {
-                            if (client.tb.rate > 0)
+                            if (sock->tb.rate > 0)
                             {
                                 // @todo Replace with semaphore.
-                                usleep((uint32_t)tokenbucket_delay(&client.tb,
+                                usleep((uint32_t)tokenbucket_delay(&sock->tb,
                                                                    opts->buflen * 8));
                             }
                             else if (tsus - activetimeus > 1000)
                             {
-                                client.event.timeoutms = 1;
-                                client.event.pevents = FIONOBJ_PEVENT_OUT;
+                                sock->event.timeoutms = 1;
+                                sock->event.pevents = FIONOBJ_PEVENT_OUT;
                             }
                         }
                         else
                         {
-                            client.event.timeoutms = 0;
-                            client.event.pevents = FIONOBJ_PEVENT_IN;
+                            sock->event.timeoutms = 0;
+                            sock->event.pevents = FIONOBJ_PEVENT_IN;
                             activetimeus = tsus;
                         }
                     }
                 }
                 else
                 {
-                    recvbytes = modeperf_call(socket.ops.sock_recv,
-                                              &socket.info.recv,
-                                              &socket,
+                    recvbytes = modeperf_call(sock->ops.sock_recv,
+                                              &sock->info.recv,
+                                              sock,
                                               recvbuf,
                                               opts->buflen,
                                               tsus);
 
-                    if (socket.state & SOCKOBJ_STATE_CLOSE)
+                    if (sock->state & SOCKOBJ_STATE_CLOSE)
                     {
                         formbytes = form.ops.form_foot(&form);
                         output_if_std_send(form.dstbuf, formbytes);
-                        count--;
 
                         logger_printf(LOGGER_LEVEL_INFO,
                                       "%s: passed %" PRIu64
                                       ", failed %" PRIu64
                                       ", avg:%u max:%u min:%u\n",
                                       __FUNCTION__,
-                                      socket.info.recv.passedcalls,
-                                      socket.info.recv.failedcalls,
-                                      socket.info.recv.avgbuflen,
-                                      socket.info.recv.maxbuflen,
-                                      socket.info.recv.minbuflen);
+                                      sock->info.recv.passedcalls,
+                                      sock->info.recv.failedcalls,
+                                      sock->info.recv.avgbuflen,
+                                      sock->info.recv.maxbuflen,
+                                      sock->info.recv.minbuflen);
+
+                        UTILMEM_FREE(node->val);
+                        dlist_remove(&list, node);
+                        // @bug Fix next node retrieval.
+                        sock = NULL;
                     }
                     else
                     {
@@ -331,33 +394,35 @@ static void *modeperf_thread(void * arg)
                         // Prevent thread spin when no bytes are available.
                         if (recvbytes == 0)
                         {
-                            if (socket.tb.rate > 0)
+                            if (sock->tb.rate > 0)
                             {
                                 // @todo Replace with semaphore.
-                                usleep((uint32_t)tokenbucket_delay(&socket.tb,
+                                usleep((uint32_t)tokenbucket_delay(&sock->tb,
                                                                    opts->buflen * 8));
                             }
                             else if (tsus - activetimeus > 1000)
                             {
-                                socket.event.timeoutms = 1;
+                                sock->event.timeoutms = 1;
                             }
                         }
                         else
                         {
 #if defined(__linux__)
-                            socket.event.timeoutms = 1;
+                            sock->event.timeoutms = 1;
 #else
-                            socket.event.timeoutms = 0;
+                            sock->event.timeoutms = 0;
 #endif
                             activetimeus = tsus;
                         }
                     }
                 }
+
+                node = node->next;
             }
         }
 
-        free(recvbuf);
-        free(sendbuf);
+        UTILMEM_FREE(recvbuf);
+        UTILMEM_FREE(sendbuf);
     }
 
     return NULL;
@@ -368,7 +433,7 @@ static void *modeperf_thread(void * arg)
  */
 static bool modeperf_init(struct args_obj * const args)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (args == NULL)
     {
@@ -379,10 +444,10 @@ static bool modeperf_init(struct args_obj * const args)
     else
     {
         opts = args;
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -390,7 +455,7 @@ static bool modeperf_init(struct args_obj * const args)
  */
 static bool modeperf_start(void)
 {
-    bool retval = false;
+    bool ret = false;
 
     thread.function = modeperf_thread;
     thread.argument = &thread;
@@ -416,10 +481,10 @@ static bool modeperf_start(void)
     }
     else
     {
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -427,7 +492,7 @@ static bool modeperf_start(void)
  */
 static bool modeperf_stop(void)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (threadobj_stop(&thread) == false)
     {
@@ -443,10 +508,10 @@ static bool modeperf_stop(void)
     }
     else
     {
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -454,7 +519,7 @@ static bool modeperf_stop(void)
  */
 bool modeperf_run(struct args_obj * const args)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (args == NULL)
     {
@@ -487,9 +552,9 @@ bool modeperf_run(struct args_obj * const args)
         else
         {
             modeperf_stop();
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
