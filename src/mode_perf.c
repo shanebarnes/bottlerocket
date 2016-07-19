@@ -129,6 +129,7 @@ static void *modeperf_thread(void * arg)
     struct formobj form;
     char *recvbuf = NULL, *sendbuf = NULL;
     int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
+    uint32_t count = 0;
 
     //??
     struct dlist_node *node = NULL;
@@ -177,7 +178,7 @@ static void *modeperf_thread(void * arg)
 
         while ((exit == false) && (threadobj_isrunning(thread) == true))
         {
-            if ((list.size < opts->maxcon) ||
+            if ((count < opts->maxcon) ||
                 ((opts->maxcon == 0) && (opts->arch == SOCKOBJ_MODEL_SERVER)))
             {
                 // @todo Do not allocate memory every iteration.
@@ -211,9 +212,14 @@ static void *modeperf_thread(void * arg)
                     }
                     else
                     {
+                        sock->id = ++count;
                         form.sock = sock;
-                        formbytes = form.ops.form_head(&form);
-                        output_if_std_send(form.dstbuf, formbytes);
+
+                        if (count == 1)
+                        {
+                            formbytes = form.ops.form_head(&form);
+                            output_if_std_send(form.dstbuf, formbytes);
+                        }
                         //formbytes = formobj_idle(&form);
                         //output_if_std_send(form.dstbuf, formbytes);
                         //formbytes = utilstring_concat(form.dstbuf,
@@ -232,14 +238,18 @@ static void *modeperf_thread(void * arg)
 
                     if (server.ops.sock_accept(&server, sock) == true)
                     {
-                        logger_printf(LOGGER_LEVEL_ERROR,
-                                      "%s: server accepted connection on %s\n",
-                                      __FUNCTION__,
-                                      server.addrself.sockaddrstr);
+                        sock->id = ++count;
+                        //logger_printf(LOGGER_LEVEL_ERROR,
+                        //              "%s: server accepted connection on %s\n",
+                        //              __FUNCTION__,
+                        //              server.addrself.sockaddrstr);
                         sock->event.timeoutms = 0;
                         form.sock = sock;
-                        formbytes = form.ops.form_head(&form);
-                        output_if_std_send(form.dstbuf, formbytes);
+                        if (count == 1)
+                        {
+                            formbytes = form.ops.form_head(&form);
+                            output_if_std_send(form.dstbuf, formbytes);
+                        }
                     }
                     else
                     {
@@ -294,14 +304,17 @@ static void *modeperf_thread(void * arg)
                     if ((sock->state & SOCKOBJ_STATE_CONNECT) == 0)
                     {
                         sock->ops.sock_connect(sock);
+                        sendbytes = 0;
                     }
-
-                    sendbytes = modeperf_call(sock->ops.sock_send,
-                                              &sock->info.send,
-                                              sock,
-                                              sendbuf,
-                                              opts->buflen,
-                                              tsus);
+                    else
+                    {
+                        sendbytes = modeperf_call(sock->ops.sock_send,
+                                                  &sock->info.send,
+                                                  sock,
+                                                  sendbuf,
+                                                  opts->buflen,
+                                                  tsus);
+                    }
 
                     if (sock->state & SOCKOBJ_STATE_CLOSE)
                     {
