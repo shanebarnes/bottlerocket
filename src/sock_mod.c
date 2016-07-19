@@ -92,7 +92,7 @@ static bool sockmod_initserver(struct sockobj * const sock)
     {
         sock->ops.sock_close(sock);
     }
-    else if (sock->ops.sock_listen(sock, 1) == false)
+    else if (sock->ops.sock_listen(sock, sock->conf.backlog) == false)
     {
         sock->ops.sock_close(sock);
     }
