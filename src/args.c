@@ -667,7 +667,7 @@ static struct tuple_element options[] =
         'q',
         "server backlog queue length",
         str_somaxconn,
-        "1",
+        "0",
         str_somaxconn,
         val_required,
         arg_optional,
@@ -948,6 +948,7 @@ bool args_parse(const int32_t argc,
         args->maxcon = 1;
         args_copyipaddr("0.0.0.0", "0.0.0.0", "0.0.0.0", args);
         args_copyipport("5001", "5001", "5001", args);
+        args_copybacklog(str_somaxconn, "0", str_somaxconn, args);
         args_copydatalimit("1MB", "1MB", "1MB", args);
         args_copyratelimit("0bps", "0bps", "0bps", args);
         //args_copytime("0s", "0s", "0s", args);
