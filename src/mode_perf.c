@@ -37,6 +37,7 @@ static void modeperf_conf(struct sockobj * const obj, const int32_t timeoutms)
 {
     memcpy(obj->conf.ipaddr, opts->ipaddr, sizeof(obj->conf.ipaddr));
     obj->conf.ipport        = opts->ipport;
+    obj->conf.backlog       = opts->backlog;
     obj->conf.timeoutms     = timeoutms;
     obj->conf.datalimitbyte = opts->datalimitbyte;
     obj->conf.ratelimitbps  = opts->ratelimitbps;
