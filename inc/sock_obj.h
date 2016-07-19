@@ -202,6 +202,7 @@ struct sockobj_conf
     int32_t            type;   // e.g.: SOCK_DGRAM, SOCK_STREAM
     char               ipaddr[INET6_ADDRSTRLEN];
     uint16_t           ipport;
+    int32_t            backlog;
     enum sockobj_model model;
     int32_t            timeoutms;
     uint64_t           datalimitbyte;
