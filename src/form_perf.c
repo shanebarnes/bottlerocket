@@ -20,6 +20,7 @@
 int32_t formperf_head(struct formobj * const obj)
 {
     int32_t  retval  = -1;
+    char recvwin[16], sendwin[16];
     //uint16_t cols    = 0,
     //         rows    = 0;
 
@@ -41,9 +42,24 @@ int32_t formperf_head(struct formobj * const obj)
 
         obj->timeoutusec = obj->sock->info.startusec;
 
+        utilunit_getdecformat(10,
+                              3,
+                              obj->sock->info.recv.winsize,
+                              recvwin,
+                              sizeof(recvwin));
+
+        utilunit_getdecformat(10,
+                              3,
+                              obj->sock->info.send.winsize,
+                              sendwin,
+                              sizeof(sendwin));
+
         retval = utilstring_concat(obj->dstbuf,
                                    obj->dstlen,
+                                   "rwin: %sB, swin: %sB\n"
                                    "%6s %21s   %-21s %17s %27s %25s %17s\n",
+                                   recvwin,
+                                   sendwin,
                                    "Con ID",
                                    "Client",         // or self?
                                    "Server",         // or peer?
@@ -130,7 +146,7 @@ int32_t formperf_body(struct formobj * const obj)
                                        "%9sB / "
                                        "%9sB | "
                                        "%02u:%02u:%02u:%02u.%03u\r",
-                                       1,
+                                       obj->sock->id,
                                        obj->sock->addrself.sockaddrstr,
                                        obj->sock->addrpeer.sockaddrstr,
                                        progress,
