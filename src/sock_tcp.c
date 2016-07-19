@@ -172,7 +172,7 @@ bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
                       __FUNCTION__);
     }
     // Backlog check: SOMAXCONN
-    else if (listen(obj->sockfd, backlog) == 0)
+    else if (listen(obj->fd, backlog) == 0)
     {
         obj->state |= SOCKOBJ_STATE_LISTEN;
         sockobj_getaddrself(obj);
@@ -183,7 +183,7 @@ bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: socked %d failed to listen on %s:%u (%d)\n",
                       __FUNCTION__,
-                      obj->sockfd,
+                      obj->fd,
                       obj->conf.ipaddr,
                       obj->conf.ipport,
                       errno);
@@ -200,7 +200,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
     bool      ret        = false;
     socklen_t socklen    = 0;
     bool      sockaccept = false;
-    int32_t   sockfd     = -1;
+    int32_t   fd         = -1;
 #if defined(__linux__)
     int32_t   flags      = 0;
 #endif
@@ -236,14 +236,14 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
         if (sockaccept == true)
         {
 #if defined(__linux__)
-            if ((sockfd = accept4(listener->sockfd,
-                                  (struct sockaddr *)&(listener->addrpeer.sockaddr),
-                                  &socklen,
-                                  flags)) > -1)
+            if ((fd = accept4(listener->fd,
+                              (struct sockaddr *)&(listener->addrpeer.sockaddr),
+                              &socklen,
+                              flags)) > -1)
 #else
-            if ((sockfd = accept(listener->sockfd,
-                                 (struct sockaddr *)&(listener->addrpeer.sockaddr),
-                                 &socklen)) > -1)
+            if ((fd = accept(listener->fd,
+                             (struct sockaddr *)&(listener->addrpeer.sockaddr),
+                             &socklen)) > -1)
 #endif
             {
                 ts = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
@@ -254,16 +254,16 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %d accept initialization failed\n",
                                   __FUNCTION__,
-                                  obj->sockfd);
+                                  obj->fd);
                 }
-                else if (((obj->sockfd = sockfd) != sockfd) ||
-                         (obj->event.ops.fion_insertfd(&obj->event, sockfd) == false) ||
+                else if (((obj->fd = fd) != fd) ||
+                         (obj->event.ops.fion_insertfd(&obj->event, fd) == false) ||
                          (obj->event.ops.fion_setflags(&obj->event) == false))
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: invalid socket fd (%d)\n",
                                   __FUNCTION__,
-                                  sockfd);
+                                  fd);
                 }
                 else if (memcpy(&obj->conf,
                                 &listener->conf,
@@ -277,7 +277,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %d self information is unavailable\n",
-                                  obj->sockfd,
+                                  obj->fd,
                                   __FUNCTION__);
                 }
                 else if (sockobj_getaddrpeer(obj) == false)
@@ -285,14 +285,14 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %d peer information is unavailable\n",
                                   __FUNCTION__,
-                                  obj->sockfd);
+                                  obj->fd);
                 }
                 else
                 {
                     logger_printf(LOGGER_LEVEL_TRACE,
                                   "%s: new socket %d accepted on %s from %s\n",
                                   __FUNCTION__,
-                                  obj->sockfd,
+                                  obj->fd,
                                   obj->addrself.sockaddrstr,
                                   obj->addrpeer.sockaddrstr);
 
@@ -307,7 +307,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %d accept failed (%d)\n",
                               __FUNCTION__,
-                              listener->sockfd,
+                              listener->fd,
                               errno);
             }
         }
@@ -334,7 +334,7 @@ bool socktcp_connect(struct sockobj * const obj)
         obj->info.startusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
                                                  UNIT_TIME_USEC);
 
-        if (connect(obj->sockfd,
+        if (obj->state == SOCKOBJ_STATE_OPEN && connect(obj->fd,
                     obj->ainfo.ai_addr,
                     obj->ainfo.ai_addrlen) == 0)
         {
@@ -347,7 +347,7 @@ bool socktcp_connect(struct sockobj * const obj)
                 logger_printf(LOGGER_LEVEL_DEBUG,
                               "%s: socket %d connect now in progress\n",
                               __FUNCTION__,
-                              obj->sockfd);
+                              obj->fd);
 
                 obj->event.pevents = FIONOBJ_PEVENT_IN | FIONOBJ_PEVENT_OUT;
                 obj->event.ops.fion_setflags(&obj->event);
@@ -368,6 +368,16 @@ bool socktcp_connect(struct sockobj * const obj)
                 obj->event.pevents = FIONOBJ_PEVENT_IN;
                 obj->event.ops.fion_setflags(&obj->event);
             }
+            else if (errno == EINVAL)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %d connect fatal error (%d)\n",
+                              __FUNCTION__,
+                              obj->fd,
+                              errno);
+
+                obj->ops.sock_close(obj);
+            }
             else if (errno == EISCONN)
             {
                 ret = true;
@@ -377,14 +387,14 @@ bool socktcp_connect(struct sockobj * const obj)
                 logger_printf(LOGGER_LEVEL_DEBUG,
                               "%s: socket %d connect already in progress\n",
                               __FUNCTION__,
-                              obj->sockfd);
+                              obj->fd);
             }
             else
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %d connect error (%d)\n",
                               __FUNCTION__,
-                              obj->sockfd,
+                              obj->fd,
                               errno);
             }
         }
@@ -419,7 +429,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
     }
     else
     {
-        ret = recv(obj->sockfd, buf, len, flags);
+        ret = recv(obj->fd, buf, len, flags);
         sockobj_setstats(&obj->info.recv, ret);
 
         if (ret > 0)
@@ -427,7 +437,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %d received %d bytes\n",
                           __FUNCTION__,
-                          obj->sockfd,
+                          obj->fd,
                           ret);
         }
         else
@@ -437,7 +447,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %d fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->sockfd,
+                              obj->fd,
                               errno);
                 ret = -1;
             }
@@ -446,7 +456,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
                 logger_printf(LOGGER_LEVEL_TRACE,
                               "%s: socket %d non-fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->sockfd,
+                              obj->fd,
                               errno);
                 ret = 0;
             }
@@ -463,7 +473,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
                 }
                 else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
                 {
-                    ret = recv(obj->sockfd, buf, len, flags);
+                    ret = recv(obj->fd, buf, len, flags);
                     sockobj_setstats(&obj->info.recv, ret);
 
                     // Remote peer is closed if input is ready but no bytes are
@@ -473,7 +483,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
                         logger_printf(LOGGER_LEVEL_TRACE,
                                       "%s: socket %d received %d bytes\n",
                                       __FUNCTION__,
-                                      obj->sockfd,
+                                      obj->fd,
                                       ret);
                     }
                     else
@@ -510,7 +520,7 @@ int32_t socktcp_send(struct sockobj * const obj,
     }
     else
     {
-        ret = send(obj->sockfd, buf, len, flags);
+        ret = send(obj->fd, buf, len, flags);
         sockobj_setstats(&obj->info.send, ret);
 
         if (ret > 0)
@@ -518,7 +528,7 @@ int32_t socktcp_send(struct sockobj * const obj,
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %d sent %d bytes\n",
                           __FUNCTION__,
-                          obj->sockfd,
+                          obj->fd,
                           ret);
         }
         else
@@ -528,7 +538,7 @@ int32_t socktcp_send(struct sockobj * const obj,
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %d fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->sockfd,
+                              obj->fd,
                               errno);
                 ret = -1;
             }
@@ -537,7 +547,7 @@ int32_t socktcp_send(struct sockobj * const obj,
                 logger_printf(LOGGER_LEVEL_TRACE,
                               "%s: socket %d non-fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->sockfd,
+                              obj->fd,
                               errno);
                 ret = 0;
             }
@@ -574,12 +584,12 @@ bool socktcp_shutdown(struct sockobj * const obj, const int32_t how)
     }
     else
     {
-        if (shutdown(obj->sockfd, how) == -1)
+        if (shutdown(obj->fd, how) == -1)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to shutdown socket %d (%d)\n",
                           __FUNCTION__,
-                          obj->sockfd,
+                          obj->fd,
                           errno);
         }
         else
