@@ -178,7 +178,7 @@ bool sockudp_accept(struct sockobj * const listener,
                 // @todo Clone/duplicate listener socket
                 listener->ops.sock_create(obj);
                 listener->ops.sock_open(obj);
-                obj->sockfd = listener->sockfd;
+                obj->fd = listener->fd;
 
                 ret = true;
             }
@@ -213,7 +213,7 @@ bool sockudp_connect(struct sockobj * const obj)
         //       peer.
         // The socket can be disconnected by calling connect() again with the
         // socket family set AF_UNSPEC.
-        if (connect(obj->sockfd,
+        if (connect(obj->fd,
                     obj->ainfo.ai_addr,
                     obj->ainfo.ai_addrlen) == 0)
         {
@@ -225,7 +225,7 @@ bool sockudp_connect(struct sockobj * const obj)
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %d peer information is unavailable\n",
                               __FUNCTION__,
-                              obj->sockfd);
+                              obj->fd);
             }
         }
         else
@@ -233,7 +233,7 @@ bool sockudp_connect(struct sockobj * const obj)
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: socket %d connect error (%d)\n",
                           __FUNCTION__,
-                          obj->sockfd,
+                          obj->fd,
                           errno);
         }
     }
@@ -262,12 +262,12 @@ int32_t sockudp_recv(struct sockobj * const obj,
     {
         if (obj->state & SOCKOBJ_STATE_CONNECT)
         {
-            ret = recv(obj->sockfd, buf, len, flags);
+            ret = recv(obj->fd, buf, len, flags);
         }
         else
         {
             socklen = sizeof(obj->addrpeer.sockaddr);
-            ret = recvfrom(obj->sockfd,
+            ret = recvfrom(obj->fd,
                               buf,
                               len,
                               flags,
@@ -289,7 +289,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
                 logger_printf(LOGGER_LEVEL_TRACE,
                               "%s: socket %d received %d bytes from %s:%u\n",
                               __FUNCTION__,
-                              obj->sockfd,
+                              obj->fd,
                               ret,
                               obj->addrpeer.ipaddr,
                               obj->addrpeer.ipport);
@@ -301,7 +301,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %d fatal error (%d)\n",
                                   __FUNCTION__,
-                                  obj->sockfd,
+                                  obj->fd,
                                   errno);
                     ret = -1;
                 }
@@ -310,7 +310,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
                     logger_printf(LOGGER_LEVEL_TRACE,
                                   "%s: socket %d non-fatal error (%d)\n",
                                   __FUNCTION__,
-                                  obj->sockfd,
+                                  obj->fd,
                                   errno);
                     ret = 0;
                 }
@@ -358,11 +358,11 @@ int32_t sockudp_send(struct sockobj * const obj,
         {
             // sendto() could be used if the last two arguments were set to NULL
             // and 0, respectively.
-            ret = send(obj->sockfd, buf, len, flags);
+            ret = send(obj->fd, buf, len, flags);
         }
         else
         {
-            ret = sendto(obj->sockfd,
+            ret = sendto(obj->fd,
                             buf,
                             len,
                             flags,
@@ -377,7 +377,7 @@ int32_t sockudp_send(struct sockobj * const obj,
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %d sent %d bytes\n",
                           __FUNCTION__,
-                          obj->sockfd,
+                          obj->fd,
                           ret);
         }
         else
@@ -397,7 +397,7 @@ int32_t sockudp_send(struct sockobj * const obj,
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %d fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->sockfd,
+                              obj->fd,
                               errno);
                 ret = -1;
             }
@@ -406,7 +406,7 @@ int32_t sockudp_send(struct sockobj * const obj,
                 logger_printf(LOGGER_LEVEL_TRACE,
                               "%s: socket %d non-fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->sockfd,
+                              obj->fd,
                               errno);
                 ret = 0;
             }
@@ -423,7 +423,7 @@ int32_t sockudp_send(struct sockobj * const obj,
                 }
                 else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
                 {
-                    ret = recv(obj->sockfd, buf, len, flags);
+                    ret = recv(obj->fd, buf, len, flags);
                     sockobj_setstats(&obj->info.recv, ret);
 
                     // Remote peer is closed if input is ready but no bytes are
@@ -433,7 +433,7 @@ int32_t sockudp_send(struct sockobj * const obj,
                         logger_printf(LOGGER_LEVEL_TRACE,
                                       "%s: socket %d received %d bytes\n",
                                       __FUNCTION__,
-                                      obj->sockfd,
+                                      obj->fd,
                                       ret);
                     }
                     else
