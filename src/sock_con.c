@@ -105,20 +105,20 @@ bool sockcon_insert(struct sockcon * const con, struct sockobj * const sock)
     }
     else
     {
-        if (con->fion.ops.fion_insertfd(&con->fion, sock->sockfd) == false)
+        if (con->fion.ops.fion_insertfd(&con->fion, sock->fd) == false)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to insert socket %d\n",
                           __FUNCTION__,
-                          sock->sockfd);
+                          sock->fd);
         }
         else if (vector_inserttail(&con->sock, sock) == false)
         {
-            con->fion.ops.fion_deletefd(&con->fion, sock->sockfd);
+            con->fion.ops.fion_deletefd(&con->fion, sock->fd);
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to insert socket %d\n",
                           __FUNCTION__,
-                          sock->sockfd);
+                          sock->fd);
         }
         else
         {
@@ -156,12 +156,12 @@ bool sockcon_delete(struct sockcon * const con, const uint32_t index)
         }
         else
         {
-            if (con->fion.ops.fion_deletefd(&con->fion, sock->sockfd) == false)
+            if (con->fion.ops.fion_deletefd(&con->fion, sock->fd) == false)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: failed to destroy socket %d fd\n",
                               __FUNCTION__,
-                              sock->sockfd);
+                              sock->fd);
             }
             else if (vector_delete(&con->sock, index) == false)
             {
