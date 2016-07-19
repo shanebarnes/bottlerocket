@@ -235,7 +235,8 @@ struct sockobj
     struct sockobj_ops   ops;
     struct fionobj       event;
     struct tokenbucket   tb;
-    int32_t              sockfd;
+    int32_t              fd;
+    uint32_t             id;
     struct sockobj_addr  addrself,
                          addrpeer;
     struct addrinfo      ainfo,
