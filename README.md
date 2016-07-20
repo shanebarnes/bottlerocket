@@ -1,3 +1,5 @@
+![](doc/bottlerocket.png)
+
 # bottlerocket
 
 | [Latest][tag-link] | [License][lic-link] |
