@@ -14,11 +14,9 @@
 #include "output_if_instance.h"
 #include "output_if_std.h"
 #include "system_types.h"
+#include "util_debug.h"
 
 #include <errno.h>
-#if !defined(__CYGWIN__)
-    #include <execinfo.h>
-#endif
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -33,11 +31,6 @@
  */
 void signal_handler(int signum)
 {
-#if !defined(__CYGWIN__)
-    void *callstack[128];
-    int32_t i, frames;
-    char **strs = NULL;
-#endif
     switch (signum)
     {
         case SIGHUP:
@@ -53,16 +46,8 @@ void signal_handler(int signum)
             logger_printf(LOGGER_LEVEL_INFO, "Caught SIGQUIT\n");
             break;
         case SIGSEGV:
-#if !defined(__CYGWIN__)
-            frames = backtrace(callstack, 128);
-            strs = backtrace_symbols(callstack, frames);
             logger_printf(LOGGER_LEVEL_INFO, "Caught SIGSEGV\n");
-            for (i = 0; i < frames; ++i)
-            {
-                logger_printf(LOGGER_LEVEL_ERROR, "%s\n", strs[i]);
-            }
-            free(strs);
-#endif
+            utildebug_backtrace();
             exit(signum);
             break;
         case SIGSTOP:
