@@ -20,6 +20,7 @@ set(BRLIB_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/thread_obj.c
     ${CMAKE_CURRENT_SOURCE_DIR}/token_bucket.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_date.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_debug.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_ioctl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_inet.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_string.c

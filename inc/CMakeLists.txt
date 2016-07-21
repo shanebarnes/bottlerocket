@@ -24,6 +24,7 @@ set(BRLIB_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/thread_obj.h
     ${CMAKE_CURRENT_SOURCE_DIR}/token_bucket.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_date.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_debug.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_ioctl.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_inet.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_mem.h
