@@ -1,4 +1,4 @@
-set(BR_HEADERS
+set(BRLIB_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/args.h
     ${CMAKE_CURRENT_SOURCE_DIR}/dlist.h
     ${CMAKE_CURRENT_SOURCE_DIR}/fion_obj.h

@@ -1,11 +1,23 @@
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 cmake_minimum_required(VERSION 2.8)
 
-set(BR_LIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/inc)
-set(BR_LIB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+if (${UNIX})
+    add_definitions("-Wall")
+    add_definitions("-Werror")
+    add_definitions("-Wextra")
+    add_definitions("-O3")
+    add_definitions("-D_GNU_SOURCE")
+    if (CMAKE_COMPILER_IS_GNUCC)
+        add_definitions("-D_FILE_OFFSET_BITS=64")
+    endif (CMAKE_COMPILER_IS_GNUCC)
+endif ()
+
+set(BRLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/inc)
+set(BRLIB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 add_subdirectory(inc)
 add_subdirectory(src)
+add_subdirectory(lib)
 add_subdirectory(app)
 
 if (${BR_TESTS_ENABLE})

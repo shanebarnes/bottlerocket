@@ -1,4 +1,4 @@
-set(BR_SOURCES
+set(BRLIB_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/args.c
     ${CMAKE_CURRENT_SOURCE_DIR}/dlist.c
     ${CMAKE_CURRENT_SOURCE_DIR}/fion_poll.c
