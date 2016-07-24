@@ -46,8 +46,8 @@ void signal_handler(int signum)
             logger_printf(LOGGER_LEVEL_INFO, "Caught SIGQUIT\n");
             break;
         case SIGSEGV:
-            logger_printf(LOGGER_LEVEL_INFO, "Caught SIGSEGV\n");
             utildebug_backtrace();
+            logger_printf(LOGGER_LEVEL_INFO, "Caught SIGSEGV\n");
             exit(signum);
             break;
         case SIGSTOP:
