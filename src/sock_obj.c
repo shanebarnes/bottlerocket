@@ -78,9 +78,9 @@ bool sockobj_getaddrpeer(struct sockobj * const obj)
                          &socklen) != 0)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: socket %d getpeername failed (%d)\n",
+                      "%s: socket %u getpeername failed (%d)\n",
                       __FUNCTION__,
-                      obj->fd,
+                      obj->id,
                       errno);
     }
     else
@@ -122,9 +122,9 @@ bool sockobj_getaddrself(struct sockobj * const obj)
                          &socklen) != 0)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: socket %d getsockname failed (%d)\n",
+                      "%s: socket %u getsockname failed (%d)\n",
                       __FUNCTION__,
-                      obj->fd,
+                      obj->id,
                       errno);
     }
     else
@@ -317,9 +317,9 @@ bool sockobj_open(struct sockobj * const obj)
                     if (obj->event.ops.fion_setflags(&obj->event) == false)
                     {
                         logger_printf(LOGGER_LEVEL_ERROR,
-                                      "%s: socket %d event creation failed\n",
+                                      "%s: socket %u event creation failed\n",
                                       __FUNCTION__,
-                                      obj->fd,
+                                      obj->id,
                                       errno);
                     }
                     // @todo - SO_REUSEPORT? SO_LINGER? etc
@@ -330,9 +330,9 @@ bool sockobj_open(struct sockobj * const obj)
                                         sizeof(optval)) != 0)
                     {
                         logger_printf(LOGGER_LEVEL_ERROR,
-                                      "%s: socket %d SO_REUSEADDR option failed (%d)\n",
+                                      "%s: socket %u SO_REUSEADDR option failed (%d)\n",
                                       __FUNCTION__,
-                                      obj->fd,
+                                      obj->id,
                                       errno);
                         sockobj_close(obj);
                     }
@@ -344,9 +344,9 @@ bool sockobj_open(struct sockobj * const obj)
                              sizeof(optval)) != 0)
                     {
                         logger_printf(LOGGER_LEVEL_ERROR,
-                                      "%s: socket %d SO_NOSIGPIPE option failed (%d)\n",
+                                      "%s: socket %u SO_NOSIGPIPE option failed (%d)\n",
                                       __FUNCTION__,
-                                      obj->fd,
+                                      obj->id,
                                       errno);
                         sockobj_close(obj);
                     }
@@ -358,9 +358,9 @@ bool sockobj_open(struct sockobj * const obj)
                                         &optlen) != 0)
                     {
                         logger_printf(LOGGER_LEVEL_ERROR,
-                                      "%s: socket %d SO_RCVBUF option failed (%d)\n",
+                                      "%s: socket %u SO_RCVBUF option failed (%d)\n",
                                       __FUNCTION__,
-                                      obj->fd,
+                                      obj->id,
                                       errno);
                         sockobj_close(obj);
                     }
@@ -371,9 +371,9 @@ bool sockobj_open(struct sockobj * const obj)
                                         &optlen) != 0)
                     {
                         logger_printf(LOGGER_LEVEL_ERROR,
-                                      "%s: socket %d SO_SNDBUF option failed (%d)\n",
+                                      "%s: socket %u SO_SNDBUF option failed (%d)\n",
                                       __FUNCTION__,
-                                      obj->fd,
+                                      obj->id,
                                       errno);
                         sockobj_close(obj);
                     }
@@ -418,17 +418,17 @@ bool sockobj_close(struct sockobj * const obj)
         if (close(obj->fd) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: socket %d could not be closed (%d)\n",
+                          "%s: socket %u could not be closed (%d)\n",
                           __FUNCTION__,
-                          obj->fd,
+                          obj->id,
                           errno);
         }
         else if (sockobj_destroy(obj) == false)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: socket %d event desruction failed\n",
+                          "%s: socket %u event desruction failed\n",
                           __FUNCTION__,
-                          obj->fd,
+                          obj->id,
                           errno);
         }
         else
@@ -472,9 +472,9 @@ bool sockobj_bind(struct sockobj * const obj)
     else
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: socket %d bind failed (%d)\n",
+                      "%s: socket %u bind failed (%d)\n",
                       __FUNCTION__,
-                      obj->fd,
+                      obj->id,
                       errno);
     }
 
@@ -508,9 +508,9 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
             if (opt == NULL)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %d option index %u is empty\n",
+                              "%s: socket %u option index %u is empty\n",
                               __FUNCTION__,
-                              obj->fd,
+                              obj->id,
                               i);
                 ret = false;
             }
@@ -525,9 +525,9 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
                 if (errval != 0)
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %d '%s' option failed (%d)\n",
+                                  "%s: socket %u '%s' option failed (%d)\n",
                                   __FUNCTION__,
-                                  obj->fd,
+                                  obj->id,
                                   sockobj_getoptname(opt->name),
                                   errno);
                     ret = false;
@@ -566,9 +566,9 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
             if (opt == NULL)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %d option index %u is empty\n",
+                              "%s: socket %u option index %u is empty\n",
                               __FUNCTION__,
-                              obj->fd,
+                              obj->id,
                               i);
                 ret = false;
             }
@@ -583,9 +583,9 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
                 if (err != 0)
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %d '%s' option failed (%d)\n",
+                                  "%s: socket %u '%s' option failed (%d)\n",
                                   __FUNCTION__,
-                                  obj->fd,
+                                  obj->id,
                                   sockobj_getoptname(opt->name),
                                   errno);
                     ret = false;
