@@ -644,7 +644,7 @@ static struct tuple_element options[] =
         "number of concurrent connections to open",
         "1",
         "0",
-        "100",
+        "1000",
         val_required,
         arg_optional,
         ARGS_FLAG_NULL,
