@@ -223,17 +223,17 @@ bool sockudp_connect(struct sockobj * const obj)
             if (sockobj_getaddrself(obj) == false)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %d peer information is unavailable\n",
+                              "%s: socket %u peer information is unavailable\n",
                               __FUNCTION__,
-                              obj->fd);
+                              obj->id);
             }
         }
         else
         {
             logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: socket %d connect error (%d)\n",
+                          "%s: socket %u connect error (%d)\n",
                           __FUNCTION__,
-                          obj->fd,
+                          obj->id,
                           errno);
         }
     }
@@ -287,9 +287,9 @@ int32_t sockudp_recv(struct sockobj * const obj,
                 }
 
                 logger_printf(LOGGER_LEVEL_TRACE,
-                              "%s: socket %d received %d bytes from %s:%u\n",
+                              "%s: socket %u received %d bytes from %s:%u\n",
                               __FUNCTION__,
-                              obj->fd,
+                              obj->id,
                               ret,
                               obj->addrpeer.ipaddr,
                               obj->addrpeer.ipport);
@@ -299,18 +299,18 @@ int32_t sockudp_recv(struct sockobj * const obj,
                 if (sockobj_iserrfatal(errno) == true)
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %d fatal error (%d)\n",
+                                  "%s: socket %u fatal error (%d)\n",
                                   __FUNCTION__,
-                                  obj->fd,
+                                  obj->id,
                                   errno);
                     ret = -1;
                 }
                 else
                 {
                     logger_printf(LOGGER_LEVEL_TRACE,
-                                  "%s: socket %d non-fatal error (%d)\n",
+                                  "%s: socket %u non-fatal error (%d)\n",
                                   __FUNCTION__,
-                                  obj->fd,
+                                  obj->id,
                                   errno);
                     ret = 0;
                 }
@@ -375,9 +375,9 @@ int32_t sockudp_send(struct sockobj * const obj,
         if (ret > 0)
         {
             logger_printf(LOGGER_LEVEL_TRACE,
-                          "%s: socket %d sent %d bytes\n",
+                          "%s: socket %u sent %d bytes\n",
                           __FUNCTION__,
-                          obj->fd,
+                          obj->id,
                           ret);
         }
         else
@@ -395,18 +395,18 @@ int32_t sockudp_send(struct sockobj * const obj,
             else if (sockobj_iserrfatal(errno) == true)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %d fatal error (%d)\n",
+                              "%s: socket %u fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->fd,
+                              obj->id,
                               errno);
                 ret = -1;
             }
             else
             {
                 logger_printf(LOGGER_LEVEL_TRACE,
-                              "%s: socket %d non-fatal error (%d)\n",
+                              "%s: socket %u non-fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->fd,
+                              obj->id,
                               errno);
                 ret = 0;
             }
@@ -431,9 +431,9 @@ int32_t sockudp_send(struct sockobj * const obj,
                     if (ret > 0)
                     {
                         logger_printf(LOGGER_LEVEL_TRACE,
-                                      "%s: socket %d received %d bytes\n",
+                                      "%s: socket %u received %d bytes\n",
                                       __FUNCTION__,
-                                      obj->fd,
+                                      obj->id,
                                       ret);
                     }
                     else
