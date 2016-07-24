@@ -133,7 +133,8 @@ static void *modeperf_thread(void * arg)
     uint32_t count = 0;
 
     //??
-    struct dlist_node *node = NULL;
+    struct dlist_node *next = NULL, *node = NULL;
+    struct sockobj_flowstats *stats = NULL;
     uint64_t activetimeus = 0;
     uint64_t tsus = 0;
 
@@ -232,11 +233,9 @@ static void *modeperf_thread(void * arg)
                 }
                 else
                 {
-                    if (list.size > 1)
-                        server.event.timeoutms = 0;
-                    else
-                        server.event.timeoutms = 500;
+                    server.event.timeoutms = (list.size > 1 ? 0 : 500);
 
+                    // @todo keep accepting connections if the previous attempt succeeded.
                     if (server.ops.sock_accept(&server, sock) == true)
                     {
                         sock->id = ++count;
@@ -302,6 +301,8 @@ static void *modeperf_thread(void * arg)
 
                 if (opts->arch == SOCKOBJ_MODEL_CLIENT)
                 {
+                    stats = &sock->info.send;
+
                     if ((sock->state & SOCKOBJ_STATE_CONNECT) == 0)
                     {
                         sock->ops.sock_connect(sock);
@@ -317,32 +318,7 @@ static void *modeperf_thread(void * arg)
                                                   tsus);
                     }
 
-                    if (sock->state & SOCKOBJ_STATE_CLOSE)
-                    {
-                        formbytes = form.ops.form_foot(&form);
-                        output_if_std_send(form.dstbuf, formbytes);
-
-                        logger_printf(LOGGER_LEVEL_INFO,
-                                      "%s: passed %" PRIu64
-                                      ", failed %" PRIu64
-                                      ", avg:%u max:%u min:%u\n",
-                                      __FUNCTION__,
-                                      sock->info.send.passedcalls,
-                                      sock->info.send.failedcalls,
-                                      sock->info.send.avgbuflen,
-                                      sock->info.send.maxbuflen,
-                                      sock->info.send.minbuflen);
-
-                        UTILMEM_FREE(node->val);
-                        dlist_remove(&list, node);
-                        // @bug Fix next node retrieval.
-
-                        if (list.size == 0)
-                        {
-                            exit = true;
-                        }
-                    }
-                    else
+                    if ((sock->state & SOCKOBJ_STATE_CLOSE) == 0)
                     {
                         formbytes = form.ops.form_body(&form);
                         output_if_std_send(form.dstbuf, formbytes);
@@ -372,6 +348,8 @@ static void *modeperf_thread(void * arg)
                 }
                 else
                 {
+                    stats = &sock->info.recv;
+
                     recvbytes = modeperf_call(sock->ops.sock_recv,
                                               &sock->info.recv,
                                               sock,
@@ -379,28 +357,7 @@ static void *modeperf_thread(void * arg)
                                               opts->buflen,
                                               tsus);
 
-                    if (sock->state & SOCKOBJ_STATE_CLOSE)
-                    {
-                        formbytes = form.ops.form_foot(&form);
-                        output_if_std_send(form.dstbuf, formbytes);
-
-                        logger_printf(LOGGER_LEVEL_INFO,
-                                      "%s: passed %" PRIu64
-                                      ", failed %" PRIu64
-                                      ", avg:%u max:%u min:%u\n",
-                                      __FUNCTION__,
-                                      sock->info.recv.passedcalls,
-                                      sock->info.recv.failedcalls,
-                                      sock->info.recv.avgbuflen,
-                                      sock->info.recv.maxbuflen,
-                                      sock->info.recv.minbuflen);
-
-                        UTILMEM_FREE(node->val);
-                        dlist_remove(&list, node);
-                        // @bug Fix next node retrieval.
-                        sock = NULL;
-                    }
-                    else
+                    if ((sock->state & SOCKOBJ_STATE_CLOSE) == 0)
                     {
                         formbytes = form.ops.form_body(&form);
                         output_if_std_send(form.dstbuf, formbytes);
@@ -431,7 +388,39 @@ static void *modeperf_thread(void * arg)
                     }
                 }
 
-                node = node->next;
+                if (sock->state & SOCKOBJ_STATE_CLOSE)
+                {
+                    formbytes = form.ops.form_foot(&form);
+                    output_if_std_send(form.dstbuf, formbytes);
+
+                    logger_printf(LOGGER_LEVEL_INFO,
+                                  "%s: passed %" PRIu64
+                                  ", failed %" PRIu64
+                                  ", avg:%u max:%u min:%u\n",
+                                  __FUNCTION__,
+                                  stats->passedcalls,
+                                  stats->failedcalls,
+                                  stats->avgbuflen,
+                                  stats->maxbuflen,
+                                  stats->minbuflen);
+
+                    next = node->next;
+                    UTILMEM_FREE(node->val);
+                    dlist_remove(&list, node);
+                    node = next;
+
+                    if (opts->arch == SOCKOBJ_MODEL_CLIENT)
+                    {
+                        if (list.size == 0)
+                        {
+                            exit = true;
+                        }
+                    }
+                }
+                else
+                {
+                    node = node->next;
+                }
             }
         }
 
