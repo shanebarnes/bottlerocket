@@ -126,7 +126,7 @@ static void *modeperf_thread(void * arg)
     bool exit = true;
     struct threadobj *thread = (struct threadobj *)arg;
     struct dlist list;
-    struct sockobj server, *sock = NULL;
+    struct sockobj group, server, *sock = NULL;
     struct formobj form;
     char *recvbuf = NULL, *sendbuf = NULL;
     int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
@@ -137,6 +137,7 @@ static void *modeperf_thread(void * arg)
     struct sockobj_flowstats *stats = NULL;
     uint64_t activetimeus = 0;
     uint64_t tsus = 0;
+    memset(&group, 0, sizeof(group));
 
     if (thread == NULL)
     {
@@ -219,6 +220,7 @@ static void *modeperf_thread(void * arg)
 
                         if (count == 1)
                         {
+                            group.info.startusec = sock->info.startusec;
                             formbytes = form.ops.form_head(&form);
                             output_if_std_send(form.dstbuf, formbytes);
                         }
@@ -245,8 +247,9 @@ static void *modeperf_thread(void * arg)
                         //              server.addrself.sockaddrstr);
                         sock->event.timeoutms = 0;
                         form.sock = sock;
-                        if (count == 1)
+                        if (list.size == 1)
                         {
+                            group.info.startusec = sock->info.startusec;
                             formbytes = form.ops.form_head(&form);
                             output_if_std_send(form.dstbuf, formbytes);
                         }
@@ -318,6 +321,11 @@ static void *modeperf_thread(void * arg)
                                                   tsus);
                     }
 
+                    if (sendbytes > 0)
+                    {
+                        group.info.send.totalbytes += sendbytes;
+                    }
+
                     if ((sock->state & SOCKOBJ_STATE_CLOSE) == 0)
                     {
                         formbytes = form.ops.form_body(&form);
@@ -357,6 +365,11 @@ static void *modeperf_thread(void * arg)
                                               opts->buflen,
                                               tsus);
 
+                    if (recvbytes > 0)
+                    {
+                        group.info.recv.totalbytes += recvbytes;
+                    }
+
                     if ((sock->state & SOCKOBJ_STATE_CLOSE) == 0)
                     {
                         formbytes = form.ops.form_body(&form);
@@ -390,6 +403,11 @@ static void *modeperf_thread(void * arg)
 
                 if (sock->state & SOCKOBJ_STATE_CLOSE)
                 {
+                    if (list.size == 1)
+                    {
+                        group.info.stopusec = sock->info.stopusec;
+                    }
+
                     formbytes = form.ops.form_foot(&form);
                     output_if_std_send(form.dstbuf, formbytes);
 
@@ -409,9 +427,14 @@ static void *modeperf_thread(void * arg)
                     dlist_remove(&list, node);
                     node = next;
 
-                    if (opts->arch == SOCKOBJ_MODEL_CLIENT)
+                    if (list.size == 0)
                     {
-                        if (list.size == 0)
+                        form.sock = &group;
+                        formbytes = form.ops.form_foot(&form);
+                        output_if_std_send(form.dstbuf, formbytes);
+                        memset(&group, 0, sizeof(group));
+
+                        if (opts->arch == SOCKOBJ_MODEL_CLIENT)
                         {
                             exit = true;
                         }
