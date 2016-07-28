@@ -641,10 +641,10 @@ static struct tuple_element options[] =
     {
         "--parallel",
         'P',
-        "number of concurrent connections to open",
+        "maximum number of concurrent connections to open",
         "1",
         "0",
-        "1000",
+        "10000",
         val_required,
         arg_optional,
         ARGS_FLAG_NULL,
@@ -665,13 +665,13 @@ static struct tuple_element options[] =
     {
         "--backlog",
         'q',
-        "server backlog queue length",
+        "client connection burst size or server backlog queue length",
         str_somaxconn,
         "0",
         str_somaxconn,
         val_required,
         arg_optional,
-        ARGS_FLAG_CLIENT,
+        ARGS_FLAG_NULL,
         args_copybacklog
     },
     {
@@ -1035,6 +1035,10 @@ bool args_parse(const int32_t argc,
                     }
                     break;
                 case 'P':
+                    if ((flags & ARGS_FLAG_BACKLOG) == 0)
+                    {
+                        args->backlog = args->maxcon;
+                    }
                     break;
                 case 'p':
                     break;
