@@ -174,6 +174,11 @@ bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
     // Backlog check: SOMAXCONN
     else if (listen(obj->fd, backlog) == 0)
     {
+        logger_printf(LOGGER_LEVEL_INFO,
+                      "%s: socket %u listening with a backlog of %d\n",
+                      __FUNCTION__,
+                      obj->id,
+                      backlog);
         obj->state |= SOCKOBJ_STATE_LISTEN;
         sockobj_getaddrself(obj);
         ret = true;
@@ -181,7 +186,7 @@ bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
     else
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: socked %d failed to listen on %s:%u (%d)\n",
+                      "%s: socket %u failed to listen on %s:%u (%d)\n",
                       __FUNCTION__,
                       obj->fd,
                       obj->conf.ipaddr,
