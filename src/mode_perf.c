@@ -136,7 +136,10 @@ static void *modeperf_thread(void * arg)
     struct dlist_node *next = NULL, *node = NULL;
     struct sockobj_flowstats *stats = NULL;
     uint64_t activetimeus = 0;
+    uint64_t delayus = 0, mindelayus = 0;
     uint64_t tsus = 0;
+    uint32_t burstlimit = opts->backlog <= 0 ? SOMAXCONN : opts->backlog;
+    uint32_t burst = 0;
     memset(&group, 0, sizeof(group));
 
     if (thread == NULL)
@@ -181,112 +184,129 @@ static void *modeperf_thread(void * arg)
 
         while ((exit == false) && (threadobj_isrunning(thread) == true))
         {
-            if ((count < opts->maxcon) ||
-                ((opts->maxcon == 0) && (opts->arch == SOCKOBJ_MODEL_SERVER)))
+            burst = count;
+
+            while ((exit == false) && ((count - burst) < burstlimit))
             {
-                // @todo Do not allocate memory every iteration.
-                sock = UTILMEM_MALLOC(struct sockobj, 1);
-
-                if (sock == NULL)
+                if ((count < opts->maxcon) ||
+                    (opts->arch == SOCKOBJ_MODEL_SERVER))
                 {
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: failed to allocate memory\n",
-                                  __FUNCTION__);
-                }
-                else if (dlist_inserttail(&list, sock) == false)
-                {
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: failed to store allocated memory\n",
-                                  __FUNCTION__);
+                    // @todo Do not allocate memory every iteration.
+                    sock = UTILMEM_MALLOC(struct sockobj, 1);
 
-                    UTILMEM_FREE(sock);
-                    sock = NULL;
-                }
-                else if (opts->arch == SOCKOBJ_MODEL_CLIENT)
-                {
-                    modeperf_conf(sock, 0);
-
-                    if (sockmod_init(sock) == false)
+                    if (sock == NULL)
                     {
-                        UTILMEM_FREE(list.tail->val);
-                        dlist_removetail(&list);
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: failed to allocate memory\n",
+                                      __FUNCTION__);
+                    }
+                    else if (dlist_inserttail(&list, sock) == false)
+                    {
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: failed to store allocated memory\n",
+                                      __FUNCTION__);
+
+                        UTILMEM_FREE(sock);
                         sock = NULL;
-                        exit = true;
+                    }
+                    else if (opts->arch == SOCKOBJ_MODEL_CLIENT)
+                    {
+                        modeperf_conf(sock, 0);
+
+                        if (sockmod_init(sock) == false)
+                        {
+                            UTILMEM_FREE(list.tail->val);
+                            dlist_removetail(&list);
+                            sock = NULL;
+                            exit = true; ///only for multiple connections??
+                            break;
+                        }
+                        else
+                        {
+                            sock->id = ++count;
+                            form.sock = sock;
+
+                            if (count == 1)
+                            {
+                                group.info.startusec = sock->info.startusec;
+                                formbytes = form.ops.form_head(&form);
+                                output_if_std_send(form.dstbuf, formbytes);
+                            }
+                        }
                     }
                     else
                     {
-                        sock->id = ++count;
-                        form.sock = sock;
+                        server.event.timeoutms = (list.size > 1 ? 0 : 500);
 
-                        if (count == 1)
+                        if (server.ops.sock_accept(&server, sock) == true)
                         {
-                            group.info.startusec = sock->info.startusec;
-                            formbytes = form.ops.form_head(&form);
-                            output_if_std_send(form.dstbuf, formbytes);
+                            if ((opts->maxcon == 0) ||
+                                (list.size <= opts->maxcon))
+                            {
+                                sock->id = ++count;
+                                logger_printf(LOGGER_LEVEL_INFO,
+                                              "%s: server accepted connection on %s\n",
+                                              __FUNCTION__,
+                                              server.addrself.sockaddrstr);
+                                sock->event.timeoutms = 0;
+                                form.sock = sock;
+                                if (list.size == 1)
+                                {
+                                    group.info.startusec = sock->info.startusec;
+                                    formbytes = form.ops.form_head(&form);
+                                    output_if_std_send(form.dstbuf, formbytes);
+                                }
+                            }
+                            else
+                            {
+                                // Refuse connection.
+                                sock->ops.sock_close(sock);
+                                UTILMEM_FREE(list.tail->val);
+                                dlist_removetail(&list);
+                                sock = NULL;
+                            }
                         }
-                        //formbytes = formobj_idle(&form);
-                        //output_if_std_send(form.dstbuf, formbytes);
-                        //formbytes = utilstring_concat(form.dstbuf,
-                        //                              form.dstlen,
-                        //                              "%c",
-                        //                              '\r');
-                        //output_if_std_send(form.dstbuf, formbytes);
+                        else
+                        {
+                            UTILMEM_FREE(list.tail->val);
+                            dlist_removetail(&list);
+                            sock = NULL;
+
+                            if (server.event.revents & FIONOBJ_REVENT_ERROR)
+                            {
+                                // Wait for any open sockets to complete.
+                                if (list.size == 0)
+                                {
+                                    exit = true;
+                                }
+                            }
+                            else if (list.size == 0)
+                            {
+                                form.sock = &server;
+                                formbytes = formobj_idle(&form);
+                                output_if_std_send(form.dstbuf, formbytes);
+                                formbytes = utilstring_concat(form.dstbuf,
+                                                              form.dstlen,
+                                                              "%c",
+                                                              '\r');
+                                output_if_std_send(form.dstbuf, formbytes);
+                            }
+
+                            break;
+                        }
                     }
+                }
+                else if ((opts->maxcon == 0) && (opts->arch == SOCKOBJ_MODEL_CLIENT))
+                {
+                    exit = true;
                 }
                 else
                 {
-                    server.event.timeoutms = (list.size > 1 ? 0 : 500);
-
-                    // @todo keep accepting connections if the previous attempt succeeded.
-                    if (server.ops.sock_accept(&server, sock) == true)
-                    {
-                        sock->id = ++count;
-                        //logger_printf(LOGGER_LEVEL_ERROR,
-                        //              "%s: server accepted connection on %s\n",
-                        //              __FUNCTION__,
-                        //              server.addrself.sockaddrstr);
-                        sock->event.timeoutms = 0;
-                        form.sock = sock;
-                        if (list.size == 1)
-                        {
-                            group.info.startusec = sock->info.startusec;
-                            formbytes = form.ops.form_head(&form);
-                            output_if_std_send(form.dstbuf, formbytes);
-                        }
-                    }
-                    else
-                    {
-                        UTILMEM_FREE(list.tail->val);
-                        dlist_removetail(&list);
-                        sock = NULL;
-
-                        if (server.event.revents & FIONOBJ_REVENT_ERROR)
-                        {
-                            // Wait for any open sockets to complete.
-                            if (list.size == 0)
-                            {
-                                exit = true;
-                            }
-                        }
-                        else if (list.size == 0)
-                        {
-                            form.sock = &server;
-                            formbytes = formobj_idle(&form);
-                            output_if_std_send(form.dstbuf, formbytes);
-                            formbytes = utilstring_concat(form.dstbuf,
-                                                          form.dstlen,
-                                                          "%c",
-                                                          '\r');
-                            output_if_std_send(form.dstbuf, formbytes);
-                        }
-                    }
+                    break;
                 }
             }
-            else if ((opts->maxcon == 0) && (opts->arch == SOCKOBJ_MODEL_CLIENT))
-            {
-                exit = true;
-            }
 
+            mindelayus = 0;
             node = list.head;
 
             while (node != NULL)
@@ -336,12 +356,17 @@ static void *modeperf_thread(void * arg)
                         {
                             if (sock->tb.rate > 0)
                             {
-                                // @todo Replace with semaphore.
-                                usleep((uint32_t)tokenbucket_delay(&sock->tb,
-                                                                   opts->buflen * 8));
+                                delayus = tokenbucket_delay(&sock->tb,
+                                                            opts->buflen * 8);
+
+                                if ((delayus < mindelayus) || (mindelayus == 0))
+                                {
+                                    mindelayus = delayus;
+                                }
                             }
                             else if (tsus - activetimeus > 1000)
                             {
+                                // @todo This needs to occur on a group of fds.
                                 sock->event.timeoutms = 1;
                                 sock->event.pevents = FIONOBJ_PEVENT_OUT;
                             }
@@ -380,12 +405,17 @@ static void *modeperf_thread(void * arg)
                         {
                             if (sock->tb.rate > 0)
                             {
-                                // @todo Replace with semaphore.
-                                usleep((uint32_t)tokenbucket_delay(&sock->tb,
-                                                                   opts->buflen * 8));
+                                delayus = tokenbucket_delay(&sock->tb,
+                                                            opts->buflen * 8);
+
+                                if ((delayus < mindelayus) || (mindelayus == 0))
+                                {
+                                    mindelayus = delayus;
+                                }
                             }
                             else if (tsus - activetimeus > 1000)
                             {
+                                // @todo This needs to occur on a group of fds.
                                 sock->event.timeoutms = 1;
                             }
                         }
@@ -429,6 +459,7 @@ static void *modeperf_thread(void * arg)
 
                     if (list.size == 0)
                     {
+                        group.id = count;
                         form.sock = &group;
                         formbytes = form.ops.form_foot(&form);
                         output_if_std_send(form.dstbuf, formbytes);
@@ -444,6 +475,13 @@ static void *modeperf_thread(void * arg)
                 {
                     node = node->next;
                 }
+            }
+
+            if (mindelayus > 0)
+            {
+                // @todo do not sleep any longer than the reporting interval;
+                // @todo Replace with semaphore.
+                usleep((uint32_t)mindelayus);
             }
         }
 
