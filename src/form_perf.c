@@ -78,7 +78,8 @@ int32_t formperf_head(struct formobj * const obj)
 int32_t formperf_body(struct formobj * const obj)
 {
     int32_t  retval   = -1;
-    uint64_t diffusec = 0, timeusec = 0, progress = 0;
+    uint64_t diffusec = 0, timeusec = 0;
+    uint32_t progress = 0;
     struct util_date_diff diff;
     char strrecvbytes[16], strsendbytes[16];
     char strrecvrate[16], strsendrate[16];
@@ -107,11 +108,13 @@ int32_t formperf_body(struct formobj * const obj)
 
             if (obj->sock->conf.timelimitusec > 0)
             {
-                progress = diffusec * 100 / obj->sock->conf.timelimitusec;
+                progress = (uint32_t)(diffusec * 100 /
+                                      obj->sock->conf.timelimitusec);
             }
             else if (obj->sock->conf.datalimitbyte > 0)
             {
-                progress = obj->sock->info.send.totalbytes * 100 / obj->sock->conf.datalimitbyte;
+                progress = (uint32_t)(obj->sock->info.send.totalbytes * 100 /
+                                      obj->sock->conf.datalimitbyte);
             }
 
             utilunit_getdecformat(10,
