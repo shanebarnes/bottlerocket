@@ -350,6 +350,7 @@ static void *modeperf_thread(void * arg)
                     if ((sock->state & SOCKOBJ_STATE_CLOSE) == 0)
                     {
                         formbytes = form.ops.form_body(&form);
+                        // @todo protect against -1 being cast to uint32_t
                         output_if_std_send(form.dstbuf, formbytes);
 
                         // Prevent thread spin when no bytes are available.
@@ -443,15 +444,21 @@ static void *modeperf_thread(void * arg)
                     output_if_std_send(form.dstbuf, formbytes);
 
                     logger_printf(LOGGER_LEVEL_INFO,
-                                  "%s: passed %" PRIu64
-                                  ", failed %" PRIu64
-                                  ", avg:%u max:%u min:%u\n",
+                                  "%s: calls pass/fail: %" PRIu64
+                                  " / %" PRIu64
+                                  "  time us pass/fail: %" PRIu64
+                                  " / %" PRIu64
+                                  "  avg/min/max %" PRIi64
+                                  " / %" PRIi64
+                                  " / %" PRIi64 "\n",
                                   __FUNCTION__,
                                   stats->passedcalls,
                                   stats->failedcalls,
-                                  stats->avgbuflen,
-                                  stats->maxbuflen,
-                                  stats->minbuflen);
+                                  stats->passedtsus,
+                                  stats->failedtsus,
+                                  stats->buflen.avg,
+                                  stats->buflen.min,
+                                  stats->buflen.max);
 
                     next = node->next;
                     UTILMEM_FREE(node->val);
