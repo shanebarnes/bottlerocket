@@ -78,7 +78,7 @@ int32_t formperf_head(struct formobj * const obj)
 int32_t formperf_body(struct formobj * const obj)
 {
     int32_t  retval   = -1;
-    uint64_t diffusec = 0, timeusec = 0;
+    uint64_t diffusec = 0;
     uint32_t progress = 0;
     struct util_date_diff diff;
     char strrecvbytes[16], strsendbytes[16];
@@ -97,12 +97,11 @@ int32_t formperf_body(struct formobj * const obj)
     }
     else
     {
-        timeusec = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
-
-        if (timeusec >= obj->timeoutusec)
+        if ((obj->tsus >= obj->timeoutusec) &&
+            (obj->tsus > obj->sock->info.startusec))
         {
             diffusec = utildate_gettsdiff(obj->sock->info.startusec,
-                                          timeusec,
+                                          obj->tsus,
                                           UNIT_TIME_USEC,
                                           &diff);
 
@@ -167,13 +166,13 @@ int32_t formperf_body(struct formobj * const obj)
                                        diff.sec,
                                        diff.msec);
 
-            obj->timeoutusec += 1 * UNIT_TIME_USEC / 5;
+            obj->timeoutusec += 1 * UNIT_TIME_USEC;
 
             // Correct timeout in the event that the new timeout has already
             // expired.
-            if (obj->timeoutusec <= timeusec)
+            if (obj->timeoutusec <= obj->tsus)
             {
-                obj->timeoutusec = timeusec + 1 * UNIT_TIME_USEC;
+                obj->timeoutusec = obj->tsus + 1 * UNIT_TIME_USEC;
             }
         }
         else
