@@ -83,6 +83,7 @@ struct formobj
                         dstlen;
     uint16_t            spincount;
     uint64_t            timeoutusec;
+    uint64_t            tsus;
 };
 
 #endif // _FORM_OBJ_H_
