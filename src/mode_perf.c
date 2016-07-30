@@ -316,6 +316,7 @@ static void *modeperf_thread(void * arg)
 
                 // @todo Perform once per iteration?
                 tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
+                form.tsus = tsus;
 
                 if (activetimeus == 0)
                 {
