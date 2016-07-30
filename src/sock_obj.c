@@ -603,6 +603,7 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
 bool sockobj_setstats(struct sockobj_flowstats * const stats, const int32_t len)
 {
     bool ret = false;
+    uint64_t tsus = 0;
 
     if (stats == NULL)
     {
@@ -612,29 +613,55 @@ bool sockobj_setstats(struct sockobj_flowstats * const stats, const int32_t len)
     }
     else
     {
+        if (stats->lasttsus == 0)
+        {
+            stats->lasttsus = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                                 UNIT_TIME_USEC);
+        }
+
         if (len > 0)
         {
             stats->totalbytes += (uint32_t)len;
 
-            if ((uint32_t)len > stats->maxbuflen)
+            if ((int64_t)len > stats->buflen.max)
             {
-                stats->maxbuflen = (uint32_t)len;
+                stats->buflen.max = (int64_t)len;
             }
 
-            if (((uint32_t)len < stats->minbuflen) || (stats->passedcalls == 0))
+            if (((int64_t)len < stats->buflen.min) || (stats->passedcalls == 0))
             {
-                stats->minbuflen = (uint32_t)len;
+                stats->buflen.min = (int64_t)len;
             }
 
             stats->passedcalls++;
 
-            stats->avgbuflen = stats->totalbytes / stats->passedcalls;
+            stats->buflen.avg = stats->totalbytes / stats->passedcalls;
+
+            if (stats->lastcall == false)
+            {
+                tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                          UNIT_TIME_USEC);
+
+                stats->failedtsus += tsus - stats->lasttsus;
+                stats->lasttsus = tsus;
+                stats->lastcall = true;
+            }
         }
         else
         {
             // @note A UDP send of 0 bytes could be considered a successful
             //       send.
             stats->failedcalls++;
+
+            if (stats->lastcall == true)
+            {
+                tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                          UNIT_TIME_USEC);
+
+                stats->passedtsus += tsus - stats->lasttsus;
+                stats->lasttsus = tsus;
+                stats->lastcall = false;
+            }
         }
 
         ret = true;

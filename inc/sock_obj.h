@@ -13,6 +13,7 @@
 #include "fion_obj.h"
 #include "system_types.h"
 #include "token_bucket.h"
+#include "util_stats.h"
 #include "vector.h"
 
 #include <netdb.h>
@@ -213,13 +214,15 @@ struct sockobj_conf
 
 struct sockobj_flowstats
 {
-    int32_t  winsize;     // socket window size
-    uint64_t passedcalls; // successful socket function call count
-    uint64_t failedcalls; // failed socket function call count
-    uint64_t totalbytes;  // total bytes passed to/from socket funcion
-    uint32_t avgbuflen;   // average buffer size passed to/from socket function
-    uint32_t maxbuflen;   // maximum buffer size passed to/from socket function
-    uint32_t minbuflen;   // minimum buffer size passed to/from socket function
+    int32_t              winsize;     // socket window size
+    bool                 lastcall;    // true/false for successful/failed socket function call
+    uint64_t             lasttsus;    // last socket timestamp
+    uint64_t             passedtsus;  // total successful socket function call time
+    uint64_t             failedtsus;  // total failed socket function call time
+    uint64_t             passedcalls; // successful socket function call count
+    uint64_t             failedcalls; // failed socket function call count
+    struct utilstats_qty buflen;      // buffer size passed to/from socket function
+    uint64_t             totalbytes;  // total bytes passed to/from socket funcion
 };
 
 struct sockobj_info
