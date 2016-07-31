@@ -136,6 +136,11 @@ static void *modeperf_thread(void * arg)
     struct dlist_node *next = NULL, *node = NULL;
     struct sockobj_flowstats *stats = NULL;
     uint64_t activetimeus = 0;
+#if defined(__APPLE__)
+    uint64_t inactivetimeus = 1000;
+#else
+    uint64_t inactivetimeus = 0;
+#endif
     uint64_t delayus = 0, mindelayus = 0;
     uint64_t tsus = 0;
     uint32_t burstlimit = opts->backlog <= 0 ? SOMAXCONN : opts->backlog;
@@ -366,7 +371,7 @@ static void *modeperf_thread(void * arg)
                                     mindelayus = delayus;
                                 }
                             }
-                            else if (tsus - activetimeus > 1000)
+                            else if (tsus - activetimeus > inactivetimeus)
                             {
                                 // @todo This needs to occur on a group of fds.
                                 sock->event.timeoutms = 1;
@@ -415,7 +420,7 @@ static void *modeperf_thread(void * arg)
                                     mindelayus = delayus;
                                 }
                             }
-                            else if (tsus - activetimeus > 1000)
+                            else if (tsus - activetimeus > inactivetimeus)
                             {
                                 // @todo This needs to occur on a group of fds.
                                 sock->event.timeoutms = 1;
@@ -423,11 +428,7 @@ static void *modeperf_thread(void * arg)
                         }
                         else
                         {
-#if defined(__linux__)
-                            sock->event.timeoutms = 1;
-#else
                             sock->event.timeoutms = 0;
-#endif
                             activetimeus = tsus;
                         }
                     }
