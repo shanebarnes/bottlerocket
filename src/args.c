@@ -665,7 +665,7 @@ static struct tuple_element options[] =
     {
         "--backlog",
         'q',
-        "client connection burst size or server backlog queue length",
+        "client or server backlog queue length",
         str_somaxconn,
         "0",
         str_somaxconn,
