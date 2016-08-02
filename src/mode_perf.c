@@ -45,7 +45,7 @@ static void modeperf_conf(struct sockobj * const obj, const int32_t timeoutms)
     obj->conf.timelimitusec = opts->timelimitusec;
     obj->conf.family        = opts->family;
     obj->conf.type          = opts->type;
-    obj->conf.model         = opts->arch;;
+    obj->conf.model         = opts->arch;
 }
 
 /**
@@ -448,9 +448,12 @@ static void *modeperf_thread(void * arg)
 
                     utilcpu_getinfo(&info);
                     logger_printf(LOGGER_LEVEL_INFO,
-                                  "%s: cpu load: %d\n",
+                                  "%s: cpu load: %d usr/sys usec: %" PRIu64
+                                  " / %" PRIu64 "\n",
                                   __FUNCTION__,
-                                  info.load);
+                                  info.load,
+                                  info.utimeus,
+                                  info.stimeus);
                     logger_printf(LOGGER_LEVEL_INFO,
                                   "%s: calls pass/fail: %" PRIu64
                                   " / %" PRIu64
