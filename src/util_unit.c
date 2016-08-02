@@ -9,6 +9,7 @@
 
 #include "util_string.h"
 #include "util_unit.h"
+
 #include <stdio.h>
 
 /**
@@ -22,75 +23,75 @@
  */
 static uint64_t utilunit_getbitrateprefix(const char *const prefix)
 {
-    uint64_t retval = 0;
+    uint64_t ret = 0;
 
     if (utilstring_compare(prefix, "BPS", 0, true) ||
         utilstring_compare(prefix, "", 0, true))
     {
-        retval = UNIT_BITRATE_BPS;
+        ret = UNIT_BITRATE_BPS;
     }
     else if (utilstring_compare(prefix, "KBPS", 0, true) ||
              utilstring_compare(prefix, "K", 0, true))
     {
-        retval = UNIT_BITRATE_KBPS;
+        ret = UNIT_BITRATE_KBPS;
     }
     else if (utilstring_compare(prefix, "KIBPS", 0, true) ||
              utilstring_compare(prefix, "KI", 0, true))
     {
-        retval = UNIT_BITRATE_KIBPS;
+        ret = UNIT_BITRATE_KIBPS;
     }
     else if (utilstring_compare(prefix, "MBPS", 0, true) ||
              utilstring_compare(prefix, "M", 0, true))
     {
-        retval = UNIT_BITRATE_MBPS;
+        ret = UNIT_BITRATE_MBPS;
     }
     else if (utilstring_compare(prefix, "MIBPS", 0, true) ||
              utilstring_compare(prefix, "MI", 0, true))
     {
-        retval = UNIT_BITRATE_MIBPS;
+        ret = UNIT_BITRATE_MIBPS;
     }
     else if (utilstring_compare(prefix, "GBPS", 0, true) ||
              utilstring_compare(prefix, "G", 0, true))
     {
-        retval = UNIT_BITRATE_GBPS;
+        ret = UNIT_BITRATE_GBPS;
     }
     else if (utilstring_compare(prefix, "GIBPS", 0, true) ||
              utilstring_compare(prefix, "GI", 0, true))
     {
-        retval = UNIT_BITRATE_GIBPS;
+        ret = UNIT_BITRATE_GIBPS;
     }
     else if (utilstring_compare(prefix, "TBPS", 0, true) ||
              utilstring_compare(prefix, "T", 0, true))
     {
-        retval = UNIT_BITRATE_TBPS;
+        ret = UNIT_BITRATE_TBPS;
     }
     else if (utilstring_compare(prefix, "TIBPS", 0, true) ||
              utilstring_compare(prefix, "TI", 0, true))
     {
-        retval = UNIT_BITRATE_TIBPS;
+        ret = UNIT_BITRATE_TIBPS;
     }
     else if (utilstring_compare(prefix, "PBPS", 0, true) ||
              utilstring_compare(prefix, "P", 0, true))
     {
-        retval = UNIT_BITRATE_PBPS;
+        ret = UNIT_BITRATE_PBPS;
     }
     else if (utilstring_compare(prefix, "PIBPS", 0, true) ||
              utilstring_compare(prefix, "PI", 0, true))
     {
-        retval = UNIT_BITRATE_PIBPS;
+        ret = UNIT_BITRATE_PIBPS;
     }
     else if (utilstring_compare(prefix, "EBPS", 0, true) ||
              utilstring_compare(prefix, "E", 0, true))
     {
-        retval = UNIT_BITRATE_EBPS;
+        ret = UNIT_BITRATE_EBPS;
     }
     else if (utilstring_compare(prefix, "EIBPS", 0, true) ||
              utilstring_compare(prefix, "EI", 0, true))
     {
-        retval = UNIT_BITRATE_EIBPS;
+        ret = UNIT_BITRATE_EIBPS;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -103,75 +104,75 @@ static uint64_t utilunit_getbitrateprefix(const char *const prefix)
  */
 static uint64_t utilunit_getbyteprefix(const char * const prefix)
 {
-    uint64_t retval = 0;
+    uint64_t ret = 0;
 
     if (utilstring_compare(prefix, "B", 0, true) ||
         utilstring_compare(prefix, "", 0, true))
     {
-        retval = UNIT_BYTE_B;
+        ret = UNIT_BYTE_B;
     }
     else if (utilstring_compare(prefix, "KB", 0, true) ||
              utilstring_compare(prefix, "K", 0, true))
     {
-        retval = UNIT_BYTE_KB;
+        ret = UNIT_BYTE_KB;
     }
     else if (utilstring_compare(prefix, "KIB", 0, true) ||
              utilstring_compare(prefix, "KI", 0, true))
     {
-        retval = UNIT_BYTE_KIB;
+        ret = UNIT_BYTE_KIB;
     }
     else if (utilstring_compare(prefix, "MB", 0, true) ||
              utilstring_compare(prefix, "M", 0, true))
     {
-        retval = UNIT_BYTE_MB;
+        ret = UNIT_BYTE_MB;
     }
     else if (utilstring_compare(prefix, "MIB", 0, true) ||
              utilstring_compare(prefix, "MI", 0, true))
     {
-        retval = UNIT_BYTE_MIB;
+        ret = UNIT_BYTE_MIB;
     }
     else if (utilstring_compare(prefix, "GB", 0, true) ||
              utilstring_compare(prefix, "G", 0, true))
     {
-        retval = UNIT_BYTE_GB;
+        ret = UNIT_BYTE_GB;
     }
     else if (utilstring_compare(prefix, "GIB", 0, true) ||
              utilstring_compare(prefix, "GI", 0, true))
     {
-        retval = UNIT_BYTE_GIB;
+        ret = UNIT_BYTE_GIB;
     }
     else if (utilstring_compare(prefix, "TB", 0, true) ||
              utilstring_compare(prefix, "T", 0, true))
     {
-        retval = UNIT_BYTE_TB;
+        ret = UNIT_BYTE_TB;
     }
     else if (utilstring_compare(prefix, "TIB", 0, true) ||
              utilstring_compare(prefix, "TI", 0, true))
     {
-        retval = UNIT_BYTE_TIB;
+        ret = UNIT_BYTE_TIB;
     }
     else if (utilstring_compare(prefix, "PB", 0, true) ||
              utilstring_compare(prefix, "P", 0, true))
     {
-        retval = UNIT_BYTE_PB;
+        ret = UNIT_BYTE_PB;
     }
     else if (utilstring_compare(prefix, "PIB", 0, true) ||
              utilstring_compare(prefix, "PI", 0, true))
     {
-        retval = UNIT_BYTE_PIB;
+        ret = UNIT_BYTE_PIB;
     }
     else if (utilstring_compare(prefix, "EB", 0, true) ||
              utilstring_compare(prefix, "E", 0, true))
     {
-        retval = UNIT_BYTE_EB;
+        ret = UNIT_BYTE_EB;
     }
     else if (utilstring_compare(prefix, "EIB", 0, true) ||
              utilstring_compare(prefix, "EI", 0, true))
     {
-        retval = UNIT_BYTE_EIB;
+        ret = UNIT_BYTE_EIB;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -185,51 +186,51 @@ static uint64_t utilunit_getbyteprefix(const char * const prefix)
  */
 static uint64_t utilunit_getsecsprefix(const char * const prefix)
 {
-    uint64_t retval = 0;
+    uint64_t ret = 0;
 
     if (utilstring_compare(prefix, "PS", 0, true))
     {
-        retval = UNIT_TIME_PSEC;
+        ret = UNIT_TIME_PSEC;
     }
     else if (utilstring_compare(prefix, "NS", 0, true))
     {
-        retval = UNIT_TIME_NSEC;
+        ret = UNIT_TIME_NSEC;
     }
     else if (utilstring_compare(prefix, "US", 0, true))
     {
-        retval = UNIT_TIME_USEC;
+        ret = UNIT_TIME_USEC;
     }
     else if (utilstring_compare(prefix, "MS", 0, true))
     {
-        retval = UNIT_TIME_MSEC;
+        ret = UNIT_TIME_MSEC;
     }
     else if (utilstring_compare(prefix, "S", 0, true) ||
              utilstring_compare(prefix, "", 0, true))
     {
-        retval = UNIT_TIME_SEC;
+        ret = UNIT_TIME_SEC;
     }
     else if (utilstring_compare(prefix, "M", 0, true))
     {
-        retval = UNIT_TIME_MIN;
+        ret = UNIT_TIME_MIN;
     }
     else if (utilstring_compare(prefix, "H", 0, true))
     {
-        retval = UNIT_TIME_HOUR;
+        ret = UNIT_TIME_HOUR;
     }
     else if (utilstring_compare(prefix, "D", 0, true))
     {
-        retval = UNIT_TIME_DAY;
+        ret = UNIT_TIME_DAY;
     }
     else if (utilstring_compare(prefix, "W", 0, true))
     {
-        retval = UNIT_TIME_WEEK;
+        ret = UNIT_TIME_WEEK;
     }
     else if (utilstring_compare(prefix, "Y", 0, true))
     {
-        retval = UNIT_TIME_YEAR;
+        ret = UNIT_TIME_YEAR;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -237,11 +238,11 @@ static uint64_t utilunit_getsecsprefix(const char * const prefix)
  */
 int64_t utilunit_getbitrate(const char * const bitrate)
 {
-    int64_t retval = -1;
+    int64_t ret = -1;
     int32_t matchcount = 0;
     char    prefix[16];
 
-    matchcount = utilstring_parse(bitrate, "%" PRIi64 "%s", &retval, prefix);
+    matchcount = utilstring_parse(bitrate, "%" PRIi64 "%s", &ret, prefix);
 
     switch (matchcount)
     {
@@ -250,14 +251,14 @@ int64_t utilunit_getbitrate(const char * const bitrate)
            break;
         case 2:
             // @todo Protect against overflow.
-            retval = retval * utilunit_getbitrateprefix(prefix);
+            ret = ret * utilunit_getbitrateprefix(prefix);
             break;
         default:
-            retval = -1;
+            ret = -1;
             break;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -265,11 +266,11 @@ int64_t utilunit_getbitrate(const char * const bitrate)
  */
 uint64_t utilunit_getbytes(const char * const bytes)
 {
-    uint64_t retval = 0;
+    uint64_t ret = 0;
     int32_t  matchcount = 0;
     char     prefix[16];
 
-    matchcount = utilstring_parse(bytes, "%" PRIu64 "%s", &retval, prefix);
+    matchcount = utilstring_parse(bytes, "%" PRIu64 "%s", &ret, prefix);
 
     switch (matchcount)
     {
@@ -278,14 +279,14 @@ uint64_t utilunit_getbytes(const char * const bytes)
            break;
         case 2:
             // @todo Protect against overflow.
-            retval = retval * utilunit_getbyteprefix(prefix);
+            ret = ret * utilunit_getbyteprefix(prefix);
             break;
         default:
             // Nothing to do.
             break;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -294,13 +295,13 @@ uint64_t utilunit_getbytes(const char * const bytes)
 uint64_t utilunit_getsecs(const char * const secs,
                           const enum unit_prefix_time units)
 {
-    uint64_t retval = 0;
+    uint64_t ret = 0;
     uint64_t scale = 0;
     int32_t  matchcount = 0;
     bool     sfraction = false, ufraction = false;
     char     prefix[16];
 
-    matchcount = utilstring_parse(secs, "%" PRIu64 "%s", &retval, prefix);
+    matchcount = utilstring_parse(secs, "%" PRIu64 "%s", &ret, prefix);
 
     switch (matchcount)
     {
@@ -327,31 +328,31 @@ uint64_t utilunit_getsecs(const char * const secs,
         {
             if (ufraction == true)
             {
-                retval *= units;
-                retval /= scale;
+                ret *= units;
+                ret /= scale;
             }
             else
             {
-                retval /= units;
-                retval /= scale;
+                ret /= units;
+                ret /= scale;
             }
         }
         else
         {
             if (ufraction == true)
             {
-                retval *= scale;
-                retval *= units;
+                ret *= scale;
+                ret *= units;
             }
             else
             {
-                retval *= scale;
-                retval /= units;
+                ret *= scale;
+                ret /= units;
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -363,41 +364,41 @@ uint64_t utilunit_getsecs(const char * const secs,
  */
 static char utilunit_getprefixsymbol(const uint64_t prefix)
 {
-    char retval = '\0';
+    char ret = '\0';
 
     switch (prefix)
     {
         case UNIT_SI_KILO:
-            retval = 'k';
+            ret = 'k';
             break;
         case UNIT_IEC_KIBI:
-            retval = 'K';
+            ret = 'K';
             break;
         case UNIT_SI_MEGA:
         case UNIT_IEC_MEBI:
-            retval = 'M';
+            ret = 'M';
             break;
         case UNIT_SI_GIGA:
         case UNIT_IEC_GIBI:
-            retval = 'G';
+            ret = 'G';
             break;
         case UNIT_SI_TERA:
         case UNIT_IEC_TEBI:
-            retval = 'T';
+            ret = 'T';
             break;
         case UNIT_SI_PETA:
         case UNIT_IEC_PEBI:
-            retval = 'P';
+            ret = 'P';
             break;
         case UNIT_SI_EXA:
         case UNIT_IEC_EXBI:
-            retval = 'E';
+            ret = 'E';
             break;
         default:
             break;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
