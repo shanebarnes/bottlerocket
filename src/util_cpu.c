@@ -28,7 +28,6 @@ bool utilcpu_getinfo(struct utilcpu_info * const info)
 {
     bool ret = false;
 #if defined(__APPLE__)
-    kern_return_t            err    = KERN_FAILURE;
     mach_port_t              thread = mach_thread_self();
     mach_msg_type_number_t   count  = THREAD_BASIC_INFO_COUNT;
     thread_basic_info_data_t data;
@@ -44,12 +43,10 @@ bool utilcpu_getinfo(struct utilcpu_info * const info)
     else
     {
 #if defined(__APPLE__)
-        err = thread_info(thread,
-                          THREAD_BASIC_INFO,
-                          (thread_info_t)&data,
-                          &count);
-
-        if (err != KERN_SUCCESS)
+        if (thread_info(thread,
+                        THREAD_BASIC_INFO,
+                        (thread_info_t)&data,
+                        &count) != KERN_SUCCESS)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to get thread information (%d)\n",
