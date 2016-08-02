@@ -15,6 +15,7 @@
 #include "sock_mod.h"
 #include "thread_obj.h"
 #include "token_bucket.h"
+#include "util_cpu.h"
 #include "util_date.h"
 #include "util_mem.h"
 #include "util_string.h"
@@ -135,6 +136,7 @@ static void *modeperf_thread(void * arg)
     //??
     struct dlist_node *next = NULL, *node = NULL;
     struct sockobj_flowstats *stats = NULL;
+    struct utilcpu_info info;
     uint64_t activetimeus = 0;
 #if defined(__APPLE__)
     uint64_t inactivetimeus = 1000;
@@ -444,19 +446,26 @@ static void *modeperf_thread(void * arg)
                     formbytes = form.ops.form_foot(&form);
                     output_if_std_send(form.dstbuf, formbytes);
 
+                    utilcpu_getinfo(&info);
+                    logger_printf(LOGGER_LEVEL_INFO,
+                                  "%s: cpu load: %d\n",
+                                  __FUNCTION__,
+                                  info.load);
                     logger_printf(LOGGER_LEVEL_INFO,
                                   "%s: calls pass/fail: %" PRIu64
                                   " / %" PRIu64
                                   "  time us pass/fail: %" PRIu64
-                                  " / %" PRIu64
-                                  "  avg/min/max %" PRIi64
-                                  " / %" PRIi64
-                                  " / %" PRIi64 "\n",
+                                  " / %" PRIu64 "\n",
                                   __FUNCTION__,
                                   stats->passedcalls,
                                   stats->failedcalls,
                                   stats->passedtsus,
-                                  stats->failedtsus,
+                                  stats->failedtsus);
+                    logger_printf(LOGGER_LEVEL_INFO,
+                                  "%s: buflen avg/min/max: %" PRIi64
+                                  " / %" PRIi64
+                                  " / %" PRIi64 "\n",
+                                  __FUNCTION__,
                                   stats->buflen.avg,
                                   stats->buflen.min,
                                   stats->buflen.max);
