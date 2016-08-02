@@ -641,7 +641,7 @@ static struct tuple_element options[] =
     {
         "--parallel",
         'P',
-        "maximum number of concurrent connections to open",
+        "maximum number of concurrent connections",
         "1",
         "0",
         "10000",
