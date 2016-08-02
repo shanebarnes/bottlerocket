@@ -19,6 +19,7 @@ set(BRLIB_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_udp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/thread_obj.c
     ${CMAKE_CURRENT_SOURCE_DIR}/token_bucket.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_cpu.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_date.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_debug.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_ioctl.c
