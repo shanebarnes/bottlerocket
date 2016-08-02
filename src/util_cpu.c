@@ -16,6 +16,9 @@
    #include <mach/mach_init.h>
    #include <mach/mach_port.h>
    #include <mach/thread_act.h>
+#elif defined(__linux__)
+    #include <sys/time.h>
+    #include <sys/resource.h>
 #endif
 
 /**
@@ -29,6 +32,8 @@ bool utilcpu_getinfo(struct utilcpu_info * const info)
     mach_port_t              thread = mach_thread_self();
     mach_msg_type_number_t   count  = THREAD_BASIC_INFO_COUNT;
     thread_basic_info_data_t data;
+#elif defined(__linux__)
+    struct rusage data;
 #endif
     if (info == NULL)
     {
@@ -50,15 +55,41 @@ bool utilcpu_getinfo(struct utilcpu_info * const info)
                           "%s: failed to get thread information (%d)\n",
                           __FUNCTION__,
                           errno);
-            info->load = -1;
+            info->load    = -1;
+            info->stimeus = 0;
+            info->utimeus = 0;
         }
         else
         {
             info->load = data.cpu_usage / 10;
+            info->stimeus = data.system_time.seconds * 1000000 +
+                            data.system_time.microseconds;
+            info->utimeus = data.user_time.seconds * 1000000 +
+                            data.user_time.microseconds;
             ret = true;
         }
 
         mach_port_deallocate(mach_task_self(), thread);
+#elif defined(__linux__)
+        if (getrusage(RUSAGE_THREAD, &data) != 0)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to get thread information (%d)\n",
+                          __FUNCTION__,
+                          errno);
+            info->load    = -1;
+            info->stimeus = 0;
+            info->utimeus = 0;
+        }
+        else
+        {
+            info->load    = -1;
+            info->stimeus = data.ru_stime.tv_sec * 1000000 +
+                            data.ru_stime.tv_usec;
+            info->utimeus = data.ru_utime.tv_sec * 1000000 +
+                            data.ru_utime.tv_usec;
+            ret = true;
+        }
 #endif
     }
 

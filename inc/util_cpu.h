@@ -14,7 +14,9 @@
 
 struct utilcpu_info
 {
-    int16_t load;
+    int16_t  load;
+    uint64_t stimeus;
+    uint64_t utimeus;
 };
 
 /**
