@@ -448,12 +448,13 @@ static void *modeperf_thread(void * arg)
 
                     utilcpu_getinfo(&info);
                     logger_printf(LOGGER_LEVEL_INFO,
-                                  "%s: cpu load: %d usr/sys usec: %" PRIu64
-                                  " / %" PRIu64 "\n",
+                                  "%s: cpu load: %d usr/sys time sec: %u.%06u / %u.%06u\n",
                                   __FUNCTION__,
-                                  info.load,
-                                  info.utimeus,
-                                  info.stimeus);
+                                  info.usage,
+                                  info.usrtime.tv_sec,
+                                  info.usrtime.tv_usec,
+                                  info.systime.tv_sec,
+                                  info.systime.tv_usec);
                     logger_printf(LOGGER_LEVEL_INFO,
                                   "%s: calls pass/fail: %" PRIu64
                                   " / %" PRIu64
