@@ -14,9 +14,9 @@
 
 struct utilcpu_info
 {
-    int16_t  load;
-    uint64_t stimeus;
-    uint64_t utimeus;
+    int16_t        usage;
+    struct timeval systime;
+    struct timeval usrtime;
 };
 
 /**

@@ -52,17 +52,19 @@ bool utilcpu_getinfo(struct utilcpu_info * const info)
                           "%s: failed to get thread information (%d)\n",
                           __FUNCTION__,
                           errno);
-            info->load    = -1;
-            info->stimeus = 0;
-            info->utimeus = 0;
+            info->usage           = -1;
+            info->systime.tv_sec  = 0;
+            info->systime.tv_usec = 0;
+            info->usrtime.tv_sec  = 0;
+            info->usrtime.tv_usec = 0;
         }
         else
         {
-            info->load = data.cpu_usage / 10;
-            info->stimeus = data.system_time.seconds * 1000000 +
-                            data.system_time.microseconds;
-            info->utimeus = data.user_time.seconds * 1000000 +
-                            data.user_time.microseconds;
+            info->usage           = data.cpu_usage / 10;
+            info->systime.tv_sec  = data.system_time.seconds;
+            info->systime.tv_usec = data.system_time.microseconds;
+            info->usrtime.tv_sec  = data.user_time.seconds;
+            info->usrtime.tv_usec = data.user_time.microseconds;
             ret = true;
         }
 
@@ -74,17 +76,19 @@ bool utilcpu_getinfo(struct utilcpu_info * const info)
                           "%s: failed to get thread information (%d)\n",
                           __FUNCTION__,
                           errno);
-            info->load    = -1;
-            info->stimeus = 0;
-            info->utimeus = 0;
+            info->usage           = -1;
+            info->systime.tv_sec  = 0;
+            info->systime.tv_usec = 0;
+            info->usrtime.tv_se c = 0;
+            info->usrtime.tv_usec = 0;
         }
         else
         {
-            info->load    = -1;
-            info->stimeus = data.ru_stime.tv_sec * 1000000 +
-                            data.ru_stime.tv_usec;
-            info->utimeus = data.ru_utime.tv_sec * 1000000 +
-                            data.ru_utime.tv_usec;
+            info->usage           = -1;
+            info->systime.tv_sec  = data.ru_stime.tv_sec;
+            info->systime.tv_usec = data.ru_stime.tv_usec;
+            info->usrtime.tv_sec  = data.ru_utime.tv_sec;
+            info->usrtime.tv_usec = data.ru_utime.tv_usec;
             ret = true;
         }
 #endif
