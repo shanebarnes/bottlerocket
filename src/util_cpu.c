@@ -79,7 +79,7 @@ bool utilcpu_getinfo(struct utilcpu_info * const info)
             info->usage           = -1;
             info->systime.tv_sec  = 0;
             info->systime.tv_usec = 0;
-            info->usrtime.tv_se c = 0;
+            info->usrtime.tv_sec  = 0;
             info->usrtime.tv_usec = 0;
         }
         else
