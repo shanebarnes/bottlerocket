@@ -12,6 +12,8 @@
 
 #include "system_types.h"
 
+#include <sys/time.h>
+
 struct utilcpu_info
 {
     int16_t        usage;
