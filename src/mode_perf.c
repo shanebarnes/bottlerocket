@@ -138,11 +138,7 @@ static void *modeperf_thread(void * arg)
     struct sockobj_flowstats *stats = NULL;
     struct utilcpu_info info;
     uint64_t activetimeus = 0;
-#if defined(__APPLE__)
-    uint64_t inactivetimeus = 1000;
-#else
     uint64_t inactivetimeus = 0;
-#endif
     uint64_t delayus = 0, mindelayus = 0;
     uint64_t tsus = 0;
     uint32_t burstlimit = opts->backlog <= 0 ? SOMAXCONN : opts->backlog;
@@ -378,12 +374,14 @@ static void *modeperf_thread(void * arg)
                                 // @todo This needs to occur on a group of fds.
                                 sock->event.timeoutms = 1;
                                 sock->event.pevents = FIONOBJ_PEVENT_OUT;
+                                sock->event.ops.fion_setflags(&sock->event);
                             }
                         }
                         else
                         {
                             sock->event.timeoutms = 0;
                             sock->event.pevents = FIONOBJ_PEVENT_IN;
+                            sock->event.ops.fion_setflags(&sock->event);
                             activetimeus = tsus;
                         }
                     }
