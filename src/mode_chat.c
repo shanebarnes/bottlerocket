@@ -132,6 +132,13 @@ static void *modechat_thread(void * arg)
 
                 if (recvbytes > 0)
                 {
+                    if ((opts->arch == SOCKOBJ_MODEL_SERVER) &&
+                        (opts->echo == true))
+                    {
+                        // @todo Fix for partial-send case.
+                        socket.ops.sock_send(&socket, recvbuf, recvbytes);
+                    }
+
                     // Null-terminate the string.
                     recvbuf[recvbytes] = '\0';
                     recvbytes++;
