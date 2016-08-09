@@ -36,6 +36,7 @@ struct args_obj
     uint64_t           timelimitusec;
     uint64_t           buflen;
     uint32_t           maxcon;
+    bool               echo;
 };
 
 /**

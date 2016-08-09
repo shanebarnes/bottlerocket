@@ -33,17 +33,18 @@ enum args_flag
     ARGS_FLAG_BIND      = 0x00020,
     ARGS_FLAG_BANDWIDTH = 0x00040,
     ARGS_FLAG_CLIENT    = 0x00080,
-    ARGS_FLAG_INTERVAL  = 0x00100,
-    ARGS_FLAG_LEN       = 0x00200,
-    ARGS_FLAG_NUM       = 0x00400,
-    ARGS_FLAG_PARALLEL  = 0x00800,
-    ARGS_FLAG_PORT      = 0x01000,
-    ARGS_FLAG_BACKLOG   = 0x02000,
-    ARGS_FLAG_SERVER    = 0x04000,
-    ARGS_FLAG_TIME      = 0x08000,
-    ARGS_FLAG_UDP       = 0x10000,
-    ARGS_FLAG_HELP      = 0x20000,
-    ARGS_FLAG_VERSION   = 0x40000
+    ARGS_FLAG_ECHO      = 0x00100,
+    ARGS_FLAG_INTERVAL  = 0x00200,
+    ARGS_FLAG_LEN       = 0x00400,
+    ARGS_FLAG_NUM       = 0x00800,
+    ARGS_FLAG_PARALLEL  = 0x01000,
+    ARGS_FLAG_PORT      = 0x02000,
+    ARGS_FLAG_BACKLOG   = 0x04000,
+    ARGS_FLAG_SERVER    = 0x08000,
+    ARGS_FLAG_TIME      = 0x10000,
+    ARGS_FLAG_UDP       = 0x20000,
+    ARGS_FLAG_HELP      = 0x40000,
+    ARGS_FLAG_VERSION   = 0x80000
 };
 
 struct tuple_element
@@ -603,6 +604,18 @@ static struct tuple_element options[] =
         args_copyipaddr
     },
     {
+        "--echo",
+        'e',
+        "echo reception back to client",
+        "disabled",
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_CLIENT,
+        NULL
+    },
+    {
         "--interval",
         'i',
         "time between periodic bandwidth reports",
@@ -1018,6 +1031,9 @@ bool args_parse(const int32_t argc,
                     {
                         args->maxcon = 1;
                     }
+                    break;
+                case 'e':
+                    args->echo = true;
                     break;
                 case 'l':
                     break;
