@@ -5,7 +5,7 @@ set(BRLIB_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/form_chat.c
     ${CMAKE_CURRENT_SOURCE_DIR}/form_obj.c
     ${CMAKE_CURRENT_SOURCE_DIR}/form_perf.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/input_if_std.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/input_std.c
     ${CMAKE_CURRENT_SOURCE_DIR}/logger.c
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_chat.c
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_perf.c
