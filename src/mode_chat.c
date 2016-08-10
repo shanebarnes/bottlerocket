@@ -8,7 +8,7 @@
  */
 
 #include "form_chat.h"
-#include "input_if_std.h"
+#include "input_std.h"
 #include "logger.h"
 #include "mode_chat.h"
 #include "output_if_std.h"
@@ -160,9 +160,9 @@ static void *modechat_thread(void * arg)
                     }
                 }
 
-                if ((recvbytes = input_if_std_recv(recvbuf,
-                                                   sizeof(recvbuf),
-                                                   timeoutms)) > 0)
+                if ((recvbytes = inputstd_recv(recvbuf,
+                                               sizeof(recvbuf),
+                                               timeoutms)) > 0)
                 {
                     if (count > 0)
                     {
