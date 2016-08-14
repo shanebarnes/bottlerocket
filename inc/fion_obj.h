@@ -93,6 +93,18 @@ struct fionobj_ops
      * @return True if the file I/O event object was polled.
      */
     bool (*fion_poll)(struct fionobj * const obj);
+
+    /**
+     * @brief Get the latest poll events returned for a file descriptor.
+     *
+     * @param[in,out] obj A pointer to a file I/O event notification object.
+     * @param[in]     pos The position of a file descriptor within a group of
+     *                    file descriptors.
+     *
+     * @return The latest poll events returned for a file descriptor (0 if no
+     *         file descriptor events are available).
+     */
+    uint32_t (*fion_getevents)(struct fionobj * const obj, const uint32_t pos);
 };
 
 struct fionobj
