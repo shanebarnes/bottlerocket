@@ -21,7 +21,7 @@
  */
 bool fionpoll_create(struct fionobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     if ((obj == NULL) || (vector_getsize(&obj->fds) != 0))
     {
@@ -50,11 +50,11 @@ bool fionpoll_create(struct fionobj * const obj)
         }
         else
         {
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -62,7 +62,7 @@ bool fionpoll_create(struct fionobj * const obj)
  */
 bool fionpoll_destroy(struct fionobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (obj == NULL)
     {
@@ -88,10 +88,10 @@ bool fionpoll_destroy(struct fionobj * const obj)
         obj->ops.fion_setflags = NULL;
         obj->ops.fion_poll     = NULL;
 
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -99,7 +99,7 @@ bool fionpoll_destroy(struct fionobj * const obj)
  */
 bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
 {
-    bool retval = false, found = false;
+    bool ret = false, found = false;
     struct pollfd *pfd = NULL;
     uint32_t i;
 
@@ -130,11 +130,11 @@ bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
         {
             pfd = UTILMEM_MALLOC(struct pollfd, 1);
             pfd->fd = fd;
-            retval = vector_inserttail(&obj->fds, pfd);
+            ret = vector_inserttail(&obj->fds, pfd);
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -142,7 +142,7 @@ bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
  */
 bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd)
 {
-    bool retval = false, found = false;
+    bool ret = false, found = false;
     struct pollfd *pfd = NULL;
     uint32_t i;
 
@@ -175,11 +175,11 @@ bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd)
         else
         {
             UTILMEM_FREE(pfd);
-            retval = vector_delete(&obj->fds, i);
+            ret = vector_delete(&obj->fds, i);
         }
     }
 
-    return retval;
+    return ret;
 }
 
 
@@ -188,7 +188,7 @@ bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd)
  */
 bool fionpoll_setflags(struct fionobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
     struct pollfd *pfd = NULL;
     uint32_t i;
     int32_t flags;
@@ -234,10 +234,10 @@ bool fionpoll_setflags(struct fionobj * const obj)
             }
         }
 
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -245,10 +245,9 @@ bool fionpoll_setflags(struct fionobj * const obj)
  */
 bool fionpoll_poll(struct fionobj * const obj)
 {
-    bool retval = false;
-    struct pollfd *pfd = NULL;
+    bool ret = false;
+    int32_t err;
     uint32_t i;
-    int32_t error;
 
     if ((obj == NULL) || (vector_getsize(&obj->fds) == 0))
     {
@@ -260,61 +259,24 @@ bool fionpoll_poll(struct fionobj * const obj)
     {
         obj->revents = 0;
 
-        error = poll((struct pollfd *)vector_getval(&obj->fds, 0),
-                     vector_getsize(&obj->fds),
-                     obj->timeoutms);
+        err = poll((struct pollfd *)vector_getval(&obj->fds, 0),
+                   vector_getsize(&obj->fds),
+                   obj->timeoutms);
 
-        if (error == 0)
+        if (err == 0)
         {
             // No event on any file descriptor.
             obj->revents = FIONOBJ_REVENT_TIMEOUT;
-            retval = true;
+            ret = true;
         }
-        else if (error > 0)
+        else if (err > 0)
         {
             for (i = 0; i < vector_getsize(&obj->fds); i++)
             {
-                pfd = (struct pollfd *)vector_getval(&obj->fds, i);
-
-                // Check for error events.
-                if ((pfd->revents & POLLERR) ||
-#if defined(__linux__)
-                    (pfd->revents & POLLRDHUP) ||
-#endif
-                    (pfd->revents & POLLHUP) ||
-                    (pfd->revents & POLLNVAL))
-                {
-                    obj->revents |= FIONOBJ_REVENT_ERROR;
-                }
-
-                // Check for input event.
-                if (pfd->revents & POLLIN)
-                {
-                    obj->revents |= FIONOBJ_REVENT_INREADY;
-                }
-
-                // Check for output event.
-                if (pfd->revents & POLLOUT)
-                {
-                    obj->revents |= FIONOBJ_REVENT_OUTREADY;
-                }
-//#if defined(__CYGWIN__)
-//                // @bug Hack to detect a remote peer connection closure.
-//                if (pfd->revents & POLLIN)
-//                {
-//                    uint8_t buf[1];
-//                    if (recv(pfd->fd,
-//                             buf,
-//                             sizeof(buf),
-//                             MSG_PEEK | MSG_DONTWAIT) != sizeof(buf))
-//                    {
-//                        obj->revents |= FIONOBJ_REVENT_ERROR;
-//                    }
-//                }
-//#endif
+                obj->revents |= fionpoll_getevents(obj, i);
             }
 
-            retval = true;
+            ret = true;
         }
         else
         {
@@ -325,5 +287,56 @@ bool fionpoll_poll(struct fionobj * const obj)
         }
     }
 
-    return retval;
+    return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+uint32_t fionpoll_getevents(struct fionobj * const obj, const uint32_t pos)
+{
+    uint32_t ret = 0;
+    struct pollfd *pfd = NULL;
+
+    if ((obj == NULL) || (pos >= vector_getsize(&obj->fds)))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed %p\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        pfd = (struct pollfd *)vector_getval(&obj->fds, pos);
+
+        // Check for error events.
+        if ((pfd->revents & POLLERR) ||
+#if defined(__linux__)
+            (pfd->revents & POLLRDHUP) ||
+#endif
+            (pfd->revents & POLLHUP) ||
+            (pfd->revents & POLLNVAL))
+        {
+            ret |= FIONOBJ_REVENT_ERROR;
+        }
+
+        // Check for input event.
+        if (pfd->revents & POLLIN)
+        {
+            ret |= FIONOBJ_REVENT_INREADY;
+        }
+
+        // Check for output event.
+        if (pfd->revents & POLLOUT)
+        {
+            ret |= FIONOBJ_REVENT_OUTREADY;
+        }
+
+        // Assume a timeout if no events received.
+        if (ret == 0)
+        {
+            ret = FIONOBJ_REVENT_TIMEOUT;
+        }
+    }
+
+    return ret;
 }

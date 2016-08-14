@@ -43,4 +43,9 @@ bool fionpoll_setflags(struct fionobj * const obj);
  */
 bool fionpoll_poll(struct fionobj * const obj);
 
+/**
+ * @see fion_getevents() for interface comments.
+ */
+uint32_t fionpoll_getevents(struct fionobj * const obj, const uint32_t pos);
+
 #endif // _FION_POLL_H_
