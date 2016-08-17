@@ -112,7 +112,7 @@ bool sockudp_destroy(struct sockobj * const obj)
     }
     else
     {
-        ret = obj->ops.sock_destroy(obj);
+        ret = sockobj_destroy(obj);
     }
 
     return ret;
