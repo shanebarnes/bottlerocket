@@ -31,7 +31,7 @@ bool dlist_insertafter(struct dlist * const list,
     }
     else
     {
-        new = UTILMEM_MALLOC(struct dlist_node, 1);
+        new = UTILMEM_MALLOC(struct dlist_node, sizeof(struct dlist_node), 1);
 
         if (new == NULL)
         {
@@ -91,7 +91,7 @@ bool dlist_insertbefore(struct dlist * const list,
     }
     else
     {
-        new = UTILMEM_MALLOC(struct dlist_node, 1);
+        new = UTILMEM_MALLOC(struct dlist_node, sizeof(struct dlist_node), 1);
 
         if (new == NULL)
         {
