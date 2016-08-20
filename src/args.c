@@ -24,27 +24,28 @@
 
 enum args_flag
 {
-    ARGS_FLAG_NULL      = 0x00000,
-    ARGS_FLAG_CHAT      = 0x00001,
-    ARGS_FLAG_PERF      = 0x00002,
-    ARGS_FLAG_IPV4      = 0x00004,
-    ARGS_FLAG_IPV6      = 0x00008,
-    ARGS_FLAG_AFFINITY  = 0x00010,
-    ARGS_FLAG_BIND      = 0x00020,
-    ARGS_FLAG_BANDWIDTH = 0x00040,
-    ARGS_FLAG_CLIENT    = 0x00080,
-    ARGS_FLAG_ECHO      = 0x00100,
-    ARGS_FLAG_INTERVAL  = 0x00200,
-    ARGS_FLAG_LEN       = 0x00400,
-    ARGS_FLAG_NUM       = 0x00800,
-    ARGS_FLAG_PARALLEL  = 0x01000,
-    ARGS_FLAG_PORT      = 0x02000,
-    ARGS_FLAG_BACKLOG   = 0x04000,
-    ARGS_FLAG_SERVER    = 0x08000,
-    ARGS_FLAG_TIME      = 0x10000,
-    ARGS_FLAG_UDP       = 0x20000,
-    ARGS_FLAG_HELP      = 0x40000,
-    ARGS_FLAG_VERSION   = 0x80000
+    ARGS_FLAG_NULL       = 0x000000,
+    ARGS_FLAG_CHAT       = 0x000001,
+    ARGS_FLAG_PERF       = 0x000002,
+    ARGS_FLAG_IPV4       = 0x000004,
+    ARGS_FLAG_IPV6       = 0x000008,
+    ARGS_FLAG_AFFINITY   = 0x000010,
+    ARGS_FLAG_BIND       = 0x000020,
+    ARGS_FLAG_BANDWIDTH  = 0x000040,
+    ARGS_FLAG_CLIENT     = 0x000080,
+    ARGS_FLAG_ECHO       = 0x000100,
+    ARGS_FLAG_INTERVAL   = 0x000200,
+    ARGS_FLAG_LEN        = 0x000400,
+    ARGS_FLAG_OPTNODELAY = 0x000800,
+    ARGS_FLAG_NUM        = 0x001000,
+    ARGS_FLAG_PARALLEL   = 0x002000,
+    ARGS_FLAG_PORT       = 0x004000,
+    ARGS_FLAG_BACKLOG    = 0x008000,
+    ARGS_FLAG_SERVER     = 0x010000,
+    ARGS_FLAG_TIME       = 0x020000,
+    ARGS_FLAG_UDP        = 0x040000,
+    ARGS_FLAG_HELP       = 0x080000,
+    ARGS_FLAG_VERSION    = 0x100000
 };
 
 struct tuple_element
@@ -640,6 +641,18 @@ static struct tuple_element options[] =
         args_copybuflen
     },
     {
+        "--nodelay",
+        'N',
+        "set TCP no delay (disable Nagle's algorithm)",
+        "disabled",
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_UDP,
+        NULL
+    },
+    {
         "--num",
         'n',
         "number of bytes to send or receive",
@@ -720,7 +733,7 @@ static struct tuple_element options[] =
         NULL,
         val_optional,
         arg_optional,
-        ARGS_FLAG_NULL,
+        ARGS_FLAG_OPTNODELAY,
         NULL
     },
     {
@@ -765,7 +778,7 @@ static void args_usage(FILE * const stream)
     for (i = 0; i < sizeof(options) / sizeof(struct tuple_element); i++)
     {
         fprintf(stream,
-                "  %s%c%s %-11s %-40s %s\n",
+                "  %s%c%s %-11s %-50s %s\n",
                 options[i].sname >= '0' ? prefix_skey : " ",
                 options[i].sname >= '0' ? options[i].sname : ' ',
                 options[i].sname >= '0' ? "," : " ",
@@ -1036,6 +1049,9 @@ bool args_parse(const int32_t argc,
                     args->echo = true;
                     break;
                 case 'l':
+                    break;
+                case 'N':
+                    args->opts.nodelay = true;
                     break;
                 case 'n':
                     break;

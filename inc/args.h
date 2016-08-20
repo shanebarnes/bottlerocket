@@ -22,6 +22,11 @@ enum args_mode
     ARGS_MODE_CHAT = 0x02
 };
 
+struct args_opts
+{
+    bool nodelay;
+};
+
 struct args_obj
 {
     enum args_mode     mode;
@@ -37,6 +42,7 @@ struct args_obj
     uint64_t           buflen;
     uint32_t           maxcon;
     bool               echo;
+    struct args_opts   opts;
 };
 
 /**
