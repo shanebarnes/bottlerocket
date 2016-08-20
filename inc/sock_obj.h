@@ -199,17 +199,17 @@ struct sockobj_opt
 
 struct sockobj_conf
 {
-    int32_t            family; // e.g., AF_INET, AF_INET6
-    int32_t            type;   // e.g.: SOCK_DGRAM, SOCK_STREAM
-    char               ipaddr[INET6_ADDRSTRLEN];
-    uint16_t           ipport;
-    int32_t            backlog;
-    enum sockobj_model model;
-    int32_t            timeoutms;
-    uint64_t           datalimitbyte;
-    uint64_t           ratelimitbps;
-    uint64_t           timelimitusec;
-    struct vector      opts;
+    int32_t             family; // e.g., AF_INET, AF_INET6
+    int32_t             type;   // e.g.: SOCK_DGRAM, SOCK_STREAM
+    char                ipaddr[INET6_ADDRSTRLEN];
+    uint16_t            ipport;
+    int32_t             backlog;
+    enum sockobj_model  model;
+    int32_t             timeoutms;
+    uint64_t            datalimitbyte;
+    uint64_t            ratelimitbps;
+    uint64_t            timelimitusec;
+    struct vector      *opts;
 };
 
 struct sockobj_flowstats
@@ -221,6 +221,7 @@ struct sockobj_flowstats
     uint64_t             failedtsus;  // total failed socket function call time
     uint64_t             passedcalls; // successful socket function call count
     uint64_t             failedcalls; // failed socket function call count
+    struct utilstats_qty rttms;
     struct utilstats_qty buflen;      // buffer size passed to/from socket function
     uint64_t             totalbytes;  // total bytes passed to/from socket funcion
 };

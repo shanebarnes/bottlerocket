@@ -207,6 +207,7 @@ bool sockobj_create(struct sockobj * const obj)
         else
         {
             obj->event.pevents = FIONOBJ_PEVENT_IN;
+            //obj->event.ops.fion_setflags(&obj->event);
             ret = true;
         }
     }
@@ -419,14 +420,6 @@ bool sockobj_close(struct sockobj * const obj)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: socket %u could not be closed (%d)\n",
-                          __FUNCTION__,
-                          obj->id,
-                          errno);
-        }
-        else if (sockobj_destroy(obj) == false)
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: socket %u event desruction failed\n",
                           __FUNCTION__,
                           obj->id,
                           errno);
