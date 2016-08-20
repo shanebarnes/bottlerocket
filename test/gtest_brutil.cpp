@@ -8,8 +8,8 @@
  */
 
 #include "logger.c"
-#include "output_if_std.c"
 #include "mutex_obj.c"
+#include "output_if_std.c"
 #include "util_date.c"
 #include "util_string.c"
 
