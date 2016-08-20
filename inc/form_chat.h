@@ -14,6 +14,11 @@
 #include "system_types.h"
 
 /**
+ * @see form_init() for interface comments.
+ */
+bool formchat_init(struct formobj * const obj);
+
+/**
  * @see form_head() for interface comments.
  */
 int32_t formchat_head(struct formobj * const obj);

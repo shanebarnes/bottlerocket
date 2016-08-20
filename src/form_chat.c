@@ -25,14 +25,40 @@ static const char * formdiv = "----------------------------------------"
 /**
  * @see See header file for interface comments.
  */
+bool formchat_init(struct formobj * const obj)
+{
+    bool ret = false;
+
+    if (obj == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        obj->ops.form_head = formchat_head;
+        obj->ops.form_body = formchat_body;
+        obj->ops.form_foot = formchat_foot;
+        obj->spincount     = 0;
+
+        ret = true;
+    }
+
+    return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
 int32_t formchat_head(struct formobj * const obj)
 {
-    int32_t  retval = -1;
-    uint16_t cols   = 0,
-             rows   = 0,
-             fill   = 0;
-    uint64_t sec    = 0,
-             nsec   = 0;
+    int32_t  ret  = -1;
+    uint16_t cols = 0,
+             rows = 0,
+             fill = 0;
+    uint64_t sec  = 0,
+             nsec = 0;
     char strdate[32];
 
     if ((obj == NULL) ||
@@ -64,17 +90,17 @@ int32_t formchat_head(struct formobj * const obj)
             fill = cols;
         }
 
-        retval = utilstring_concat(obj->dstbuf,
-                                   obj->dstlen,
-                                   "chat session %s opened at %s.%06u%.*s\a\n",
-                                   obj->sock->addrpeer.sockaddrstr,
-                                   strdate,
-                                   (uint32_t)(nsec / 1000),
-                                   cols - fill,
-                                   formdiv);
+        ret = utilstring_concat(obj->dstbuf,
+                                obj->dstlen,
+                                "chat session %s opened at %s.%06u%.*s\a\n",
+                                obj->sock->addrpeer.sockaddrstr,
+                                strdate,
+                                (uint32_t)(nsec / 1000),
+                                cols - fill,
+                                formdiv);
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -82,13 +108,16 @@ int32_t formchat_head(struct formobj * const obj)
  */
 int32_t formchat_body(struct formobj * const obj)
 {
-    int32_t  retval   = -1;
+    int32_t  ret      = -1;
     uint16_t cols     = 0,
              rows     = 0;
     int32_t  lmargin  = 0,
              rmargin  = 0;
     int32_t  srcbytes = 0,
              tmpbytes = 0;
+    uint64_t sec      = 0,
+             nsec     = 0;
+    char strdate[32];
 
     if ((obj == NULL) ||
         (obj->sock == NULL) ||
@@ -103,22 +132,31 @@ int32_t formchat_body(struct formobj * const obj)
     }
     else
     {
-        retval = 0;
+        ret = 0;
         utilioctl_gettermsize(&rows, &cols);
         rmargin = cols;
         lmargin = cols / 2;
 
+        utildate_gettvtime(DATE_CLOCK_REALTIME, &sec, &nsec);
+        utildate_gettsformat(sec,
+                             UNIT_TIME_SEC,
+                             "%Y-%m-%dT%H:%M:%S",
+                             strdate,
+                             sizeof(strdate));
+
         tmpbytes = utilstring_concat(obj->dstbuf,
                                      obj->dstlen,
-                                     "%*s[%s (%4d bytes)]\a\n",
+                                     "%*s[%s.%06u %s (%4d bytes)]\a\n",
                                      lmargin,
                                      "",
+                                     strdate,
+                                     (uint32_t)(nsec / 1000),
                                      obj->sock->addrpeer.sockaddrstr,
                                      obj->srclen - 1);
 
         if (tmpbytes > 0)
         {
-            retval += tmpbytes;
+            ret += tmpbytes;
         }
 
         while (srcbytes < obj->srclen)
@@ -129,8 +167,8 @@ int32_t formchat_body(struct formobj * const obj)
             }
 
             // Set the left margin and create a substring that is left justified.
-            tmpbytes = utilstring_concat(obj->dstbuf + retval,
-                                         obj->dstlen - retval,
+            tmpbytes = utilstring_concat(obj->dstbuf + ret,
+                                         obj->dstlen - ret,
                                          "%*s%-*.*s\n",
                                          lmargin,
                                          "",
@@ -141,7 +179,7 @@ int32_t formchat_body(struct formobj * const obj)
             if (tmpbytes > 0)
             {
                 srcbytes += (rmargin - lmargin);
-                retval   += tmpbytes;
+                ret   += tmpbytes;
             }
             else
             {
@@ -150,7 +188,7 @@ int32_t formchat_body(struct formobj * const obj)
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -158,12 +196,12 @@ int32_t formchat_body(struct formobj * const obj)
  */
 int32_t formchat_foot(struct formobj * const obj)
 {
-    int32_t  retval = -1;
-    uint16_t cols   = 0,
-             rows   = 0,
-             fill   = 0;
-    uint64_t sec    = 0,
-             nsec   = 0;
+    int32_t  ret  = -1;
+    uint16_t cols = 0,
+             rows = 0,
+             fill = 0;
+    uint64_t sec  = 0,
+             nsec = 0;
     uint64_t durationusec = 0,
              recvratebps  = 0,
              sendratebps  = 0;
@@ -227,21 +265,21 @@ int32_t formchat_foot(struct formobj * const obj)
             fill = cols;
         }
 
-        retval = utilstring_concat(obj->dstbuf,
-                                   obj->dstlen,
-                                   "send stats: %sB / %sbps "
-                                   "recv stats: %sB / %sbps\n"
-                                   "chat session %s closed at %s.%06u%.*s\a\n",
-                                   strsendbytes,
-                                   strsendrate,
-                                   strrecvbytes,
-                                   strrecvrate,
-                                   obj->sock->addrpeer.sockaddrstr,
-                                   strdate,
-                                   (uint32_t)(nsec / 1000),
-                                   cols - fill,
-                                   formdiv);
+        ret = utilstring_concat(obj->dstbuf,
+                                obj->dstlen,
+                                "send stats: %sB / %sbps "
+                                "recv stats: %sB / %sbps\n"
+                                "chat session %s closed at %s.%06u%.*s\a\n",
+                                strsendbytes,
+                                strsendrate,
+                                strrecvbytes,
+                                strrecvrate,
+                                obj->sock->addrpeer.sockaddrstr,
+                                strdate,
+                                (uint32_t)(nsec / 1000),
+                                cols - fill,
+                                formdiv);
     }
 
-    return retval;
+    return ret;
 }
