@@ -29,7 +29,7 @@ bool logger_create(void)
     bool retval = false;
 
     //@todo Replace with a read/write lock for multiple threads?
-    lock = UTILMEM_MALLOC(struct mutexobj, 1);
+    lock = UTILMEM_MALLOC(struct mutexobj, sizeof(struct mutexobj), 1);
 
     if (lock != NULL)
     {
