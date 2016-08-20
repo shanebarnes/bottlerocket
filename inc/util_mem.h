@@ -13,17 +13,23 @@
 #include <stdlib.h>
 
 #if defined(__cplusplus)
-    #define UTILMEM_CALLOC(type, count) ((type*)calloc(count, sizeof(type)))
+    #define UTILMEM_CALLOC(type, size, count) ((type*)calloc(count, size))
 #else
-    #define UTILMEM_CALLOC(type, count) (calloc(count, sizeof(type)))
+    #define UTILMEM_CALLOC(type, size, count) (calloc(count, size))
 #endif
 
 #define UTILMEM_FREE(ptr) (free(ptr))
 
 #if defined(__cplusplus)
-    #define UTILMEM_MALLOC(type, count) ((type*)malloc(sizeof(type) * count))
+    #define UTILMEM_MALLOC(type, size, count) ((type*)malloc(size * count))
 #else
-    #define UTILMEM_MALLOC(type, count) (malloc(sizeof(type) * count))
+    #define UTILMEM_MALLOC(type, size, count) (malloc(size * count))
+#endif
+
+#if defined(__cplusplus)
+    #define UTILMEM_REALLOC(type, ptr, size) ((type*)realloc(ptr, size))
+#else
+    #define UTILMEM_REALLOC(type, ptr, size) (realloc(ptr, size))
 #endif
 
 #endif // _UTIL_MEM_H_
