@@ -15,7 +15,6 @@ set(BRLIB_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_std.h
     ${CMAKE_CURRENT_SOURCE_DIR}/rwlock_obj.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/sock_con.h
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_mod.h
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_obj.h
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_tcp.h
