@@ -7,6 +7,7 @@
  *            This project is released under the MIT license.
  */
 
+#include "fion_poll.h"
 #include "form_chat.h"
 #include "input_std.h"
 #include "logger.h"
@@ -19,6 +20,7 @@
 #include "util_string.h"
 
 #include <string.h>
+#include <unistd.h>
 
 static struct threadobj thread;
 static struct args_obj *opts = NULL;
@@ -32,6 +34,7 @@ static void *modechat_thread(void * arg)
     struct threadobj *thread = (struct threadobj *)arg;
     struct sockobj server, socket;
     struct formobj form;
+    struct fionobj fion;
     char recvbuf[65536], sendbuf[65536];
     int32_t count = 0, timeoutms = 500;
     int32_t recvbytes = 0, formbytes = 0;
@@ -46,7 +49,7 @@ static void *modechat_thread(void * arg)
     socket.conf.model = SOCKOBJ_MODEL_CLIENT;
     memcpy(server.conf.ipaddr, opts->ipaddr, sizeof(server.conf.ipaddr));
     server.conf.ipport = opts->ipport;
-    server.conf.timeoutms = timeoutms;
+    server.conf.timeoutms = 0;
     server.conf.family = opts->family;
     server.conf.type = opts->type;
     server.conf.model = SOCKOBJ_MODEL_SERVER;
@@ -57,11 +60,18 @@ static void *modechat_thread(void * arg)
                       "%s: parameter validation failed\n",
                       __FUNCTION__);
     }
+    else if (fionpoll_create(&fion) == false)
+    {
+        // Do nothing.
+    }
     else
     {
-        form.ops.form_head = formchat_head;
-        form.ops.form_body = formchat_body;
-        form.ops.form_foot = formchat_foot;
+        fion.ops.fion_insertfd(&fion, STDIN_FILENO);
+        fion.timeoutms = timeoutms;
+        fion.pevents   = FIONOBJ_PEVENT_IN;
+        fion.ops.fion_setflags(&fion); // ?? fix this
+
+        formchat_init(&form);
         form.srcbuf = recvbuf;
         form.srclen = sizeof(recvbuf);
         form.dstbuf = sendbuf;
@@ -78,6 +88,8 @@ static void *modechat_thread(void * arg)
 
         while ((exit == false) && (threadobj_isrunning(thread) == true))
         {
+            fion.ops.fion_poll(&fion);
+
             if (count <= 0)
             {
                 if (opts->arch == SOCKOBJ_MODEL_CLIENT)
@@ -85,6 +97,7 @@ static void *modechat_thread(void * arg)
                     form.sock = &socket;
                     formbytes = form.ops.form_head(&form);
                     output_if_std_send(form.dstbuf, formbytes);
+                    fion.ops.fion_insertfd(&fion, socket.fd);
                     count++;
                 }
                 else
@@ -95,10 +108,11 @@ static void *modechat_thread(void * arg)
                                       "%s: server accepted connection on %s\n",
                                       __FUNCTION__,
                                       server.addrself.sockaddrstr);
-                        socket.event.timeoutms = timeoutms;
+                        socket.event.timeoutms = 0;
                         form.sock = &socket;
                         formbytes = form.ops.form_head(&form);
                         output_if_std_send(form.dstbuf, formbytes);
+                        fion.ops.fion_insertfd(&fion, socket.fd);
                         count++;
                     }
                     else
@@ -114,6 +128,12 @@ static void *modechat_thread(void * arg)
                     }
 
                     // @todo Exit if server socket has fatal error.
+                }
+
+                // Flush input.
+                if (fion.ops.fion_getevents(&fion, 0) & FIONOBJ_REVENT_INREADY)
+                {
+                    inputstd_recv(recvbuf, sizeof(recvbuf), 0);
                 }
             }
             else
@@ -149,7 +169,9 @@ static void *modechat_thread(void * arg)
                 }
                 else if (recvbytes < 0)
                 {
+                    fion.ops.fion_deletefd(&fion, socket.fd);
                     socket.ops.sock_close(&socket);
+                    socket.ops.sock_destroy(&socket);
                     count--;
                     formbytes = form.ops.form_foot(&form);
                     output_if_std_send(form.dstbuf, formbytes);
@@ -160,18 +182,23 @@ static void *modechat_thread(void * arg)
                     }
                 }
 
-                if ((recvbytes = inputstd_recv(recvbuf,
-                                               sizeof(recvbuf),
-                                               timeoutms)) > 0)
+                if (fion.ops.fion_getevents(&fion, 0) & FIONOBJ_REVENT_INREADY)
                 {
-                    if (count > 0)
+                    if ((recvbytes = inputstd_recv(recvbuf,
+                                                   sizeof(recvbuf),
+                                                   0)) > 0)
                     {
-                        // @todo Fix for partial-send case.
-                        socket.ops.sock_send(&socket, recvbuf, recvbytes);
+                        if (count > 0)
+                        {
+                            // @todo Fix for partial-send case.
+                            socket.ops.sock_send(&socket, recvbuf, recvbytes);
+                        }
                     }
                 }
             }
         }
+
+        fionpoll_destroy(&fion);
     }
 
     return NULL;
