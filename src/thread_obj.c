@@ -37,7 +37,9 @@ bool threadobj_create(struct threadobj * const obj)
     }
     else
     {
-        obj->internal = UTILMEM_MALLOC(struct internals, 1);
+        obj->internal = UTILMEM_MALLOC(struct internals,
+                                       sizeof(struct internals),
+                                       1);
 
         if (obj->internal == NULL)
         {
