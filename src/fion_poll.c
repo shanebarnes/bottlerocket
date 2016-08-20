@@ -31,17 +31,18 @@ bool fionpoll_create(struct fionobj * const obj)
     }
     else
     {
-        obj->ops.fion_create   = fionpoll_create;
-        obj->ops.fion_destroy  = fionpoll_destroy;
-        obj->ops.fion_insertfd = fionpoll_insertfd;
-        obj->ops.fion_deletefd = fionpoll_deletefd;
-        obj->ops.fion_setflags = fionpoll_setflags;
-        obj->ops.fion_poll     = fionpoll_poll;
+        obj->ops.fion_create    = fionpoll_create;
+        obj->ops.fion_destroy   = fionpoll_destroy;
+        obj->ops.fion_insertfd  = fionpoll_insertfd;
+        obj->ops.fion_deletefd  = fionpoll_deletefd;
+        obj->ops.fion_setflags  = fionpoll_setflags;
+        obj->ops.fion_poll      = fionpoll_poll;
+        obj->ops.fion_getevents = fionpoll_getevents;
+        obj->timeoutms          = 0;
+        obj->pevents            = 0;
+        obj->revents            = 0;
 
-        obj->timeoutms = 0;
-        obj->pevents   = 0;
-
-        if (vector_create(&obj->fds, 0) == false)
+        if (vector_create(&obj->fds, 0, sizeof(struct pollfd)) == false)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: vector allocation failed (%d)\n",
@@ -72,21 +73,15 @@ bool fionpoll_destroy(struct fionobj * const obj)
     }
     else
     {
-        while (vector_getsize(&obj->fds) > 0)
-        {
-            if (vector_getval(&obj->fds, 0) != NULL)
-            {
-                UTILMEM_FREE(vector_getval(&obj->fds, 0));
-                vector_delete(&obj->fds, 0);
-            }
-        }
+        vector_destroy(&obj->fds);
 
-        obj->ops.fion_create   = NULL;
-        obj->ops.fion_destroy  = NULL;
-        obj->ops.fion_insertfd = NULL;
-        obj->ops.fion_deletefd = NULL;
-        obj->ops.fion_setflags = NULL;
-        obj->ops.fion_poll     = NULL;
+        obj->ops.fion_create    = NULL;
+        obj->ops.fion_destroy   = NULL;
+        obj->ops.fion_insertfd  = NULL;
+        obj->ops.fion_deletefd  = NULL;
+        obj->ops.fion_setflags  = NULL;
+        obj->ops.fion_poll      = NULL;
+        obj->ops.fion_getevents = NULL;
 
         ret = true;
     }
@@ -101,6 +96,7 @@ bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
 {
     bool ret = false, found = false;
     struct pollfd *pfd = NULL;
+    struct pollfd val = {.fd = fd, .events = 0, .revents = 0};
     uint32_t i;
 
     if (obj == NULL)
@@ -128,9 +124,11 @@ bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
 
         if (found == false)
         {
-            pfd = UTILMEM_MALLOC(struct pollfd, 1);
-            pfd->fd = fd;
-            ret = vector_inserttail(&obj->fds, pfd);
+            if ((vector_inserttail(&obj->fds, &val) == true) &&
+                (obj->ops.fion_setflags(obj) == true))
+            {
+                ret = true;
+            }
         }
     }
 
@@ -174,14 +172,12 @@ bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd)
         }
         else
         {
-            UTILMEM_FREE(pfd);
             ret = vector_delete(&obj->fds, i);
         }
     }
 
     return ret;
 }
-
 
 /**
  * @see See header file for interface comments.
@@ -258,7 +254,6 @@ bool fionpoll_poll(struct fionobj * const obj)
     else
     {
         obj->revents = 0;
-
         err = poll((struct pollfd *)vector_getval(&obj->fds, 0),
                    vector_getsize(&obj->fds),
                    obj->timeoutms);
