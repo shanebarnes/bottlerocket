@@ -77,6 +77,7 @@ int32_t main(int argc, char **argv)
     int32_t retval = EXIT_SUCCESS;
     struct output_if_ops output_if;
     struct args_obj args;
+    memset(&args, 0, sizeof(args));
 
     logger_create();
     output_if.oio_send = output_if_std_send;
