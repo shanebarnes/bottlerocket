@@ -12,22 +12,26 @@
 #include "vector.h"
 
 #include <errno.h>
+#include <string.h>
 
 struct internals
 {
-    void     **array;
-    uint32_t   asize;
-    uint32_t   vsize;
+    uint8_t  *array;
+    uint32_t  count; // allocated member count (used/unused member count)
+    uint32_t  msize; // member size (bytes)
+    uint32_t  vsize; // vector size (used member count)
 };
 
 /**
  * @see See header file for interface comments.
  */
-bool vector_create(struct vector * const vector, const uint32_t size)
+bool vector_create(struct vector * const vector,
+                   const uint32_t count,
+                   const uint32_t size)
 {
     bool retval = false;
 
-    if ((vector == NULL) || (vector->internal != NULL))
+    if ((vector == NULL) || (size == 0) || (vector->internal != NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -35,7 +39,9 @@ bool vector_create(struct vector * const vector, const uint32_t size)
     }
     else
     {
-        vector->internal = calloc(1, sizeof(struct internals));
+        vector->internal = UTILMEM_CALLOC(struct internals,
+                                          sizeof(struct internals),
+                                          1);
 
         if (vector->internal == NULL)
         {
@@ -46,12 +52,13 @@ bool vector_create(struct vector * const vector, const uint32_t size)
         }
         else
         {
-            vector->internal->array = UTILMEM_MALLOC(void*, 1);
+            vector->internal->array = UTILMEM_MALLOC(uint8_t, size, 1);
 
             if (vector->internal->array != NULL)
             {
-                vector->internal->asize = vector->internal->vsize = 1;
-                retval = vector_resize(vector, size);
+                vector->internal->count = vector->internal->vsize = 1;
+                vector->internal->msize = size;
+                retval = vector_resize(vector, count);
             }
         }
     }
@@ -84,9 +91,9 @@ bool vector_destroy(struct vector * const vector)
 
             UTILMEM_FREE(vector->internal);
             vector->internal = NULL;
-        }
 
-        retval = true;
+            retval = true;
+        }
     }
 
     return retval;
@@ -109,21 +116,23 @@ bool vector_resize(struct vector * const vector, const uint32_t size)
     else if (vector->internal->vsize != size)
     {
         if (((size > vector->internal->vsize) &&
-             (size > vector->internal->asize)) ||
+             (size > vector->internal->count)) ||
             ((size < vector->internal->vsize) &&
-             (size < vector->internal->asize / 2)))
+             (size < vector->internal->count / 2)))
         {
             // Round the array size up to the nearest power of 2 using a power
             // of two ceiling operation (note: start with a size of 1 for a
             // floor operation).
-            vector->internal->asize = 2;
+            vector->internal->count = 2;
             while (nsize >>= 1)
             {
-                vector->internal->asize <<= 1;
+                vector->internal->count <<= 1;
             }
 
-            vector->internal->array = realloc(vector->internal->array,
-                                              sizeof(void *) * vector->internal->asize);
+            vector->internal->array = UTILMEM_REALLOC(uint8_t,
+                                                      vector->internal->array,
+                                                      vector->internal->msize *
+                                                      vector->internal->count);
 
             if (vector->internal->array == NULL)
             {
@@ -132,7 +141,7 @@ bool vector_resize(struct vector * const vector, const uint32_t size)
                               __FUNCTION__,
                               errno);
 
-                vector->internal->asize = vector->internal->vsize = 0;
+                vector->internal->count = vector->internal->vsize = 0;
             }
             else
             {
@@ -171,7 +180,7 @@ void *vector_getval(struct vector * const vector, const uint32_t index)
     }
     else
     {
-        retval = vector->internal->array[index];
+        retval = &vector->internal->array[index * vector->internal->msize];
     }
 
     return retval;
@@ -204,12 +213,11 @@ uint32_t vector_getsize(struct vector * const vector)
 /**
  * @see See header file for interface comments.
  */
- bool vector_insert(struct vector * const vector,
-                    const uint32_t index,
-                    void * const val)
+bool vector_insert(struct vector * const vector,
+                   const uint32_t index,
+                   void * const val)
 {
     bool retval = false;
-    uint32_t i = 0;
 
     if ((vector == NULL) ||
         (vector->internal == NULL) ||
@@ -225,13 +233,16 @@ uint32_t vector_getsize(struct vector * const vector)
         {
             if (vector->internal->vsize > 1)
             {
-                for (i = vector->internal->vsize - 2; i >= index; i--)
-                {
-                    vector->internal->array[i+1] = vector->internal->array[i];
-                }
+                memmove(&vector->internal->array[(index+1)*vector->internal->msize],
+                        &vector->internal->array[index*vector->internal->msize],
+                        (vector->internal->vsize - index - 1) *
+                         vector->internal->msize);
             }
 
-            vector->internal->array[index] = val;
+            // There is no guarantee that memory will not overlap.
+            memmove(&vector->internal->array[index*vector->internal->msize],
+                    val,
+                    vector->internal->msize);
             vector->internal->vsize++;
             retval = true;
         }
@@ -243,11 +254,11 @@ uint32_t vector_getsize(struct vector * const vector)
 /**
  * @see See header file for interface comments.
  */
- bool vector_inserttail(struct vector * const vector, void * const val)
+bool vector_inserttail(struct vector * const vector, void * const val)
 {
     bool retval = false;
 
-    if ((vector == NULL) || (vector->internal == NULL))
+    if ((vector == NULL) || (vector->internal == NULL) || (val == NULL))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -257,7 +268,10 @@ uint32_t vector_getsize(struct vector * const vector)
     {
         if (vector_resize(vector, vector->internal->vsize + 1) == true)
         {
-            vector->internal->array[vector->internal->vsize - 1] = val;
+            // There is no guarantee that memory will not overlap.
+            memmove(&vector->internal->array[(vector->internal->vsize - 1) * vector->internal->msize],
+                    val,
+                    vector->internal->msize);
             retval = true;
         }
     }
@@ -268,10 +282,9 @@ uint32_t vector_getsize(struct vector * const vector)
 /**
  * @see See header file for interface comments.
  */
- bool vector_delete(struct vector * const vector, const uint32_t index)
+bool vector_delete(struct vector * const vector, const uint32_t index)
 {
     bool retval = false;
-    uint32_t i = 0;
 
     if ((vector == NULL) ||
         (vector->internal == NULL) ||
@@ -283,12 +296,12 @@ uint32_t vector_getsize(struct vector * const vector)
     }
     else
     {
-        if (vector->internal->vsize > 1)
+        if (index < (vector->internal->vsize - 1))
         {
-            for (i = index; i < vector->internal->vsize - 1; i++)
-            {
-                vector->internal->array[i] = vector->internal->array[i+1];
-            }
+            memmove(&vector->internal->array[index*vector->internal->msize],
+                    &vector->internal->array[(index+1)*vector->internal->msize],
+                    (vector->internal->vsize - index - 1) *
+                     vector->internal->msize);
         }
 
         retval = vector_resize(vector, vector->internal->vsize - 1);
@@ -300,7 +313,7 @@ uint32_t vector_getsize(struct vector * const vector)
 /**
  * @see See header file for interface comments.
  */
- bool vector_deletetail(struct vector * const vector)
+bool vector_deletetail(struct vector * const vector)
 {
     bool retval = false;
 
@@ -312,7 +325,10 @@ uint32_t vector_getsize(struct vector * const vector)
     }
     else
     {
-        retval = vector_resize(vector, vector->internal->vsize - 1);
+        if (vector->internal->vsize > 0)
+        {
+            retval = vector_resize(vector, vector->internal->vsize - 1);
+        }
     }
 
     return retval;

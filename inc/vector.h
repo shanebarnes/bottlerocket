@@ -23,11 +23,15 @@ struct vector
  * @brief Create a vector.
  *
  * @param[in,out] vector A pointer to a vector.
- * @param[in]     size   The initial/default size of the vector.
+ * @param[in]     count  The initial/default size of the vector in terms of
+ *                       member count.
+ * @param[in]     size   The size of each element in bytes.
  *
  * @return True if a vector was created.
  */
-bool vector_create(struct vector * const vector, const uint32_t size);
+bool vector_create(struct vector * const vector,
+                   const uint32_t count,
+                   const uint32_t size);
 
 /**
  * @brief Destroy a vector.
