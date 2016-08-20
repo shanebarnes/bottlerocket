@@ -101,16 +101,19 @@ static int32_t modeperf_call(int32_t (*call)(struct sockobj * const obj,
     if (ret < 0)
     {
         sock->ops.sock_close(sock);
+        sock->ops.sock_destroy(sock);
     }
     else if ((opts->timelimitusec > 0) &&
              ((tsus - sock->info.startusec) >= opts->timelimitusec))
     {
         sock->ops.sock_close(sock);
+        sock->ops.sock_destroy(sock);
     }
     else if ((opts->datalimitbyte > 0) &&
              (stats->totalbytes >= opts->datalimitbyte))
     {
         sock->ops.sock_close(sock);
+        sock->ops.sock_destroy(sock);
     }
 
     tokenbucket_return(&sock->tb, ret < 0 ? 0 : len - (uint32_t)ret);
@@ -151,13 +154,13 @@ static void *modeperf_thread(void * arg)
                       "%s: parameter validation failed\n",
                       __FUNCTION__);
     }
-    else if ((recvbuf = UTILMEM_MALLOC(char, opts->buflen)) == NULL)
+    else if ((recvbuf = UTILMEM_MALLOC(char, sizeof(char), opts->buflen)) == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: receive buffer allocation failed\n",
                       __FUNCTION__);
     }
-    else if ((sendbuf = UTILMEM_MALLOC(char, opts->buflen)) == NULL)
+    else if ((sendbuf = UTILMEM_MALLOC(char, sizeof(char), opts->buflen)) == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: send buffer allocation failed\n",
@@ -195,7 +198,9 @@ static void *modeperf_thread(void * arg)
                     (opts->arch == SOCKOBJ_MODEL_SERVER))
                 {
                     // @todo Do not allocate memory every iteration.
-                    sock = UTILMEM_MALLOC(struct sockobj, 1);
+                    sock = UTILMEM_MALLOC(struct sockobj,
+                                          sizeof(struct sockobj),
+                                          1);
 
                     if (sock == NULL)
                     {
@@ -264,6 +269,7 @@ static void *modeperf_thread(void * arg)
                             {
                                 // Refuse connection.
                                 sock->ops.sock_close(sock);
+                                sock->ops.sock_destroy(sock);
                                 UTILMEM_FREE(list.tail->val);
                                 dlist_removetail(&list);
                                 sock = NULL;
