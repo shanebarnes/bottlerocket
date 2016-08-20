@@ -18,6 +18,15 @@ struct formobj;
 struct formobj_ops
 {
     /**
+     * @brief Initialize a format object.
+     *
+     * @param[in,out] obj A pointer to a format object.
+     *
+     * @return True if a format object was initialized.
+     */
+    bool (*form_init)(struct formobj * const obj);
+
+    /**
      * @brief Create and format a data header and store it in the format object
      *        destination buffer.
      *
