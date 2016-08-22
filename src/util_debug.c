@@ -7,7 +7,7 @@
  *            This project is released under the MIT license.
  */
 
-#include "system_types.h"
+#include "logger.h"
 #include "util_debug.h"
 
 #if defined(__APPLE__) || defined(__linux__)
@@ -35,4 +35,28 @@ void utildebug_backtrace(void)
 
     free(strs);
 #endif
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool utildebug_verify(const bool eval,
+                      const char * const expr,
+                      const char * const func,
+                      const uint32_t line)
+{
+    bool ret = eval;
+
+    if ((eval == false) && (expr != NULL) && (func != NULL))
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "verification failed: func %s, line %u, expr %s\n",
+                      func,
+                      line,
+                      expr);
+
+        //utildebug_backtrace();
+    }
+
+    return ret;
 }
