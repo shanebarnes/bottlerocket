@@ -337,12 +337,14 @@ bool socktcp_connect(struct sockobj * const obj)
     }
     else
     {
-        obj->info.startusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
-                                                 UNIT_TIME_USEC);
+        if (obj->info.startusec == 0)
+        {
+            obj->info.startusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                                     UNIT_TIME_USEC);
+        }
 
-        if (obj->state == SOCKOBJ_STATE_OPEN && connect(obj->fd,
-                    obj->ainfo.ai_addr,
-                    obj->ainfo.ai_addrlen) == 0)
+        if ((obj->state == SOCKOBJ_STATE_OPEN) &&
+            (connect(obj->fd, obj->ainfo.ai_addr, obj->ainfo.ai_addrlen) == 0))
         {
             ret = true;
         }
