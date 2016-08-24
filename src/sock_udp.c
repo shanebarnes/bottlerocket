@@ -18,6 +18,7 @@
 #include "util_unit.h"
 
 #include <errno.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -130,7 +131,7 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
 
     // @todo SO_REUSEPORT could be used on kernels that support its use.
 
-    if ((obj == NULL) || (obj->conf.type != SOCK_DGRAM) || (backlog == 0))
+    if ((obj == NULL) || (obj->conf.type != SOCK_DGRAM))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: parameter validation failed\n",
@@ -138,6 +139,11 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
     }
     else
     {
+        // @todo Set up socket pairs based on backlog.
+        if (backlog)
+        {
+        }
+
         ret = true;
     }
 
@@ -150,7 +156,9 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
 bool sockudp_accept(struct sockobj * const listener,
                     struct sockobj * const obj)
 {
-    bool ret = false;
+    bool     ret = false;
+    int32_t  fd  = -1;
+    uint64_t ts  = 0;
 
     // @todo Consider using this API to poll for datagrams available to be read.
     //       Once read, the datagrams could be filtered and associated with the
@@ -175,12 +183,69 @@ bool sockudp_accept(struct sockobj * const listener,
             if (((listener->event.revents & FIONOBJ_REVENT_TIMEOUT) == 0) &&
                 ((listener->event.revents & FIONOBJ_REVENT_ERROR) == 0))
             {
-                // @todo Clone/duplicate listener socket
-                listener->ops.sock_create(obj);
-                listener->ops.sock_open(obj);
-                obj->fd = listener->fd;
+                fd = listener->fd;
+                ts = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
-                ret = true;
+                //if (listener->ops.sock_create(obj) == false)
+                if (sockudp_create(obj) == false)
+                {
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: socket %u accept initialization failed\n",
+                                  __FUNCTION__,
+                                  obj->id);
+                }
+                //else if (listener->ops.sock_open(obj) == false)
+                //{
+                //    logger_printf(LOGGER_LEVEL_ERROR,
+                //                  "%s: socket %u open failed\n",
+                //                  __FUNCTION__,
+                //                  obj->id);
+                //}
+                else if (((obj->fd = fd) != fd) ||
+                         (obj->event.ops.fion_insertfd(&obj->event, fd) == false) ||
+                         (obj->event.ops.fion_setflags(&obj->event) == false))
+                {
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: socket %u fd clone failed\n",
+                                  __FUNCTION__,
+                                  obj->id);
+                }
+                else if (memcpy(&obj->conf,
+                                &listener->conf,
+                                sizeof(listener->conf)) == NULL)
+                {
+                   logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: socket %u configuration clone failed\n",
+                                  __FUNCTION__,
+                                  obj->id);
+                }
+                else if (sockobj_getaddrself(obj) == false)
+                {
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: socket %u self information is unavailable\n",
+                                  obj->id,
+                                  __FUNCTION__);
+                }
+                //else if (sockobj_getaddrpeer(obj) == false)
+                //{
+                //    logger_printf(LOGGER_LEVEL_ERROR,
+                //                  "%s: socket %u peer information is unavailable\n",
+                //                  __FUNCTION__,
+                //                  obj->id);
+                //}
+                else
+                {
+                    logger_printf(LOGGER_LEVEL_TRACE,
+                                  "%s: new socket %u accepted on %s from %s\n",
+                                  obj->id,
+                                  obj->addrself.sockaddrstr,
+                                  obj->addrpeer.sockaddrstr);
+
+                    tokenbucket_init(&obj->tb, obj->conf.ratelimitbps);
+                    obj->state = SOCKOBJ_STATE_OPEN;// | SOCKOBJ_STATE_CONNECT;
+                    obj->info.startusec = ts;
+                    ret = true;
+                }
             }
         }
     }
@@ -203,8 +268,11 @@ bool sockudp_connect(struct sockobj * const obj)
     }
     else
     {
-        obj->info.startusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
-                                                 UNIT_TIME_USEC);
+        if (obj->info.startusec == 0)
+        {
+            obj->info.startusec = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                                     UNIT_TIME_USEC);
+        }
 
         // There are a number of benefits to calling connect() on a UDP socket:
         //    1. the local IP port can be retrieved,
@@ -218,6 +286,10 @@ bool sockudp_connect(struct sockobj * const obj)
                     obj->ainfo.ai_addrlen) == 0)
         {
             obj->state |= SOCKOBJ_STATE_CONNECT;
+
+            // @todo Add transport layer handshaking using zero payload datagrams?
+            //obj->ops.sock_send(obj, &ret, 0);
+
             ret = true;
 
             if (sockobj_getaddrself(obj) == false)
@@ -273,58 +345,59 @@ int32_t sockudp_recv(struct sockobj * const obj,
                               flags,
                               (struct sockaddr *)&(obj->addrpeer.sockaddr),
                               &socklen);
-            sockobj_setstats(&obj->info.recv, ret);
+        }
 
-            if (ret > 0)
+        sockobj_setstats(&obj->info.recv, ret);
+
+        if (ret > 0)
+        {
+            if ((obj->state & SOCKOBJ_STATE_CONNECT) == 0)
             {
-                if ((obj->state & SOCKOBJ_STATE_CONNECT) == 0)
-                {
-                    inet_ntop(obj->conf.family,
-                              utilinet_getaddrfromstorage(&obj->addrpeer.sockaddr),
-                              obj->addrpeer.ipaddr,
-                              sizeof(obj->addrpeer.ipaddr));
-                    obj->addrpeer.ipport = ntohs(*utilinet_getportfromstorage(&obj->addrpeer.sockaddr));
-                }
+                inet_ntop(obj->conf.family,
+                          utilinet_getaddrfromstorage(&obj->addrpeer.sockaddr),
+                          obj->addrpeer.ipaddr,
+                          sizeof(obj->addrpeer.ipaddr));
+                obj->addrpeer.ipport = ntohs(*utilinet_getportfromstorage(&obj->addrpeer.sockaddr));
+            }
 
-                logger_printf(LOGGER_LEVEL_TRACE,
-                              "%s: socket %u received %d bytes from %s:%u\n",
+            logger_printf(LOGGER_LEVEL_TRACE,
+                          "%s: socket %u received %d bytes from %s:%u\n",
+                          __FUNCTION__,
+                          obj->id,
+                          ret,
+                          obj->addrpeer.ipaddr,
+                          obj->addrpeer.ipport);
+        }
+        else
+        {
+            if (sockobj_iserrfatal(errno) == true)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %u fatal error (%d)\n",
                               __FUNCTION__,
                               obj->id,
-                              ret,
-                              obj->addrpeer.ipaddr,
-                              obj->addrpeer.ipport);
+                              errno);
+                ret = -1;
             }
             else
             {
-                if (sockobj_iserrfatal(errno) == true)
+                logger_printf(LOGGER_LEVEL_TRACE,
+                              "%s: socket %u non-fatal error (%d)\n",
+                              __FUNCTION__,
+                              obj->id,
+                              errno);
+                ret = 0;
+            }
+
+            if (ret == 0)
+            {
+                if (obj->event.ops.fion_poll(&obj->event) == false)
                 {
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %u fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  obj->id,
-                                  errno);
                     ret = -1;
                 }
-                else
+                else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
                 {
-                    logger_printf(LOGGER_LEVEL_TRACE,
-                                  "%s: socket %u non-fatal error (%d)\n",
-                                  __FUNCTION__,
-                                  obj->id,
-                                  errno);
-                    ret = 0;
-                }
-
-                if (ret == 0)
-                {
-                    if (obj->event.ops.fion_poll(&obj->event) == false)
-                    {
-                        ret = -1;
-                    }
-                    else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
-                    {
-                        ret = -1;
-                    }
+                    ret = -1;
                 }
             }
         }
