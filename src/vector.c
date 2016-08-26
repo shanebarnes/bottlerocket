@@ -8,6 +8,7 @@
  */
 
 #include "logger.h"
+#include "util_debug.h"
 #include "util_mem.h"
 #include "vector.h"
 
@@ -29,15 +30,11 @@ bool vector_create(struct vector * const vector,
                    const uint32_t count,
                    const uint32_t size)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if ((vector == NULL) || (size == 0) || (vector->internal != NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((vector != NULL) &&
+                         (size > 0) &&
+                         (vector->internal == NULL)) == true)
     {
         vector->internal = UTILMEM_CALLOC(struct internals,
                                           sizeof(struct internals),
@@ -58,12 +55,12 @@ bool vector_create(struct vector * const vector,
             {
                 vector->internal->count = vector->internal->vsize = 1;
                 vector->internal->msize = size;
-                retval = vector_resize(vector, count);
+                ret = vector_resize(vector, count);
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -71,15 +68,9 @@ bool vector_create(struct vector * const vector,
  */
 bool vector_destroy(struct vector * const vector)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if (vector == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(vector != NULL) == true)
     {
         if (vector->internal != NULL)
         {
@@ -92,11 +83,11 @@ bool vector_destroy(struct vector * const vector)
             UTILMEM_FREE(vector->internal);
             vector->internal = NULL;
 
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -104,14 +95,13 @@ bool vector_destroy(struct vector * const vector)
  */
 bool vector_resize(struct vector * const vector, const uint32_t size)
 {
-    bool retval = false;
+    bool ret = false;
     uint32_t nsize = size;
 
-    if ((vector == NULL) || (vector->internal == NULL))
+    if (UTILDEBUG_VERIFY((vector != NULL) &&
+                         (vector->internal != NULL)) == false)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
+        // Do nothing.
     }
     else if (vector->internal->vsize != size)
     {
@@ -146,21 +136,21 @@ bool vector_resize(struct vector * const vector, const uint32_t size)
             else
             {
                 vector->internal->vsize = size;
-                retval = true;
+                ret = true;
             }
         }
         else
         {
             vector->internal->vsize = size;
-            retval = true;
+            ret = true;
         }
     }
     else
     {
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -168,22 +158,16 @@ bool vector_resize(struct vector * const vector, const uint32_t size)
  */
 void *vector_getval(struct vector * const vector, const uint32_t index)
 {
-    void *retval = NULL;
+    void *ret = NULL;
 
-    if ((vector == NULL) ||
-        (vector->internal == NULL) ||
-        (index >= vector->internal->vsize))
+    if (UTILDEBUG_VERIFY((vector != NULL) &&
+                         (vector->internal != NULL) &&
+                         (index < vector->internal->vsize)) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        retval = &vector->internal->array[index * vector->internal->msize];
+        ret = &vector->internal->array[index * vector->internal->msize];
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -191,23 +175,17 @@ void *vector_getval(struct vector * const vector, const uint32_t index)
  */
 uint32_t vector_getsize(struct vector * const vector)
 {
-    uint32_t retval = 0;
+    uint32_t ret = 0;
 
-    if (vector == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(vector != NULL) == true)
     {
         if (vector->internal != NULL)
         {
-            retval = vector->internal->vsize;
+            ret = vector->internal->vsize;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -217,17 +195,11 @@ bool vector_insert(struct vector * const vector,
                    const uint32_t index,
                    void * const val)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if ((vector == NULL) ||
-        (vector->internal == NULL) ||
-        (index >= vector->internal->vsize))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((vector != NULL) &&
+                         (vector->internal != NULL) &&
+                         (index < vector->internal->vsize)) == true)
     {
         if (vector_resize(vector, vector->internal->vsize + 1) == true)
         {
@@ -244,11 +216,11 @@ bool vector_insert(struct vector * const vector,
                     val,
                     vector->internal->msize);
             vector->internal->vsize++;
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -256,15 +228,11 @@ bool vector_insert(struct vector * const vector,
  */
 bool vector_inserttail(struct vector * const vector, void * const val)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if ((vector == NULL) || (vector->internal == NULL) || (val == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((vector != NULL) &&
+                         (vector->internal != NULL) &&
+                         (val != NULL)) == true)
     {
         if (vector_resize(vector, vector->internal->vsize + 1) == true)
         {
@@ -272,11 +240,11 @@ bool vector_inserttail(struct vector * const vector, void * const val)
             memmove(&vector->internal->array[(vector->internal->vsize - 1) * vector->internal->msize],
                     val,
                     vector->internal->msize);
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -284,17 +252,11 @@ bool vector_inserttail(struct vector * const vector, void * const val)
  */
 bool vector_delete(struct vector * const vector, const uint32_t index)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if ((vector == NULL) ||
-        (vector->internal == NULL) ||
-        (index >= vector->internal->vsize))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((vector != NULL) &&
+                         (vector->internal != NULL) &&
+                         (index < vector->internal->vsize)) == true)
     {
         if (index < (vector->internal->vsize - 1))
         {
@@ -304,10 +266,10 @@ bool vector_delete(struct vector * const vector, const uint32_t index)
                      vector->internal->msize);
         }
 
-        retval = vector_resize(vector, vector->internal->vsize - 1);
+        ret = vector_resize(vector, vector->internal->vsize - 1);
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -315,21 +277,16 @@ bool vector_delete(struct vector * const vector, const uint32_t index)
  */
 bool vector_deletetail(struct vector * const vector)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if ((vector == NULL) || (vector->internal == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((vector != NULL) &&
+                         (vector->internal != NULL)) == true)
     {
         if (vector->internal->vsize > 0)
         {
-            retval = vector_resize(vector, vector->internal->vsize - 1);
+            ret = vector_resize(vector, vector->internal->vsize - 1);
         }
     }
 
-    return retval;
+    return ret;
 }
