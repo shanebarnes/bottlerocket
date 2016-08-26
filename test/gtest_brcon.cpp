@@ -10,6 +10,7 @@
 #include "logger.c"
 #include "mutex_obj.c"
 #include "util_date.c"
+#include "util_debug.c"
 #include "util_string.c"
 #include "vector.c"
 
