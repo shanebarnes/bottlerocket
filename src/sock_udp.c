@@ -117,9 +117,12 @@ bool sockudp_destroy(struct sockobj * const obj)
     }
     else
     {
-        sockcon_destroy(&con);
-        con.sock = NULL;
-        con.priv = NULL;
+        if (obj->state & SOCKOBJ_STATE_LISTEN)
+        {
+            sockcon_destroy(&con);
+            con.sock = NULL;
+            con.priv = NULL;
+        }
         ret = sockobj_destroy(obj);
     }
 
@@ -150,9 +153,30 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
                       "%s: failed to create listener\n",
                       __FUNCTION__);
     }
+    else if (sockcon_listen(&con, obj, backlog) == true)
+    {
+        logger_printf(LOGGER_LEVEL_INFO,
+                      "%s: socket %u listening with a backlog of %d\n",
+                      __FUNCTION__,
+                      obj->id,
+                      backlog);
+        obj->state |= SOCKOBJ_STATE_LISTEN;
+        sockobj_getaddrself(obj);
+        ret = true;
+    }
     else
     {
-        ret = sockcon_listen(&con, obj, backlog);
+        sockcon_destroy(&con);
+        con.sock = NULL;
+        con.priv = NULL;
+
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: socket %u failed to listen on %s:%u (%d)\n",
+                      __FUNCTION__,
+                      obj->fd,
+                      obj->conf.ipaddr,
+                      obj->conf.ipport,
+                      errno);
     }
 
     return ret;
