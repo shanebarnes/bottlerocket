@@ -28,7 +28,7 @@ static struct args_obj *opts = NULL;
 /**
  * @see See header file for interface comments.
  */
-static void *modechat_thread(void * arg)
+static void *modechat_thread(void * const arg)
 {
     bool exit = false;
     struct threadobj *thread = (struct threadobj *)arg;
