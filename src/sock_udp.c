@@ -8,8 +8,10 @@
  */
 
 #include "logger.h"
+#include "sock_con.h"
 #include "sock_udp.h"
 #include "util_date.h"
+#include "util_debug.h"
 #include "util_inet.h"
 #include "util_ioctl.h"
 #if defined(__APPLE__)
@@ -26,6 +28,8 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 // temp
+
+static struct sockcon con = {.sock = NULL, .priv = NULL};
 
 /**
  * @brief Get the maximum UDP message size in bytes.
@@ -113,6 +117,9 @@ bool sockudp_destroy(struct sockobj * const obj)
     }
     else
     {
+        sockcon_destroy(&con);
+        con.sock = NULL;
+        con.priv = NULL;
         ret = sockobj_destroy(obj);
     }
 
@@ -137,14 +144,15 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
                       "%s: parameter validation failed\n",
                       __FUNCTION__);
     }
+    else if (sockcon_create(&con) == false)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: failed to create listener\n",
+                      __FUNCTION__);
+    }
     else
     {
-        // @todo Set up socket pairs based on backlog.
-        if (backlog)
-        {
-        }
-
-        ret = true;
+        ret = sockcon_listen(&con, obj, backlog);
     }
 
     return ret;
@@ -160,10 +168,6 @@ bool sockudp_accept(struct sockobj * const listener,
     int32_t  fd  = -1;
     uint64_t ts  = 0;
 
-    // @todo Consider using this API to poll for datagrams available to be read.
-    //       Once read, the datagrams could be filtered and associated with the
-    //       appropriate socket obj in the "connection" backlog.
-
     if ((listener == NULL) ||
         (obj == NULL) ||
         (listener->conf.type != SOCK_DGRAM))
@@ -178,12 +182,8 @@ bool sockudp_accept(struct sockobj * const listener,
         //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
         //       for signaling shutdown events, etc.
 
-        if (listener->event.ops.fion_poll(&listener->event) == true)
+        if ((fd = sockcon_accept(&con)) > - 1)
         {
-            if (((listener->event.revents & FIONOBJ_REVENT_TIMEOUT) == 0) &&
-                ((listener->event.revents & FIONOBJ_REVENT_ERROR) == 0))
-            {
-                fd = listener->fd;
                 ts = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
                 //if (listener->ops.sock_create(obj) == false)
@@ -219,13 +219,13 @@ bool sockudp_accept(struct sockobj * const listener,
                                   __FUNCTION__,
                                   obj->id);
                 }
-                else if (sockobj_getaddrself(obj) == false)
-                {
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %u self information is unavailable\n",
-                                  obj->id,
-                                  __FUNCTION__);
-                }
+          //      else if (sockobj_getaddrself(obj) == false)
+          //      {
+          //          logger_printf(LOGGER_LEVEL_ERROR,
+           //                       "%s: socket %u self information is unavailable\n",
+           //                       obj->id,
+           //                       __FUNCTION__);
+           //     }
                 //else if (sockobj_getaddrpeer(obj) == false)
                 //{
                 //    logger_printf(LOGGER_LEVEL_ERROR,
@@ -246,7 +246,6 @@ bool sockudp_accept(struct sockobj * const listener,
                     obj->info.startusec = ts;
                     ret = true;
                 }
-            }
         }
     }
 
@@ -340,24 +339,27 @@ int32_t sockudp_recv(struct sockobj * const obj,
         {
             socklen = sizeof(obj->addrpeer.sockaddr);
             ret = recvfrom(obj->fd,
-                              buf,
-                              len,
-                              flags,
-                              (struct sockaddr *)&(obj->addrpeer.sockaddr),
-                              &socklen);
+                           buf,
+                           len,
+                           flags,
+                           (struct sockaddr *)&(obj->addrpeer.sockaddr),
+                           &socklen);
         }
 
         sockobj_setstats(&obj->info.recv, ret);
 
         if (ret > 0)
         {
+//logger_printf(LOGGER_LEVEL_ERROR, "%s: received %u bytes on con %u\n", __FUNCTION__, ret, obj->id);
             if ((obj->state & SOCKOBJ_STATE_CONNECT) == 0)
             {
                 inet_ntop(obj->conf.family,
                           utilinet_getaddrfromstorage(&obj->addrpeer.sockaddr),
                           obj->addrpeer.ipaddr,
                           sizeof(obj->addrpeer.ipaddr));
-                obj->addrpeer.ipport = ntohs(*utilinet_getportfromstorage(&obj->addrpeer.sockaddr));
+uint16_t *port = utilinet_getportfromstorage(&obj->addrpeer.sockaddr);
+if (port != NULL)
+                obj->addrpeer.ipport = ntohs(*port);
             }
 
             logger_printf(LOGGER_LEVEL_TRACE,
@@ -436,11 +438,11 @@ int32_t sockudp_send(struct sockobj * const obj,
         else
         {
             ret = sendto(obj->fd,
-                            buf,
-                            len,
-                            flags,
-                            (struct sockaddr *)&(obj->addrpeer.sockaddr),
-                            sizeof(obj->addrpeer.sockaddr));
+                         buf,
+                         len,
+                         flags,
+                         (struct sockaddr *)&(obj->addrpeer.sockaddr),
+                         sizeof(obj->addrpeer.sockaddr));
         }
 
         sockobj_setstats(&obj->info.send, ret);
