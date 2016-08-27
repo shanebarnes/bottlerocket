@@ -1,6 +1,6 @@
 /**
  * @file      sock_con.h
- * @brief     Socket container interface.
+ * @brief     Socket connection manager interface.
  * @author    Shane Barnes
  * @date      23 Apr 2016
  * @copyright Copyright 2016 Shane Barnes. All rights reserved.
@@ -10,28 +10,57 @@
 #ifndef _SOCK_CON_H_
 #define _SOCK_CON_H_
 
-#include "fion_obj.h"
 #include "sock_obj.h"
 #include "system_types.h"
-#include "vector.h"
+
+struct sockcon_priv;
 
 struct sockcon
 {
-    struct fionobj fion;
-    struct vector  sock;
-    int32_t        maxcon;
+    struct sockobj      *sock;
+    struct sockcon_priv *priv;
 };
 
+/**
+ * @brief Create a socket connection manager.
+ *
+ * @param[in,out] obj A pointer to a socket connection manager to create.
+ *
+ * @return True if a socket connection manager was created.
+ */
 bool sockcon_create(struct sockcon * const con);
 
+/**
+ * @brief Destroy a socket connection manager.
+ *
+ * @param[in,out] obj A pointer to a socket connection manager to destroy.
+ *
+ * @return True if a socket connection manager was destroyed.
+ */
 bool sockcon_destroy(struct sockcon * const con);
 
-struct sockobj *sockcon_get(struct sockcon * const con, const uint32_t index);
+/**
+ * @brief Listen for connections on a socket object.
+ *
+ * @param[in,out] con     A pointer to a socket connection manager.
+ * @param[in,out] sock    A pointer to a socket object.
+ * @param[in]     backlog The maximum length of the pending connection queue.
+ *                        Defaults to SOMAXCONN if length specified is less than
+ *                        or equal to zero.
+ *
+ * @return True if socket connection manager started listening for connections.
+ */
+bool sockcon_listen(struct sockcon * const con,
+                    struct sockobj * const sock,
+                    const int32_t backlog);
 
-bool sockcon_insert(struct sockcon * const con, struct sockobj * const obj);
-
-bool sockcon_delete(struct sockcon * const con, const uint32_t index);
-
-bool sockcon_poll(struct sockcon * const con);
+/**
+ * @brief Accept a connection from a socket connection manager.
+ *
+ * @param[in,out] con A pointer to a socket connection manager.
+ *
+ * @return A socket file descriptor (non-negative integer) on success.
+ */
+int32_t sockcon_accept(struct sockcon * const con);
 
 #endif // _SOCK_CON_H_
