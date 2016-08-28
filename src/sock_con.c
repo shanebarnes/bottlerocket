@@ -20,7 +20,7 @@
 #include "vector.h"
 
 #include <errno.h>
-#include <sys/socket.h>
+#include <string.h>
 #include <unistd.h>
 
 static const uint32_t SOCKCON_PEER_INDEX   = 0;
@@ -39,9 +39,10 @@ struct sockcon_priv
 
 struct sockcon_pair
 {
-    uint32_t hash; // @note Just port number for now (assume localhost peer)
-    int32_t  fds[2];
-    uint64_t timeoutus;
+    struct sockaddr_storage sockaddr;
+    uint32_t                hash; // @note Just port number for now (assume localhost peer)
+    int32_t                 fds[2];
+    uint64_t                timeoutus;
 };
 
 /**
@@ -169,6 +170,9 @@ static void *sockcon_thread(void * const arg)
                         }
                         else
                         {
+                            memcpy(&pair.sockaddr,
+                                   &con->sock->addrpeer.sockaddr,
+                                   sizeof(pair.sockaddr));
                             pair.hash = hash;
                             vector_inserttail(&con->priv->backlog, &pair);
                             sockcon_send(&con->priv->backlog,
@@ -316,13 +320,18 @@ bool sockcon_listen(struct sockcon * const con,
 /**
  * @see See header file for interface comments.
  */
-int32_t sockcon_accept(struct sockcon * const con)
+int32_t sockcon_accept(struct sockcon * const con,
+                       struct sockaddr * const addr,
+                       socklen_t * const len)
 {
     int32_t ret = -1;
     uint32_t backlog = 0;
     struct sockcon_pair *pair = NULL;
 
-    if (UTILDEBUG_VERIFY((con != NULL) && (con->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((con != NULL) &&
+                         (con->priv != NULL) &&
+                         (addr != NULL) &&
+                         (len > 0)) == true)
     {
         mutexobj_lock(&con->priv->mutex);
         backlog = vector_getsize(&con->priv->backlog);
@@ -345,6 +354,12 @@ int32_t sockcon_accept(struct sockcon * const con)
                 }
                 else
                 {
+                    if (*len > sizeof(pair->sockaddr))
+                    {
+                        *len = sizeof(pair->sockaddr);
+                    }
+
+                    memcpy(addr, &pair->sockaddr, *len);
                     ret = pair->fds[SOCKCON_PEER_INDEX];
                     vector_inserttail(&con->priv->frontlog, pair);
                     vector_delete(&con->priv->backlog, 0);
