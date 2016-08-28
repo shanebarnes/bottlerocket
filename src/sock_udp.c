@@ -188,9 +188,11 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
 bool sockudp_accept(struct sockobj * const listener,
                     struct sockobj * const obj)
 {
-    bool     ret = false;
-    int32_t  fd  = -1;
-    uint64_t ts  = 0;
+    bool     ret  = false;
+    int32_t  fd   = -1;
+    uint64_t ts   = 0;
+    socklen_t len = sizeof(struct sockaddr_storage);
+    struct sockaddr_storage addr;
 
     if ((listener == NULL) ||
         (obj == NULL) ||
@@ -206,70 +208,60 @@ bool sockudp_accept(struct sockobj * const listener,
         //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
         //       for signaling shutdown events, etc.
 
-        if ((fd = sockcon_accept(&con)) > - 1)
+        if ((fd = sockcon_accept(&con, (struct sockaddr *)&(addr), &len)) > - 1)
         {
-                ts = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
+            ts = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
-                //if (listener->ops.sock_create(obj) == false)
-                if (sockudp_create(obj) == false)
-                {
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %u accept initialization failed\n",
-                                  __FUNCTION__,
-                                  obj->id);
-                }
-                //else if (listener->ops.sock_open(obj) == false)
-                //{
-                //    logger_printf(LOGGER_LEVEL_ERROR,
-                //                  "%s: socket %u open failed\n",
-                //                  __FUNCTION__,
-                //                  obj->id);
-                //}
-                else if (((obj->fd = fd) != fd) ||
-                         (obj->event.ops.fion_insertfd(&obj->event, fd) == false) ||
-                         (obj->event.ops.fion_setflags(&obj->event) == false))
-                {
-                    logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %u fd clone failed\n",
-                                  __FUNCTION__,
-                                  obj->id);
-                }
-                else if (memcpy(&obj->conf,
-                                &listener->conf,
-                                sizeof(listener->conf)) == NULL)
-                {
-                   logger_printf(LOGGER_LEVEL_ERROR,
-                                  "%s: socket %u configuration clone failed\n",
-                                  __FUNCTION__,
-                                  obj->id);
-                }
-          //      else if (sockobj_getaddrself(obj) == false)
-          //      {
-          //          logger_printf(LOGGER_LEVEL_ERROR,
-           //                       "%s: socket %u self information is unavailable\n",
-           //                       obj->id,
-           //                       __FUNCTION__);
-           //     }
-                //else if (sockobj_getaddrpeer(obj) == false)
-                //{
-                //    logger_printf(LOGGER_LEVEL_ERROR,
-                //                  "%s: socket %u peer information is unavailable\n",
-                //                  __FUNCTION__,
-                //                  obj->id);
-                //}
-                else
-                {
-                    logger_printf(LOGGER_LEVEL_TRACE,
-                                  "%s: new socket %u accepted on %s from %s\n",
-                                  obj->id,
-                                  obj->addrself.sockaddrstr,
-                                  obj->addrpeer.sockaddrstr);
+            if (sockudp_create(obj) == false)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %u accept initialization failed\n",
+                              __FUNCTION__,
+                              obj->id);
+            }
+            else if (((obj->fd = fd) != fd) ||
+                     (obj->event.ops.fion_insertfd(&obj->event, fd) == false) ||
+                     (obj->event.ops.fion_setflags(&obj->event) == false))
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %u fd clone failed\n",
+                              __FUNCTION__,
+                              obj->id);
+            }
+            else if (memcpy(&obj->conf,
+                            &listener->conf,
+                            sizeof(listener->conf)) == NULL)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %u configuration clone failed\n",
+                              __FUNCTION__,
+                              obj->id);
+            }
+            //else if (sockobj_getaddrself(listener) == false) // this requires that a datagram has been sent (zero payload handshaking?)
+            //{
+            //    logger_printf(LOGGER_LEVEL_ERROR,
+            //                  "%s: socket %u self information is unavailable\n",
+            //                  __FUNCTION__,
+            //                  obj->id);
+            //}
+            else
+            {
+                memcpy(&obj->addrpeer.sockaddr, &addr, sizeof(obj->addrpeer.sockaddr));
+                sockobj_getaddrsock(&obj->addrpeer);
+                memcpy(&obj->addrself, &listener->addrself, sizeof(obj->addrself));
 
-                    tokenbucket_init(&obj->tb, obj->conf.ratelimitbps);
-                    obj->state = SOCKOBJ_STATE_OPEN;// | SOCKOBJ_STATE_CONNECT;
-                    obj->info.startusec = ts;
-                    ret = true;
-                }
+                logger_printf(LOGGER_LEVEL_TRACE,
+                              "%s: new socket %u accepted on %s from %s\n",
+                              obj->id,
+                              obj->addrself.sockaddrstr,
+                              obj->addrpeer.sockaddrstr);
+
+                tokenbucket_init(&obj->tb, obj->conf.ratelimitbps);
+                obj->state = SOCKOBJ_STATE_OPEN | SOCKOBJ_STATE_CONNECT;
+                obj->info.startusec = ts;
+
+                ret = true;
+            }
         }
     }
 
@@ -343,9 +335,10 @@ int32_t sockudp_recv(struct sockobj * const obj,
                      void * const buf,
                      const uint32_t len)
 {
-    int32_t   ret     = -1;
-    int32_t   flags   = MSG_DONTWAIT;
-    socklen_t socklen = 0;
+    int32_t    ret     = -1;
+    int32_t    flags   = MSG_DONTWAIT;
+    socklen_t  socklen = 0;
+    uint16_t  *port    = NULL;
 
     if ((obj == NULL) || (buf == NULL))
     {
@@ -374,16 +367,19 @@ int32_t sockudp_recv(struct sockobj * const obj,
 
         if (ret > 0)
         {
-//logger_printf(LOGGER_LEVEL_ERROR, "%s: received %u bytes on con %u\n", __FUNCTION__, ret, obj->id);
             if ((obj->state & SOCKOBJ_STATE_CONNECT) == 0)
             {
                 inet_ntop(obj->conf.family,
                           utilinet_getaddrfromstorage(&obj->addrpeer.sockaddr),
                           obj->addrpeer.ipaddr,
                           sizeof(obj->addrpeer.ipaddr));
-uint16_t *port = utilinet_getportfromstorage(&obj->addrpeer.sockaddr);
-if (port != NULL)
-                obj->addrpeer.ipport = ntohs(*port);
+
+                port = utilinet_getportfromstorage(&obj->addrpeer.sockaddr);
+
+                if (port != NULL)
+                {
+                    obj->addrpeer.ipport = ntohs(*port);
+                }
             }
 
             logger_printf(LOGGER_LEVEL_TRACE,
