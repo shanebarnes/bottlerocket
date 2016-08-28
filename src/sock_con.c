@@ -331,7 +331,8 @@ int32_t sockcon_accept(struct sockcon * const con,
     if (UTILDEBUG_VERIFY((con != NULL) &&
                          (con->priv != NULL) &&
                          (addr != NULL) &&
-                         (len > 0)) == true)
+                         (len != NULL) &&
+                         (*len > 0)) == true)
     {
         mutexobj_lock(&con->priv->mutex);
         backlog = vector_getsize(&con->priv->backlog);
