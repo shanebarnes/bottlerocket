@@ -85,19 +85,7 @@ bool sockobj_getaddrpeer(struct sockobj * const obj)
     }
     else
     {
-        inet_ntop(obj->addrpeer.sockaddr.ss_family,
-                  utilinet_getaddrfromstorage(&obj->addrpeer.sockaddr),
-                  obj->addrpeer.ipaddr,
-                  sizeof(obj->addrpeer.ipaddr));
-        obj->addrpeer.ipport = ntohs(*utilinet_getportfromstorage(&obj->addrpeer.sockaddr));
-
-        snprintf(obj->addrpeer.sockaddrstr,
-                 sizeof(obj->addrpeer.sockaddrstr),
-                 "%s:%u",
-                 obj->addrpeer.ipaddr,
-                 obj->addrpeer.ipport);
-
-        ret = true;
+        ret = sockobj_getaddrsock(&obj->addrpeer);
     }
 
     return ret;
@@ -129,17 +117,51 @@ bool sockobj_getaddrself(struct sockobj * const obj)
     }
     else
     {
-        inet_ntop(obj->addrself.sockaddr.ss_family,
-                  utilinet_getaddrfromstorage(&obj->addrself.sockaddr),
-                  obj->addrself.ipaddr,
-                  sizeof(obj->addrself.ipaddr));
-        obj->addrself.ipport = ntohs(*utilinet_getportfromstorage(&obj->addrself.sockaddr));
+        ret = sockobj_getaddrsock(&obj->addrself);
+    }
 
-        snprintf(obj->addrself.sockaddrstr,
-                 sizeof(obj->addrself.sockaddrstr),
+    return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool sockobj_getaddrsock(struct sockobj_addr * const addr)
+{
+    bool ret = false;
+    uint16_t *port = NULL;
+
+    if (addr == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: parameter validation failed\n",
+                      __FUNCTION__);
+    }
+    else if (inet_ntop(addr->sockaddr.ss_family,
+                       utilinet_getaddrfromstorage(&addr->sockaddr),
+                       addr->ipaddr,
+                       sizeof(addr->ipaddr)) == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: failed to convert address format (%d)\n",
+                      __FUNCTION__,
+                      errno);
+    }
+    else if ((port = utilinet_getportfromstorage(&addr->sockaddr)) == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: failed to convert port format\n",
+                      __FUNCTION__);
+    }
+    else
+    {
+        addr->ipport = ntohs(*port);
+
+        snprintf(addr->sockaddrstr,
+                 sizeof(addr->sockaddrstr),
                  "%s:%u",
-                 obj->addrself.ipaddr,
-                 obj->addrself.ipport);
+                 addr->ipaddr,
+                 addr->ipport);
 
         ret = true;
     }

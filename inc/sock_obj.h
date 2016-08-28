@@ -269,6 +269,15 @@ bool sockobj_getaddrpeer(struct sockobj * const obj);
 bool sockobj_getaddrself(struct sockobj * const obj);
 
 /**
+ * @brief Get a human-readable socket address format.
+ *
+ * @param[in,out] addr A pointer to a human-readable socket address structure.
+ *
+ * @return True if a human-readable socket address format was obtained.
+ */
+bool sockobj_getaddrsock(struct sockobj_addr * const addr);
+
+/**
  * @brief Determine if an error number is fatal.
  *
  * @param[in] err An error number set by a system call.
