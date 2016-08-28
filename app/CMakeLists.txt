@@ -34,7 +34,7 @@ if (NOT CPACK_GENERATOR)
 endif()
 
 set (CPACK_PACKAGE_NAME "bottlerocket")
-set (CPACK_PACKAGE_VERSION "0.2.5")
+set (CPACK_PACKAGE_VERSION "0.2.6")
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "A multi-threaded network benchmarking tool")
 set (CPACK_PACKAGE_DESCRIPTION "")
 set (CPACK_PACKAGE_RELEASE 1)
