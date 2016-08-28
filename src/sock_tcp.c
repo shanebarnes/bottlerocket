@@ -252,7 +252,6 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
 #endif
             {
                 ts = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
-                socklen = sizeof(obj->addrself.sockaddr);
 
                 if (socktcp_create(obj) == false)
                 {
@@ -283,8 +282,8 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %u self information is unavailable\n",
-                                  obj->id,
-                                  __FUNCTION__);
+                                  __FUNCTION__,
+                                  obj->id);
                 }
                 else if (sockobj_getaddrpeer(obj) == false)
                 {
