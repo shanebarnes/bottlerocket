@@ -355,7 +355,7 @@ int32_t sockcon_accept(struct sockcon * const con,
                 }
                 else
                 {
-                    if (*len > sizeof(pair->sockaddr))
+                    if ((uint32_t)(*len) > sizeof(pair->sockaddr))
                     {
                         *len = sizeof(pair->sockaddr);
                     }
