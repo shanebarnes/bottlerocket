@@ -305,15 +305,10 @@ bool sockudp_connect(struct sockobj * const obj)
             // @todo Add transport layer handshaking using zero payload datagrams?
             //obj->ops.sock_send(obj, &ret, 0);
 
-            ret = true;
+            sockobj_getaddrself(obj);
+            sockobj_getaddrpeer(obj);
 
-            if (sockobj_getaddrself(obj) == false)
-            {
-                logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %u peer information is unavailable\n",
-                              __FUNCTION__,
-                              obj->id);
-            }
+            ret = true;
         }
         else
         {
