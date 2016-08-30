@@ -69,13 +69,7 @@ bool sockudp_create(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(obj != NULL) == true)
     {
         if (sockobj_create(obj) == true)
         {
@@ -109,13 +103,8 @@ bool sockudp_destroy(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if ((obj == NULL) || (obj->conf.type != SOCK_DGRAM))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (obj->conf.type == SOCK_DGRAM)) == true)
     {
         if (obj->state & SOCKOBJ_STATE_LISTEN)
         {
@@ -123,6 +112,7 @@ bool sockudp_destroy(struct sockobj * const obj)
             con.sock = NULL;
             con.priv = NULL;
         }
+
         ret = sockobj_destroy(obj);
     }
 
@@ -136,16 +126,12 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
 {
     bool ret = false;
 
-    // @todo Consider using this API to create the size of the UDP "connection"
-    //       poll.
-
     // @todo SO_REUSEPORT could be used on kernels that support its use.
 
-    if ((obj == NULL) || (obj->conf.type != SOCK_DGRAM))
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (obj->conf.type == SOCK_DGRAM)) == false)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
+        // Do nothing.
     }
     else if (sockcon_create(&con) == false)
     {
@@ -194,15 +180,9 @@ bool sockudp_accept(struct sockobj * const listener,
     socklen_t len = sizeof(struct sockaddr_storage);
     struct sockaddr_storage addr;
 
-    if ((listener == NULL) ||
-        (obj == NULL) ||
-        (listener->conf.type != SOCK_DGRAM))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((listener != NULL) &&
+                         (listener->conf.type == SOCK_DGRAM) &&
+                         (obj != NULL)) == true)
     {
         // @todo If timeout is -1 (blocking), then the poll should occur in a
         //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
@@ -275,13 +255,9 @@ bool sockudp_connect(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if ((obj == NULL) || (obj->conf.type != SOCK_DGRAM))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (obj->conf.type == SOCK_DGRAM) &&
+                         (obj->state == SOCKOBJ_STATE_OPEN)) == true)
     {
         if (obj->info.startusec == 0)
         {
@@ -302,8 +278,9 @@ bool sockudp_connect(struct sockobj * const obj)
         {
             obj->state |= SOCKOBJ_STATE_CONNECT;
 
-            // @todo Add transport layer handshaking using zero payload datagrams?
-            //obj->ops.sock_send(obj, &ret, 0);
+            // @todo Use a 3-way transport layer handshake using zero payload
+            //       datagrams.
+            obj->ops.sock_send(obj, &ret, 0);
 
             sockobj_getaddrself(obj);
             sockobj_getaddrpeer(obj);
@@ -335,13 +312,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
     socklen_t  socklen = 0;
     uint16_t  *port    = NULL;
 
-    if ((obj == NULL) || (buf == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) && (buf != NULL)) == true)
     {
         if (obj->state & SOCKOBJ_STATE_CONNECT)
         {
@@ -436,13 +407,7 @@ int32_t sockudp_send(struct sockobj * const obj,
     flags |= MSG_NOSIGNAL;
 #endif
 
-    if ((obj == NULL) || (buf == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) && (buf != NULL)) == true)
     {
         if (obj->state & SOCKOBJ_STATE_CONNECT)
         {
@@ -545,13 +510,7 @@ bool sockudp_shutdown(struct sockobj * const obj, const int32_t how)
 {
     bool ret = false;
 
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(obj != NULL) == true)
     {
         switch (how)
         {
