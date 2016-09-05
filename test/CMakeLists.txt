@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(gtest_br NONE)
+project(brtest NONE)
 
 include_directories(${BRLIB_INCLUDE_DIR}
                     ${BRLIB_SOURCE_DIR}
@@ -8,8 +8,9 @@ include_directories(${BRLIB_INCLUDE_DIR}
 
 link_libraries(brlib gtest)
 
-add_executable(gtest_brcon gtest_brcon.cpp)
-add_executable(gtest_brutil gtest_brutil.cpp)
+add_executable(${PROJECT_NAME}
+               ${PROJECT_NAME}.cpp
+               gtest_brcon.cpp
+               gtest_brutil.cpp)
 
-install(TARGETS gtest_brcon DESTINATION bin)
-install(TARGETS gtest_brutil DESTINATION bin)
+install(TARGETS ${PROJECT_NAME} DESTINATION bin)
