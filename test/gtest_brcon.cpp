@@ -7,12 +7,12 @@
  *            This project is released under the MIT license.
  */
 
-#include "logger.c"
-#include "mutex_obj.c"
-#include "util_date.c"
-#include "util_debug.c"
-#include "util_string.c"
-#include "vector.c"
+#include "logger.h"
+#include "mutex_obj.h"
+#include "util_date.h"
+#include "util_debug.h"
+#include "util_string.h"
+#include "vector.h"
 
 #include <gtest/gtest.h>
 
@@ -86,10 +86,4 @@ TEST (VectorTest, Vector)
     ASSERT_FALSE(vector_destroy(NULL));
     ASSERT_TRUE(vector_destroy(&vec));
     ASSERT_FALSE(vector_destroy(&vec));
-}
-
-int main(int argc, char **argv)
-{
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }
