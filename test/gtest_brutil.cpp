@@ -7,11 +7,11 @@
  *            This project is released under the MIT license.
  */
 
-#include "logger.c"
-#include "mutex_obj.c"
-#include "output_if_std.c"
-#include "util_date.c"
-#include "util_string.c"
+#include "logger.h"
+#include "mutex_obj.h"
+#include "output_if_std.h"
+#include "util_date.h"
+#include "util_string.h"
 
 #include <gtest/gtest.h>
 
@@ -72,10 +72,4 @@ TEST (ManipStringTest, Concat)
     // Buffer overflow.
     ASSERT_EQ(strsize, utilstring_concat(buf, strsize, "%s", str));
     ASSERT_EQ(strsize - 1, utilstring_concat(buf, strsize - 1, "%s", str));
-}
-
-int main(int argc, char **argv)
-{
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }
