@@ -356,7 +356,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
                           obj->addrpeer.ipaddr,
                           obj->addrpeer.ipport);
         }
-        else
+        else if (ret < 0)
         {
             if (sockobj_iserrfatal(errno) == true)
             {
@@ -388,6 +388,11 @@ int32_t sockudp_recv(struct sockobj * const obj,
                     ret = -1;
                 }
             }
+        }
+        else
+        {
+            // For UDP sockets, a return value 0 does not mean a peer has closed
+            // its half side of the "connection."
         }
     }
 
