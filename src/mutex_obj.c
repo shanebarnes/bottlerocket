@@ -9,25 +9,20 @@
 
 #include "logger.h"
 #include "mutex_obj.h"
+#include "util_debug.h"
 
 #include <errno.h>
 
 /**
  * @see See header file for interface comments.
  */
-bool mutexobj_create(struct mutexobj * const obj)
+bool mutexobj_create(struct mutexobj * const mtx)
 {
     bool retval = false;
 
-    if (obj == NULL)
+    if (UTILDEBUG_VERIFY(mtx != NULL) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if (pthread_mutex_init(&obj->mutex, NULL) == 0)
+        if (pthread_mutex_init(&mtx->obj, NULL) == 0)
         {
             retval = true;
         }
@@ -46,19 +41,13 @@ bool mutexobj_create(struct mutexobj * const obj)
 /**
  * @see See header file for interface comments.
  */
-bool mutexobj_destroy(struct mutexobj * const obj)
+bool mutexobj_destroy(struct mutexobj * const mtx)
 {
     bool retval = false;
 
-    if (obj == NULL)
+    if (UTILDEBUG_VERIFY(mtx != NULL) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if (pthread_mutex_destroy(&obj->mutex) == 0)
+        if (pthread_mutex_destroy(&mtx->obj) == 0)
         {
             retval = true;
         }
@@ -77,19 +66,13 @@ bool mutexobj_destroy(struct mutexobj * const obj)
 /**
  * @see See header file for interface comments.
  */
-bool mutexobj_lock(struct mutexobj * const obj)
+bool mutexobj_lock(struct mutexobj * const mtx)
 {
     bool retval = false;
 
-    if (obj == NULL)
+    if (UTILDEBUG_VERIFY(mtx != NULL) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if (pthread_mutex_lock(&obj->mutex) == 0)
+        if (pthread_mutex_lock(&mtx->obj) == 0)
         {
             retval = true;
         }
@@ -108,19 +91,13 @@ bool mutexobj_lock(struct mutexobj * const obj)
 /**
  * @see See header file for interface comments.
  */
-bool mutexobj_trylock(struct mutexobj * const obj)
+bool mutexobj_trylock(struct mutexobj * const mtx)
 {
     bool retval = false;
 
-    if (obj == NULL)
+    if (UTILDEBUG_VERIFY(mtx != NULL) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if (pthread_mutex_trylock(&obj->mutex) == 0)
+        if (pthread_mutex_trylock(&mtx->obj) == 0)
         {
             retval = true;
         }
@@ -132,19 +109,13 @@ bool mutexobj_trylock(struct mutexobj * const obj)
 /**
  * @see See header file for interface comments.
  */
-bool mutexobj_unlock(struct mutexobj * const obj)
+bool mutexobj_unlock(struct mutexobj * const mtx)
 {
     bool retval = false;
 
-    if (obj == NULL)
+    if (UTILDEBUG_VERIFY(mtx != NULL) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if (pthread_mutex_unlock(&obj->mutex) == 0)
+        if (pthread_mutex_unlock(&mtx->obj) == 0)
         {
             retval = true;
         }
