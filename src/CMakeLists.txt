@@ -1,5 +1,6 @@
 set(BRLIB_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/args.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/cv_obj.c
     ${CMAKE_CURRENT_SOURCE_DIR}/dlist.c
     ${CMAKE_CURRENT_SOURCE_DIR}/fion_poll.c
     ${CMAKE_CURRENT_SOURCE_DIR}/form_chat.c
