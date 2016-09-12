@@ -10,32 +10,52 @@
 #include "cv_obj.h"
 #include "logger.h"
 #include "util_debug.h"
+#include "util_mem.h"
 
 #include <errno.h>
+#include <pthread.h>
+
+struct cvobj_priv
+{
+    pthread_cond_t handle;
+};
 
 /**
  * @see See header file for interface comments.
  */
 bool cvobj_create(struct cvobj * const cv)
 {
-    bool retval = false;
+    bool ret = false;
+    int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY(cv != NULL) == true)
+    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv == NULL)) == true)
     {
-        if (pthread_cond_init(&cv->obj, NULL) == 0)
+        cv->priv = UTILMEM_CALLOC(struct cvobj_priv,
+                                  sizeof(struct cvobj_priv),
+                                  1);
+
+        if (cv->priv == NULL)
         {
-            retval = true;
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to allocate private memory (%d)\n",
+                          __FUNCTION__,
+                          errno);
         }
-        else
+        else if ((err = pthread_cond_init(&cv->priv->handle, NULL)) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to create condition variable (%d)\n",
                           __FUNCTION__,
-                          errno);
+                          err);
+            cvobj_destroy(cv);
+        }
+        else
+        {
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -43,24 +63,17 @@ bool cvobj_create(struct cvobj * const cv)
  */
 bool cvobj_destroy(struct cvobj * const cv)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if (UTILDEBUG_VERIFY(cv != NULL) == true)
+    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL)) == true)
     {
-        if (pthread_cond_destroy(&cv->obj) == 0)
-        {
-            retval = true;
-        }
-        else
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to destroy condition variable (%d)\n",
-                          __FUNCTION__,
-                          errno);
-        }
+        pthread_cond_destroy(&cv->priv->handle);
+        UTILMEM_FREE(cv->priv);
+        cv->priv = NULL;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -68,24 +81,25 @@ bool cvobj_destroy(struct cvobj * const cv)
  */
 bool cvobj_signalall(struct cvobj * const cv)
 {
-    bool retval = false;
+    bool ret = false;
+    int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY(cv != NULL) == true)
+    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL)) == true)
     {
-        if (pthread_cond_broadcast(&cv->obj) == 0)
-        {
-            retval = true;
-        }
-        else
+        if ((err = pthread_cond_broadcast(&cv->priv->handle)) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to broadcast condition variable(%d)\n",
                           __FUNCTION__,
-                          errno);
+                          err);
+        }
+        else
+        {
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -93,24 +107,25 @@ bool cvobj_signalall(struct cvobj * const cv)
  */
 bool cvobj_signalone(struct cvobj * const cv)
 {
-    bool retval = false;
+    bool ret = false;
+    int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY(cv != NULL) == true)
+    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL)) == true)
     {
-        if (pthread_cond_signal(&cv->obj) == 0)
-        {
-            retval = true;
-        }
-        else
+        if ((err = pthread_cond_signal(&cv->priv->handle)) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to signal condition variable(%d)\n",
                           __FUNCTION__,
-                          errno);
+                          err);
+        }
+        else
+        {
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -118,22 +133,25 @@ bool cvobj_signalone(struct cvobj * const cv)
  */
 bool cvobj_wait(struct cvobj * const cv, struct mutexobj * const mtx)
 {
-    bool retval = false;
+    bool ret = false;
+    int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY((cv != NULL) && (mtx != NULL)) == true)
+    if (UTILDEBUG_VERIFY((cv != NULL) &&
+                         (cv->priv != NULL) &&
+                         (mtx != NULL)) == true)
     {
-        if (pthread_cond_wait(&cv->obj, &mtx->obj) == 0)
-        {
-            retval = true;
-        }
-        else
+        if ((err = pthread_cond_wait(&cv->priv->handle, &mtx->obj)) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to block on condition variable (%d)\n",
                           __FUNCTION__,
-                          errno);
+                          err);
+        }
+        else
+        {
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }

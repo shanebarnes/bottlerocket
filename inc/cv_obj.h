@@ -13,11 +13,11 @@
 #include "mutex_obj.h"
 #include "system_types.h"
 
-#include <pthread.h>
+struct cvobj_priv;
 
 struct cvobj
 {
-    pthread_cond_t obj;
+    struct cvobj_priv *priv;
 };
 
 /**
