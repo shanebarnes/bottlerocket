@@ -12,18 +12,13 @@
 
 #include "system_types.h"
 
-#include <pthread.h>
-
-struct internals;
+struct threadobj_priv;
 
 struct threadobj
 {
-    char              name[64];
-    pthread_t         handle;
-    pthread_attr_t    attributes;
-    void             *function;
-    void             *argument;
-    struct internals *internal;
+    void                  *function;
+    void                  *argument;
+    struct threadobj_priv *priv;
 };
 
 /**
@@ -54,6 +49,15 @@ bool threadobj_destroy(struct threadobj * const obj);
 bool threadobj_start(struct threadobj * const obj);
 
 /**
+ * @brief Stop a thread object.
+ *
+ * @param[in,out] obj A pointer to a thread object to stop.
+ *
+ * @return True if a thread object was stopped.
+ */
+bool threadobj_stop(struct threadobj * const obj);
+
+/**
  * @brief Check if a thread object is running.
  *
  * @param[in] obj A pointer to a thread object.
@@ -70,14 +74,5 @@ bool threadobj_isrunning(struct threadobj * const obj);
  * @return True if thread object caller was suspended.
  */
 bool threadobj_join(struct threadobj * const obj);
-
-/**
- * @brief Stop a thread object.
- *
- * @param[in,out] obj A pointer to a thread object to stop.
- *
- * @return True if a thread object was stopped.
- */
-bool threadobj_stop(struct threadobj * const obj);
 
 #endif // _THREAD_OBJ_H_

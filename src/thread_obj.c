@@ -10,14 +10,19 @@
 #include "logger.h"
 #include "mutex_obj.h"
 #include "thread_obj.h"
+#include "util_debug.h"
 #include "util_mem.h"
 
 #include <errno.h>
+#include <pthread.h>
 #include <signal.h>
 #include <unistd.h>
 
-struct internals
+struct threadobj_priv
 {
+    char            name[64];
+    pthread_t       handle;
+    pthread_attr_t  attributes;
     struct mutexobj mutex;
     bool            shutdown;
 };
@@ -27,28 +32,22 @@ struct internals
  */
 bool threadobj_create(struct threadobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if ((obj == NULL) || (obj->internal != NULL))
+    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv == NULL)) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        obj->internal = UTILMEM_MALLOC(struct internals,
-                                       sizeof(struct internals),
-                                       1);
+        obj->priv = UTILMEM_CALLOC(struct threadobj_priv,
+                                   sizeof(struct threadobj_priv),
+                                   1);
 
-        if (obj->internal == NULL)
+        if (obj->priv == NULL)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to allocate internals (%d)\n",
+                          "%s: failed to allocate private memory (%d)\n",
                           __FUNCTION__,
                           errno);
         }
-        else if (pthread_attr_init(&obj->attributes) != 0)
+        else if (pthread_attr_init(&obj->priv->attributes) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to create thread (%d)\n",
@@ -56,17 +55,18 @@ bool threadobj_create(struct threadobj * const obj)
                           errno);
             threadobj_destroy(obj);
         }
-        else if (mutexobj_create(&obj->internal->mutex) == false)
+        else if (mutexobj_create(&obj->priv->mutex) == false)
         {
             threadobj_destroy(obj);
         }
         else
         {
-            retval = true;
+            obj->priv->shutdown = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -74,21 +74,15 @@ bool threadobj_create(struct threadobj * const obj)
  */
 bool threadobj_destroy(struct threadobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv) != NULL) == true)
     {
         //pthread_detach
 #if 0
-        if (pthread_join(obj->handle, NULL) == 0)
+        if (pthread_join(obj->priv->handle, NULL) == 0)
         {
-            retval = true;
+            ret = true;
         }
         else
         {
@@ -99,14 +93,15 @@ bool threadobj_destroy(struct threadobj * const obj)
         }
 #endif
 
-        mutexobj_destroy(&obj->internal->mutex);
-        pthread_attr_destroy(&obj->attributes);
-        UTILMEM_FREE(obj->internal);
-        obj->internal = NULL;
-        retval = true;
+        threadobj_stop(obj);
+        mutexobj_destroy(&obj->priv->mutex);
+        pthread_attr_destroy(&obj->priv->attributes);
+        UTILMEM_FREE(obj->priv);
+        obj->priv = NULL;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -114,93 +109,31 @@ bool threadobj_destroy(struct threadobj * const obj)
  */
 bool threadobj_start(struct threadobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if (obj == NULL)
+    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv != NULL)) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        mutexobj_lock(&obj->internal->mutex);
-        obj->internal->shutdown = false;
-        mutexobj_unlock(&obj->internal->mutex);
+        mutexobj_lock(&obj->priv->mutex);
+        obj->priv->shutdown = false;
+        mutexobj_unlock(&obj->priv->mutex);
 
-        if (pthread_create(&obj->handle,
-                           &obj->attributes,
+        if (pthread_create(&obj->priv->handle,
+                           &obj->priv->attributes,
                            obj->function,
-                           obj->argument) == 0)
-        {
-            retval = true;
-        }
-        else
+                           obj->argument) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to start thread (%d)\n",
                           __FUNCTION__,
                           errno);
         }
-    }
-
-    return retval;
-}
-
-/**
- * @see See header file for interface comments.
- */
-bool threadobj_isrunning(struct threadobj * const obj)
-{
-    bool retval = false;
-
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        mutexobj_lock(&obj->internal->mutex);
-        retval = !obj->internal->shutdown;
-        mutexobj_unlock(&obj->internal->mutex);
-    }
-
-    return retval;
-}
-
-/**
- * @see See header file for interface comments.
- */
-bool threadobj_join(struct threadobj * const obj)
-{
-    bool retval = false;
-
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        errno = pthread_join(obj->handle, NULL);
-
-        if (errno != 0)
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to suspend the calling thread (%d)\n",
-                          __FUNCTION__,
-                          errno);
-        }
         else
         {
-            retval = true;
+            ret = true;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -208,28 +141,67 @@ bool threadobj_join(struct threadobj * const obj)
  */
 bool threadobj_stop(struct threadobj * const obj)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if (obj == NULL)
+    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv != NULL)) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        mutexobj_lock(&obj->internal->mutex);
-        obj->internal->shutdown = true;
-        mutexobj_unlock(&obj->internal->mutex);
+        mutexobj_lock(&obj->priv->mutex);
+        obj->priv->shutdown = true;
+        mutexobj_unlock(&obj->priv->mutex);
 
         // Wait for thread to exit.
-        while (pthread_kill(obj->handle, 0) == 0)
+        while (pthread_kill(obj->priv->handle, 0) == 0)
         {
             usleep(10 * 1000);
         }
 
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool threadobj_isrunning(struct threadobj * const obj)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv != NULL)) == true)
+    {
+        mutexobj_lock(&obj->priv->mutex);
+        ret = !obj->priv->shutdown;
+        mutexobj_unlock(&obj->priv->mutex);
+    }
+
+    return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool threadobj_join(struct threadobj * const obj)
+{
+    bool ret = false;
+    int32_t err = 0;
+
+    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv != NULL)) == true)
+    {
+        err = pthread_join(obj->priv->handle, NULL);
+
+        if (err != 0)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to suspend the calling thread (%d)\n",
+                          __FUNCTION__,
+                          err);
+        }
+        else
+        {
+            ret = true;
+        }
+    }
+
+    return ret;
 }
