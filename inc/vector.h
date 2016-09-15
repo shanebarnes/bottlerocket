@@ -53,6 +53,16 @@ bool vector_destroy(struct vector * const vector);
 bool vector_resize(struct vector * const vector, const uint32_t size);
 
 /**
+ * @brief Get the value at the end of a vector.
+ *
+ * @param[in,out] vector A pointer to a vector.
+ *
+ * @return A pointer to the value at the end of a vector (NULL on error or if
+ *         vector is empty).
+ */
+void *vector_gettail(struct vector * const vector);
+
+/**
  * @brief Get a value from a position in a vector.
  *
  * @param[in] vector A pointer to a vector.

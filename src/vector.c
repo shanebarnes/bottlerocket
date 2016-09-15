@@ -152,6 +152,21 @@ bool vector_resize(struct vector * const vector, const uint32_t size)
 
     return ret;
 }
+/**
+ * @see See header file for interface comments.
+ */
+void *vector_gettail(struct vector * const vector)
+{
+    void *ret = NULL;
+    uint32_t size = vector_getsize(vector);
+
+    if (size > 0)
+    {
+        ret = &vector->internal->array[(size - 1) * vector->internal->msize];
+    }
+
+    return ret;
+}
 
 /**
  * @see See header file for interface comments.
