@@ -30,6 +30,8 @@ TEST (VectorTest, Vector)
 
     ASSERT_EQ(NULL, vector_getval(NULL, 0));
     ASSERT_EQ(NULL, vector_getval(&vec, 0));
+    ASSERT_EQ(NULL, vector_gettail(NULL));
+    ASSERT_EQ(NULL, vector_gettail(&vec));
 
     ASSERT_EQ(i, vector_getsize(NULL));
     ASSERT_EQ(i, vector_getsize(&vec));
@@ -55,6 +57,7 @@ TEST (VectorTest, Vector)
     {
         ASSERT_TRUE(vector_inserttail(&vec, &i));
         ASSERT_EQ(i, *((uint32_t*)vector_getval(&vec, i)));
+        ASSERT_EQ(i, *((uint32_t*)vector_gettail(&vec)));
     }
 
     ASSERT_EQ(size, vector_getsize(&vec));
