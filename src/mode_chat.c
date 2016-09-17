@@ -16,13 +16,15 @@
 #include "sock_mod.h"
 #include "sock_tcp.h"
 #include "sock_udp.h"
-#include "thread_obj.h"
+#include "thread_pool.h"
+#include "util_debug.h"
 #include "util_string.h"
 
+#include <signal.h>
 #include <string.h>
 #include <unistd.h>
 
-static struct threadobj thread;
+static struct threadpool pool;
 static struct args_obj *opts = NULL;
 
 /**
@@ -31,7 +33,7 @@ static struct args_obj *opts = NULL;
 static void *modechat_thread(void * const arg)
 {
     bool exit = false;
-    struct threadobj *thread = (struct threadobj *)arg;
+    struct threadpool *pool = (struct threadpool*)arg;
     struct sockobj server, socket;
     struct formobj form;
     struct fionobj fion;
@@ -54,11 +56,9 @@ static void *modechat_thread(void * const arg)
     server.conf.type = opts->type;
     server.conf.model = SOCKOBJ_MODEL_SERVER;
 
-    if (thread == NULL)
+    if (UTILDEBUG_VERIFY(pool != NULL) == false)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
+        // Do nothing.
     }
     else if (fionpoll_create(&fion) == false)
     {
@@ -86,7 +86,7 @@ static void *modechat_thread(void * const arg)
             exit = !sockmod_init(&server);
         }
 
-        while ((exit == false) && (threadobj_isrunning(thread) == true))
+        while ((exit == false) && (threadpool_isrunning(pool) == true))
         {
             fion.ops.fion_poll(&fion);
 
@@ -205,19 +205,33 @@ static void *modechat_thread(void * const arg)
 }
 
 /**
+ * @brief Run the chat mode tasks.
+ *
+ * @param[in,out] arg A pointer to a thread pool.
+ */
+static void *modechat_run(void *arg)
+{
+    struct threadpool *pool = (struct threadpool*)arg;
+
+    if (UTILDEBUG_VERIFY(pool != NULL) == true)
+    {
+        threadpool_execute(pool, modechat_thread, pool);
+        threadpool_wait(pool, 1);
+    }
+
+    raise(SIGTERM);
+
+    return NULL;
+}
+
+/**
  * @see See header file for interface comments.
  */
-static bool modechat_init(struct args_obj * const args)
+bool modechat_init(struct args_obj * const args)
 {
     bool retval = false;
 
-    if (args == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(args != NULL) == true)
     {
         opts = args;
         retval = true;
@@ -229,35 +243,30 @@ static bool modechat_init(struct args_obj * const args)
 /**
  * @see See header file for interface comments.
  */
-static bool modechat_start(void)
+bool modechat_start(void)
 {
     bool retval = false;
 
-    thread.function = modechat_thread;
-    thread.argument = &thread;
-
-    if (opts == NULL)
+    if (UTILDEBUG_VERIFY(opts != NULL) == false)
+    {
+        // Do nothing.
+    }
+    else if (threadpool_create(&pool, 2) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
+                      "%s: failed to create chat threads\n",
                       __FUNCTION__);
     }
-    else if (threadobj_create(&thread) == false)
+    else if (threadpool_start(&pool) == false)
     {
+        threadpool_destroy(&pool);
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to create chat thread\n",
-                      __FUNCTION__);
-    }
-    else if (threadobj_start(&thread) == false)
-    {
-        threadobj_destroy(&thread);
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to start chat thread\n",
+                      "%s: failed to start chat threads\n",
                       __FUNCTION__);
     }
     else
     {
-        retval = true;
+        retval = threadpool_execute(&pool, modechat_run, &pool);
     }
 
     return retval;
@@ -266,68 +275,25 @@ static bool modechat_start(void)
 /**
  * @see See header file for interface comments.
  */
-static bool modechat_stop(void)
+bool modechat_stop(void)
 {
     bool retval = false;
 
-    if (threadobj_stop(&thread) == false)
+    if (threadpool_stop(&pool) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to stop chat thread\n",
+                      "%s: failed to stop chat threads\n",
                       __FUNCTION__);
     }
-    else if (threadobj_destroy(&thread) == false)
+    else if (threadpool_destroy(&pool) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to destroy chat thread\n",
+                      "%s: failed to destroy chat threads\n",
                       __FUNCTION__);
     }
     else
     {
         retval = true;
-    }
-
-    return retval;
-}
-
-/**
- * @see See header file for interface comments.
- */
-bool modechat_run(struct args_obj * const args)
-{
-    bool retval = false;
-
-    if (args == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if (modechat_init(args) == false)
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to initialze mode\n",
-                          __FUNCTION__);
-        }
-        else if (modechat_start() == false)
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to start mode\n",
-                          __FUNCTION__);
-        }
-        else if (threadobj_join(&thread) == false)
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to suspend caller\n",
-                          __FUNCTION__);
-        }
-        else
-        {
-            modechat_stop();
-            retval = true;
-        }
     }
 
     return retval;
