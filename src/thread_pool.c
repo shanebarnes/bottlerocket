@@ -45,36 +45,37 @@ struct threadpool_task
 static void *threadpool_thread(void *arg)
 {
     struct threadpool *pool = (struct threadpool*)arg;
-    bool shutdown = false;
     struct threadpool_task task, *temp = NULL;
 
     if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
     {
-        while (threadpool_isrunning(pool) == true)
+        mutexobj_lock(&pool->priv->mtx);
+        pool->priv->startup--;
+
+        while (pool->priv->shutdown == false)
         {
             task.func = NULL;
-            mutexobj_lock(&pool->priv->mtx);
-            pool->priv->startup--;
-            cvobj_wait(&pool->priv->cv, &pool->priv->mtx);
 
-            shutdown = pool->priv->shutdown;
-            if (shutdown == false)
+            temp = vector_gettail(&pool->priv->tasks);
+            if (temp != NULL)
             {
-                temp = vector_gettail(&pool->priv->tasks);
-                if (temp != NULL)
-                {
-                    task.func = temp->func;
-                    task.arg = temp->arg;
-                    vector_deletetail(&pool->priv->tasks);
-                }
-            }
-            mutexobj_unlock(&pool->priv->mtx);
+                task.func = temp->func;
+                task.arg = temp->arg;
+                vector_deletetail(&pool->priv->tasks);
 
-            if (task.func != NULL)
-            {
+                mutexobj_unlock(&pool->priv->mtx);
                 (*task.func)(task.arg);
+                mutexobj_lock(&pool->priv->mtx);
+            }
+
+            if ((pool->priv->shutdown == false) &&
+                (vector_getsize(&pool->priv->tasks) == 0))
+            {
+                cvobj_wait(&pool->priv->cv, &pool->priv->mtx);
             }
         }
+
+        mutexobj_unlock(&pool->priv->mtx);
     }
 
     return NULL;
