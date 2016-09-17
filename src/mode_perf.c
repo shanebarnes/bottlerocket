@@ -137,7 +137,7 @@ static void *modeperf_thread(void *arg)
     // @todo Get the actual thread object from the thread pool so that all
     //       threads are not trying to access the thread-safe
     //       threadpool_isrunning() in the while loop.
-    struct threadpool *pool = (struct threadpool*)arg;
+    struct threadpool *tpool = (struct threadpool*)arg;
     struct dlist list;
     struct sockobj group, server, *sock = NULL;
     struct formobj form;
@@ -157,7 +157,7 @@ static void *modeperf_thread(void *arg)
     uint32_t burst = 0;
     memset(&group, 0, sizeof(group));
 
-    if (UTILDEBUG_VERIFY(pool != NULL) == false)
+    if (UTILDEBUG_VERIFY(tpool != NULL) == false)
     {
         // Do nothing.
     }
@@ -195,7 +195,7 @@ static void *modeperf_thread(void *arg)
             exit = !sockmod_init(&server);
         }
 
-        while ((exit == false) && (threadpool_isrunning(pool) == true))
+        while ((exit == false) && (threadpool_isrunning(tpool) == true))
         {
             burst = count;
 
@@ -534,12 +534,12 @@ static void *modeperf_thread(void *arg)
  */
 static void *modeperf_run(void *arg)
 {
-    struct threadpool *pool = (struct threadpool*)arg;
+    struct threadpool *tpool = (struct threadpool*)arg;
 
-    if (UTILDEBUG_VERIFY(pool != NULL) == true)
+    if (UTILDEBUG_VERIFY(tpool != NULL) == true)
     {
-        threadpool_execute(pool, modeperf_thread, pool);
-        threadpool_wait(pool, 1);
+        threadpool_execute(tpool, modeperf_thread, tpool);
+        threadpool_wait(tpool, 1);
     }
 
     raise(SIGTERM);
