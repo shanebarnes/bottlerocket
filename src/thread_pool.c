@@ -22,12 +22,15 @@
 
 struct threadpool_priv
 {
-    struct cvobj    cv;
+    struct cvobj    cv_task;
+    struct cvobj    cv_wait;
     struct mutexobj mtx;
     struct vector   threads;
     struct vector   tasks;
-    uint32_t        busy;
     uint32_t        startup;
+    uint32_t        busy;
+    uint32_t        complete;
+    uint32_t        wait;
     bool            shutdown;
 };
 
@@ -69,12 +72,21 @@ static void *threadpool_thread(void *arg)
                 (*task.func)(task.arg);
                 mutexobj_lock(&pool->priv->mtx);
                 pool->priv->busy--;
+                pool->priv->complete++;
+
+                if ((pool->priv->wait > 0) &&
+                    (pool->priv->complete >= pool->priv->wait))
+                {
+                    mutexobj_unlock(&pool->priv->mtx);
+                    cvobj_signalall(&pool->priv->cv_wait);
+                    mutexobj_lock(&pool->priv->mtx);
+                }
             }
 
             if ((pool->priv->shutdown == false) &&
                 (vector_getsize(&pool->priv->tasks) == 0))
             {
-                cvobj_wait(&pool->priv->cv, &pool->priv->mtx);
+                cvobj_wait(&pool->priv->cv_task, &pool->priv->mtx);
             }
         }
 
@@ -120,7 +132,11 @@ bool threadpool_create(struct threadpool * pool, const uint32_t size)
         {
             threadpool_destroy(pool);
         }
-        else if (cvobj_create(&pool->priv->cv) == false)
+        else if (cvobj_create(&pool->priv->cv_task) == false)
+        {
+            threadpool_destroy(pool);
+        }
+        else if (cvobj_create(&pool->priv->cv_wait) == false)
         {
             threadpool_destroy(pool);
         }
@@ -180,7 +196,8 @@ bool threadpool_destroy(struct threadpool * const pool)
     {
         threadpool_stop(pool);
         mutexobj_destroy(&pool->priv->mtx);
-        cvobj_destroy(&pool->priv->cv);
+        cvobj_destroy(&pool->priv->cv_wait);
+        cvobj_destroy(&pool->priv->cv_task);
         vector_destroy(&pool->priv->tasks);
 
         for (i = 0; i < vector_getsize(&pool->priv->threads); i++)
@@ -218,6 +235,10 @@ bool threadpool_start(struct threadpool * const pool)
     {
         mutexobj_lock(&pool->priv->mtx);
         pool->priv->shutdown = false;
+        pool->priv->startup = 0;
+        pool->priv->busy = 0;
+        pool->priv->complete = 0;
+        pool->priv->wait = 0;
         mutexobj_unlock(&pool->priv->mtx);
 
         for (i = 0; i < vector_getsize(&pool->priv->threads); i++)
@@ -261,7 +282,8 @@ bool threadpool_stop(struct threadpool * const pool)
         mutexobj_lock(&pool->priv->mtx);
         pool->priv->shutdown = true;
         mutexobj_unlock(&pool->priv->mtx);
-        cvobj_signalall(&pool->priv->cv);
+        cvobj_signalall(&pool->priv->cv_wait);
+        cvobj_signalall(&pool->priv->cv_task);
 
         for (i = 0; i < vector_getsize(&pool->priv->threads); i++)
         {
@@ -314,7 +336,45 @@ bool threadpool_execute(struct threadpool * const pool,
         ret = vector_inserttail(&pool->priv->tasks, &task);
         mutexobj_unlock(&pool->priv->mtx);
 
-        cvobj_signalone(&pool->priv->cv);
+        cvobj_signalone(&pool->priv->cv_task);
+    }
+
+    return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool threadpool_wait(struct threadpool * const pool, const uint32_t wait_count)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((pool != NULL) &&
+                         (pool->priv != NULL) &&
+                         (wait_count > 0)) == true)
+    {
+        mutexobj_lock(&pool->priv->mtx);
+
+        if (pool->priv->wait > 0)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: thread pool failed to wait (already waiting)\n",
+                          __FUNCTION__);
+        }
+        else
+        {
+            pool->priv->wait = wait_count;
+            cvobj_wait(&pool->priv->cv_wait, &pool->priv->mtx);
+
+            if (pool->priv->complete >= wait_count)
+            {
+                ret = true;
+            }
+
+            pool->priv->wait = 0;
+        }
+
+        mutexobj_unlock(&pool->priv->mtx);
     }
 
     return ret;

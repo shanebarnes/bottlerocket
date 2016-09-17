@@ -71,6 +71,18 @@ bool threadpool_execute(struct threadpool * const pool,
                         void * const arg);
 
 /**
+ * @brief Wait (block) until a specified number of tasks are completed by a
+ *        thread pool.
+ *
+ * @param[in,out] pool       A pointer to a thread pool.
+ * @param[in]     wait_count The number of tasks required to unblock the wait.
+ *
+ * @return True if the specified number of tasks were completed by a thread
+ *         pool.
+ */
+bool threadpool_wait(struct threadpool * const pool, const uint32_t wait_count);
+
+/**
  * @brief Check if a thread pool is running.
  *
  * @param[in] pool A pointer to a thread pool.
