@@ -10,6 +10,7 @@
 #include "args.h"
 #include "logger.h"
 #include "mode_chat.h"
+#include "mode_obj.h"
 #include "mode_perf.h"
 #include "output_if_instance.h"
 #include "output_if_std.h"
@@ -21,6 +22,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+static struct modeobj mode =
+{
+    .ops.mode_init = NULL,
+    .ops.mode_start = NULL,
+    .ops.mode_stop = NULL,
+    .ops.mode_cancel = NULL
+};
 
 /**
  * @brief Signal handler callback function.
@@ -58,6 +67,11 @@ void signal_handler(int signum)
             break;
         default:
             logger_printf(LOGGER_LEVEL_INFO, "Caught signal %d\n", signum);
+    }
+
+    if (mode.ops.mode_cancel != NULL)
+    {
+        mode.ops.mode_cancel();
     }
 }
 
@@ -99,18 +113,22 @@ int32_t main(int argc, char **argv)
     {
         if (args.mode == ARGS_MODE_CHAT)
         {
-            modechat_init(&args);
-            modechat_start();
-            pause();
-            modechat_stop();
+            mode.ops.mode_init = modechat_init;
+            mode.ops.mode_start = modechat_start;
+            mode.ops.mode_stop = modechat_stop;
+            mode.ops.mode_cancel = modechat_cancel;
         }
         else if (args.mode == ARGS_MODE_PERF)
         {
-            modeperf_init(&args);
-            modeperf_start();
-            pause();
-            modeperf_stop();
+            mode.ops.mode_init = modeperf_init;
+            mode.ops.mode_start = modeperf_start;
+            mode.ops.mode_stop = modeperf_stop;
+            mode.ops.mode_cancel = modeperf_cancel;
         }
+
+        mode.ops.mode_init(&args);
+        mode.ops.mode_start();
+        mode.ops.mode_stop();
     }
 
     logger_destroy();
