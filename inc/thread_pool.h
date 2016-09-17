@@ -83,6 +83,15 @@ bool threadpool_execute(struct threadpool * const pool,
 bool threadpool_wait(struct threadpool * const pool, const uint32_t wait_count);
 
 /**
+ * @brief Wake a threadpool_wait call.
+ *
+ * @param[in,out] pool A pointer to a thread pool.
+ *
+ * @return True if a threadpool_wait call was unblocked.
+ */
+bool threadpool_wake(struct threadpool * const pool);
+
+/**
  * @brief Check if a thread pool is running.
  *
  * @param[in] pool A pointer to a thread pool.
@@ -110,6 +119,15 @@ uint32_t threadpool_getexeccount(struct threadpool * const pool);
  *         thread pool.
  */
 uint32_t threadpool_gettaskcount(struct threadpool * const pool);
+
+/**
+ * @brief Get the number of running threads in a thread pool.
+ *
+ * @param[in] pool A pointer to a thread pool.
+ *
+ * @return The number of running threads in a thread pool.
+ */
+uint32_t threadpool_getthreadcount(struct threadpool * const pool);
 
 /**
  * @brief Get the number of tasks waiting to be executed by a thread pool.

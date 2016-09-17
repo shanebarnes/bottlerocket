@@ -28,6 +28,7 @@ struct threadpool_priv
     struct vector   threads;
     struct vector   tasks;
     uint32_t        startup;
+    uint32_t        running;
     uint32_t        busy;
     uint32_t        complete;
     uint32_t        wait;
@@ -90,6 +91,7 @@ static void *threadpool_thread(void *arg)
             }
         }
 
+        pool->priv->running--;
         mutexobj_unlock(&pool->priv->mtx);
     }
 
@@ -236,6 +238,7 @@ bool threadpool_start(struct threadpool * const pool)
         mutexobj_lock(&pool->priv->mtx);
         pool->priv->shutdown = false;
         pool->priv->startup = 0;
+        pool->priv->running = 0;
         pool->priv->busy = 0;
         pool->priv->complete = 0;
         pool->priv->wait = 0;
@@ -245,6 +248,7 @@ bool threadpool_start(struct threadpool * const pool)
         {
             mutexobj_lock(&pool->priv->mtx);
             pool->priv->startup++;
+            pool->priv->running++;
             mutexobj_unlock(&pool->priv->mtx);
 
             thread = vector_getval(&pool->priv->threads, i);
@@ -256,6 +260,7 @@ bool threadpool_start(struct threadpool * const pool)
                               i);
                 mutexobj_lock(&pool->priv->mtx);
                 pool->priv->startup--;
+                pool->priv->running--;
                 mutexobj_unlock(&pool->priv->mtx);
             }
             else
@@ -282,7 +287,6 @@ bool threadpool_stop(struct threadpool * const pool)
         mutexobj_lock(&pool->priv->mtx);
         pool->priv->shutdown = true;
         mutexobj_unlock(&pool->priv->mtx);
-        cvobj_signalall(&pool->priv->cv_wait);
         cvobj_signalall(&pool->priv->cv_task);
 
         for (i = 0; i < vector_getsize(&pool->priv->threads); i++)
@@ -301,6 +305,13 @@ bool threadpool_stop(struct threadpool * const pool)
                 ret = true;
             }
         }
+
+        while (threadpool_getthreadcount(pool) > 0)
+        {
+            usleep(1000);
+        }
+
+        cvobj_signalall(&pool->priv->cv_wait);
     }
 
     return ret;
@@ -383,6 +394,21 @@ bool threadpool_wait(struct threadpool * const pool, const uint32_t wait_count)
 /**
  * @see See header file for interface comments.
  */
+bool threadpool_wake(struct threadpool * const pool)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    {
+        ret = cvobj_signalall(&pool->priv->cv_wait);
+    }
+
+    return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
 bool threadpool_isrunning(struct threadpool * const pool)
 {
     bool ret = false;
@@ -425,6 +451,23 @@ uint32_t threadpool_gettaskcount(struct threadpool * const pool)
     {
         mutexobj_lock(&pool->priv->mtx);
         ret = pool->priv->busy + vector_getsize(&pool->priv->tasks);
+        mutexobj_unlock(&pool->priv->mtx);
+    }
+
+    return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+uint32_t threadpool_getthreadcount(struct threadpool * const pool)
+{
+    uint32_t ret = 0;
+
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    {
+        mutexobj_lock(&pool->priv->mtx);
+        ret = pool->priv->running;
         mutexobj_unlock(&pool->priv->mtx);
     }
 
