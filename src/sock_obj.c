@@ -345,7 +345,7 @@ bool sockobj_open(struct sockobj * const obj)
                                       obj->id,
                                       errno);
                     }
-                    // @todo - SO_REUSEPORT? SO_LINGER? etc
+                    // @todo - SO_LINGER? etc
                     else if (setsockopt(obj->fd,
                                         SOL_SOCKET,
                                         SO_REUSEADDR,
@@ -354,6 +354,19 @@ bool sockobj_open(struct sockobj * const obj)
                     {
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %u SO_REUSEADDR option failed (%d)\n",
+                                      __FUNCTION__,
+                                      obj->id,
+                                      errno);
+                        sockobj_close(obj);
+                    }
+                    else if (setsockopt(obj->fd,
+                                        SOL_SOCKET,
+                                        SO_REUSEPORT,
+                                        &optval,
+                                        sizeof(optval)) != 0)
+                    {
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: socket %u SO_REUSEPORT option failed (%d)\n",
                                       __FUNCTION__,
                                       obj->id,
                                       errno);
