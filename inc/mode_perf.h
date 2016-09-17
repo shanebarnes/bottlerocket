@@ -16,7 +16,7 @@
 /**
  * @brief Initialize performance mode arguments.
  *
- * @param[in] args A pointer to a list of performance mode arguments.
+ * @param[in] args A pointer to an arguments object..
  *
  * @return True if performance mode was initialized.
  */
