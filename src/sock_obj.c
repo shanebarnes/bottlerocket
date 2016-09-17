@@ -359,6 +359,7 @@ bool sockobj_open(struct sockobj * const obj)
                                       errno);
                         sockobj_close(obj);
                     }
+#if defined(SO_REUSEPORT)
                     else if (setsockopt(obj->fd,
                                         SOL_SOCKET,
                                         SO_REUSEPORT,
@@ -372,6 +373,7 @@ bool sockobj_open(struct sockobj * const obj)
                                       errno);
                         sockobj_close(obj);
                     }
+#endif
 #if defined(__APPLE__)
                     else if (setsockopt(obj->fd,
                              SOL_SOCKET,
