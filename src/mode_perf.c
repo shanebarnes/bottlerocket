@@ -13,17 +13,19 @@
 #include "mode_perf.h"
 #include "output_if_std.h"
 #include "sock_mod.h"
-#include "thread_obj.h"
+#include "thread_pool.h"
 #include "token_bucket.h"
 #include "util_cpu.h"
 #include "util_date.h"
+#include "util_debug.h"
 #include "util_mem.h"
 #include "util_string.h"
 
+#include <signal.h>
 #include <string.h>
 #include <unistd.h>
 
-static struct threadobj thread;
+static struct threadpool pool;
 static struct args_obj *opts = NULL;
 
 /**
@@ -123,12 +125,19 @@ static int32_t modeperf_call(int32_t (*call)(struct sockobj * const obj,
 }
 
 /**
- * @see See header file for interface comments.
+ * @brief Perform a performance mode task.
+ *
+ * @param[in,out] arg A pointer to a thread pool.
+ *
+ * @return NULL.
  */
-static void *modeperf_thread(void * arg)
+static void *modeperf_thread(void *arg)
 {
     bool exit = true;
-    struct threadobj *thread = (struct threadobj *)arg;
+    // @todo Get the actual thread object from the thread pool so that all
+    //       threads are not trying to access the thread-safe
+    //       threadpool_isrunning() in the while loop.
+    struct threadpool *pool = (struct threadpool*)arg;
     struct dlist list;
     struct sockobj group, server, *sock = NULL;
     struct formobj form;
@@ -148,11 +157,9 @@ static void *modeperf_thread(void * arg)
     uint32_t burst = 0;
     memset(&group, 0, sizeof(group));
 
-    if (thread == NULL)
+    if (UTILDEBUG_VERIFY(pool != NULL) == false)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
+        // Do nothing.
     }
     else if ((recvbuf = UTILMEM_MALLOC(char, sizeof(char), opts->buflen)) == NULL)
     {
@@ -188,7 +195,7 @@ static void *modeperf_thread(void * arg)
             exit = !sockmod_init(&server);
         }
 
-        while ((exit == false) && (threadobj_isrunning(thread) == true))
+        while ((exit == false) && (threadpool_isrunning(pool) == true))
         {
             burst = count;
 
@@ -519,19 +526,35 @@ static void *modeperf_thread(void * arg)
 }
 
 /**
+ * @brief Run the performance mode tasks.
+ *
+ * @param[in,out] arg A pointer to a thread pool.
+ *
+ * @return NULL.
+ */
+static void *modeperf_run(void *arg)
+{
+    struct threadpool *pool = (struct threadpool*)arg;
+
+    if (UTILDEBUG_VERIFY(pool != NULL) == true)
+    {
+        threadpool_execute(pool, modeperf_thread, pool);
+        threadpool_wait(pool, 1);
+    }
+
+    raise(SIGTERM);
+
+    return NULL;
+}
+
+/**
  * @see See header file for interface comments.
  */
-static bool modeperf_init(struct args_obj * const args)
+bool modeperf_init(struct args_obj * const args)
 {
     bool ret = false;
 
-    if (args == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(args != NULL) == true)
     {
         opts = args;
         ret = true;
@@ -543,35 +566,30 @@ static bool modeperf_init(struct args_obj * const args)
 /**
  * @see See header file for interface comments.
  */
-static bool modeperf_start(void)
+bool modeperf_start(void)
 {
     bool ret = false;
 
-    thread.function = modeperf_thread;
-    thread.argument = &thread;
-
-    if (opts == NULL)
+    if (UTILDEBUG_VERIFY(opts != NULL) == false)
+    {
+        // Do nothing.
+    }
+    else if (threadpool_create(&pool, 2) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
+                      "%s: failed to create perf threads\n",
                       __FUNCTION__);
     }
-    else if (threadobj_create(&thread) == false)
+    else if (threadpool_start(&pool) == false)
     {
+        threadpool_destroy(&pool);
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to create chat thread\n",
-                      __FUNCTION__);
-    }
-    else if (threadobj_start(&thread) == false)
-    {
-        threadobj_destroy(&thread);
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to start chat thread\n",
+                      "%s: failed to start perf threads\n",
                       __FUNCTION__);
     }
     else
     {
-        ret = true;
+        ret = threadpool_execute(&pool, modeperf_run, &pool);
     }
 
     return ret;
@@ -580,70 +598,25 @@ static bool modeperf_start(void)
 /**
  * @see See header file for interface comments.
  */
-static bool modeperf_stop(void)
+bool modeperf_stop(void)
 {
     bool ret = false;
 
-    if (threadobj_stop(&thread) == false)
+    if (threadpool_stop(&pool) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to stop chat thread\n",
+                      "%s: failed to stop perf threads\n",
                       __FUNCTION__);
     }
-    else if (threadobj_destroy(&thread) == false)
+    else if (threadpool_destroy(&pool) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to destroy chat thread\n",
+                      "%s: failed to destroy perf threads\n",
                       __FUNCTION__);
     }
     else
     {
         ret = true;
-    }
-
-    return ret;
-}
-
-/**
- * @see See header file for interface comments.
- */
-bool modeperf_run(struct args_obj * const args)
-{
-    bool ret = false;
-
-    if (args == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if (modeperf_init(args) == false)
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to initialize mode\n",
-                          __FUNCTION__);
-
-        }
-        else if (modeperf_start() == false)
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to start mode\n",
-                          __FUNCTION__);
-
-        }
-        else if (threadobj_join(&thread) == false)
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to suspend caller\n",
-                          __FUNCTION__);
-        }
-        else
-        {
-            modeperf_stop();
-            ret = true;
-        }
     }
 
     return ret;

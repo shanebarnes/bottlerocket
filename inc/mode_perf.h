@@ -14,10 +14,26 @@
 #include "system_types.h"
 
 /**
- * @brief args A pointer to an arguments object.
+ * @brief Initialize performance mode arguments.
  *
- * @return True if the performance mode of operation was run successfully.
+ * @param[in] args A pointer to a list of performance mode arguments.
+ *
+ * @return True if performance mode was initialized.
  */
-bool modeperf_run(struct args_obj * const args);
+bool modeperf_init(struct args_obj * const args);
+
+/**
+ * @brief Start performance mode.
+ *
+ * @return True if performance mode was started.
+ */
+bool modeperf_start(void);
+
+/**
+ * @brief Stop performance mode
+ *
+ * @return True if performance mode was stopped.
+ */
+bool modeperf_stop(void);
 
 #endif // _MODE_PERF_H_
