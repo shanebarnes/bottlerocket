@@ -57,15 +57,6 @@ bool threadpool_start(struct threadpool * const pool);
 bool threadpool_stop(struct threadpool * const pool);
 
 /**
- * @brief Check if a thread pool is running.
- *
- * @param[in] obj A pointer to a thread pool.
- *
- * @return True if a thread pool is running.
- */
-bool threadpool_isrunning(struct threadpool * const pool);
-
-/**
  * @brief Execute a task (i.e., a function with arguments) concurrently in a
  *        thread pool worker thread.
  *
@@ -78,5 +69,43 @@ bool threadpool_isrunning(struct threadpool * const pool);
 bool threadpool_execute(struct threadpool * const pool,
                         void * const func,
                         void * const arg);
+
+/**
+ * @brief Check if a thread pool is running.
+ *
+ * @param[in] pool A pointer to a thread pool.
+ *
+ * @return True if a thread pool is running.
+ */
+bool threadpool_isrunning(struct threadpool * const pool);
+
+/**
+ * @brief Get the number of tasks being executed by a thread pool.
+ *
+ * @param[in] pool A pointer to a thread pool.
+ *
+ * @return The number of tasks being executed by a thread pool.
+ */
+uint32_t threadpool_getexeccount(struct threadpool * const pool);
+
+/**
+ * @brief Get the number of tasks being executed or waiting to be executed by  a
+ *        thread pool.
+ *
+ * @param[in] pool A pointer to a thread pool.
+ *
+ * @return The number of tasks being executed or waiting to be executed by a
+ *         thread pool.
+ */
+uint32_t threadpool_gettaskcount(struct threadpool * const pool);
+
+/**
+ * @brief Get the number of tasks waiting to be executed by a thread pool.
+ *
+ * @param[in] pool A pointer to a thread pool.
+ *
+ * @return The number of tasks waiting to be executed by a thread pool.
+ */
+uint32_t threadpool_getwaitcount(struct threadpool * const pool);
 
 #endif // _THREAD_POOL_H_
