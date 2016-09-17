@@ -39,6 +39,13 @@ struct modeobj_ops
      * @return True if mode of operation was stopped.
      */
     bool (*mode_stop)(void);
+
+    /**
+     * @brief Cancel a mode of operation (i.e., unblock the mode_start).
+     *
+     * @return True if mode of operation was canceled.
+     */
+    bool (*mode_cancel)(void);
 };
 
 struct modeobj
