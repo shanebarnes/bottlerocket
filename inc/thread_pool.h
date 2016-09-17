@@ -57,6 +57,15 @@ bool threadpool_start(struct threadpool * const pool);
 bool threadpool_stop(struct threadpool * const pool);
 
 /**
+ * @brief Check if a thread pool is running.
+ *
+ * @param[in] obj A pointer to a thread pool.
+ *
+ * @return True if a thread pool is running.
+ */
+bool threadpool_isrunning(struct threadpool * const pool);
+
+/**
  * @brief Execute a task (i.e., a function with arguments) concurrently in a
  *        thread pool worker thread.
  *

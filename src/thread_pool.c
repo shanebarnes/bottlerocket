@@ -18,6 +18,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 
 struct threadpool_priv
 {
@@ -25,6 +26,7 @@ struct threadpool_priv
     struct mutexobj mtx;
     struct vector   threads;
     struct vector   tasks;
+    uint16_t        startup;
     bool            shutdown;
 };
 
@@ -48,10 +50,11 @@ static void *threadpool_thread(void *arg)
 
     if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
     {
-        while (shutdown == false)
+        while (threadpool_isrunning(pool) == true)
         {
             task.func = NULL;
             mutexobj_lock(&pool->priv->mtx);
+            pool->priv->startup--;
             cvobj_wait(&pool->priv->cv, &pool->priv->mtx);
 
             shutdown = pool->priv->shutdown;
@@ -215,6 +218,10 @@ bool threadpool_start(struct threadpool * const pool)
 
         for (i = 0; i < vector_getsize(&pool->priv->threads); i++)
         {
+            mutexobj_lock(&pool->priv->mtx);
+            pool->priv->startup++;
+            mutexobj_unlock(&pool->priv->mtx);
+
             thread = vector_getval(&pool->priv->threads, i);
             if (threadobj_start(thread) == false)
             {
@@ -222,6 +229,9 @@ bool threadpool_start(struct threadpool * const pool)
                               "%s: failed to start thread #%u\n",
                               __FUNCTION__,
                               i);
+                mutexobj_lock(&pool->priv->mtx);
+                pool->priv->startup--;
+                mutexobj_unlock(&pool->priv->mtx);
             }
             else
             {
@@ -273,6 +283,23 @@ bool threadpool_stop(struct threadpool * const pool)
 /**
  * @see See header file for interface comments.
  */
+bool threadpool_isrunning(struct threadpool * const pool)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    {
+        mutexobj_lock(&pool->priv->mtx);
+        ret = !pool->priv->shutdown;
+        mutexobj_unlock(&pool->priv->mtx);
+    }
+
+    return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
 bool threadpool_execute(struct threadpool * const pool,
                         void * const func,
                         void * const arg)
@@ -284,8 +311,19 @@ bool threadpool_execute(struct threadpool * const pool,
                          (pool->priv != NULL) &&
                          (func != NULL)) == true)
     {
+        // Wait for all threads to complete startup.
         mutexobj_lock(&pool->priv->mtx);
+        while (pool->priv->startup > 0)
+        {
+            mutexobj_unlock(&pool->priv->mtx);
+            usleep(1000);
+            mutexobj_lock(&pool->priv->mtx);
+
+        }
+        mutexobj_unlock(&pool->priv->mtx);
+
         // @todo Replace vector with circular queue.
+        mutexobj_lock(&pool->priv->mtx);
         vector_inserttail(&pool->priv->tasks, &task);
         mutexobj_unlock(&pool->priv->mtx);
 
