@@ -14,26 +14,23 @@
 #include "system_types.h"
 
 /**
- * @brief Initialize chat mode arguments.
- *
- * @param[in] args A pointer to an arguments object..
- *
- * @return True if chat mode was initialized.
+ * @see modeobj_int() for interface comments.
  */
 bool modechat_init(struct args_obj * const args);
 
 /**
- * @brief Start chat mode.
- *
- * @return True if chat mode was started.
+ * @see modeobj_start() for interface comments.
  */
 bool modechat_start(void);
 
 /**
- * @brief Stop the chat mode.
- *
- * @return True if chat mode was stopped.
+ * @see modeobj_stop() for interface comments.
  */
 bool modechat_stop(void);
+
+/**
+ * @see modeobj_cancel() for interface comments.
+ */
+bool modechat_cancel(void);
 
 #endif // _MODE_CHAT_H_

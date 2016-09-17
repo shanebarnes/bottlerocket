@@ -20,7 +20,6 @@
 #include "util_debug.h"
 #include "util_string.h"
 
-#include <signal.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -205,39 +204,19 @@ static void *modechat_thread(void * const arg)
 }
 
 /**
- * @brief Run the chat mode tasks.
- *
- * @param[in,out] arg A pointer to a thread pool.
- */
-static void *modechat_run(void *arg)
-{
-    struct threadpool *tpool = (struct threadpool*)arg;
-
-    if (UTILDEBUG_VERIFY(tpool != NULL) == true)
-    {
-        threadpool_execute(tpool, modechat_thread, tpool);
-        threadpool_wait(tpool, 1);
-    }
-
-    raise(SIGTERM);
-
-    return NULL;
-}
-
-/**
  * @see See header file for interface comments.
  */
 bool modechat_init(struct args_obj * const args)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (UTILDEBUG_VERIFY(args != NULL) == true)
     {
         opts = args;
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -245,7 +224,7 @@ bool modechat_init(struct args_obj * const args)
  */
 bool modechat_start(void)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (UTILDEBUG_VERIFY(opts != NULL) == false)
     {
@@ -266,10 +245,11 @@ bool modechat_start(void)
     }
     else
     {
-        retval = threadpool_execute(&pool, modechat_run, &pool);
+        ret = threadpool_execute(&pool, modechat_thread, &pool);
+        threadpool_wait(&pool, 1);
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -277,7 +257,7 @@ bool modechat_start(void)
  */
 bool modechat_stop(void)
 {
-    bool retval = false;
+    bool ret = false;
 
     if (threadpool_stop(&pool) == false)
     {
@@ -293,8 +273,16 @@ bool modechat_stop(void)
     }
     else
     {
-        retval = true;
+        ret = true;
     }
 
-    return retval;
+    return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool modechat_cancel(void)
+{
+    return threadpool_wake(&pool);
 }
