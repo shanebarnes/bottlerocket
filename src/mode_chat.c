@@ -33,7 +33,7 @@ static struct args_obj *opts = NULL;
 static void *modechat_thread(void * const arg)
 {
     bool exit = false;
-    struct threadpool *pool = (struct threadpool*)arg;
+    struct threadpool *tpool = (struct threadpool*)arg;
     struct sockobj server, socket;
     struct formobj form;
     struct fionobj fion;
@@ -56,7 +56,7 @@ static void *modechat_thread(void * const arg)
     server.conf.type = opts->type;
     server.conf.model = SOCKOBJ_MODEL_SERVER;
 
-    if (UTILDEBUG_VERIFY(pool != NULL) == false)
+    if (UTILDEBUG_VERIFY(tpool != NULL) == false)
     {
         // Do nothing.
     }
@@ -86,7 +86,7 @@ static void *modechat_thread(void * const arg)
             exit = !sockmod_init(&server);
         }
 
-        while ((exit == false) && (threadpool_isrunning(pool) == true))
+        while ((exit == false) && (threadpool_isrunning(tpool) == true))
         {
             fion.ops.fion_poll(&fion);
 
@@ -211,12 +211,12 @@ static void *modechat_thread(void * const arg)
  */
 static void *modechat_run(void *arg)
 {
-    struct threadpool *pool = (struct threadpool*)arg;
+    struct threadpool *tpool = (struct threadpool*)arg;
 
-    if (UTILDEBUG_VERIFY(pool != NULL) == true)
+    if (UTILDEBUG_VERIFY(tpool != NULL) == true)
     {
-        threadpool_execute(pool, modechat_thread, pool);
-        threadpool_wait(pool, 1);
+        threadpool_execute(tpool, modechat_thread, tpool);
+        threadpool_wait(tpool, 1);
     }
 
     raise(SIGTERM);
