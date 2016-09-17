@@ -21,7 +21,6 @@
 #include "util_mem.h"
 #include "util_string.h"
 
-#include <signal.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -526,28 +525,6 @@ static void *modeperf_thread(void *arg)
 }
 
 /**
- * @brief Run the performance mode tasks.
- *
- * @param[in,out] arg A pointer to a thread pool.
- *
- * @return NULL.
- */
-static void *modeperf_run(void *arg)
-{
-    struct threadpool *tpool = (struct threadpool*)arg;
-
-    if (UTILDEBUG_VERIFY(tpool != NULL) == true)
-    {
-        threadpool_execute(tpool, modeperf_thread, tpool);
-        threadpool_wait(tpool, 1);
-    }
-
-    raise(SIGTERM);
-
-    return NULL;
-}
-
-/**
  * @see See header file for interface comments.
  */
 bool modeperf_init(struct args_obj * const args)
@@ -574,7 +551,7 @@ bool modeperf_start(void)
     {
         // Do nothing.
     }
-    else if (threadpool_create(&pool, 2) == false)
+    else if (threadpool_create(&pool, 1) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to create perf threads\n",
@@ -589,7 +566,8 @@ bool modeperf_start(void)
     }
     else
     {
-        ret = threadpool_execute(&pool, modeperf_run, &pool);
+        ret = threadpool_execute(&pool, modeperf_thread, &pool);
+        threadpool_wait(&pool, 1);
     }
 
     return ret;
@@ -620,4 +598,12 @@ bool modeperf_stop(void)
     }
 
     return ret;
+}
+
+/**
+ * @see See header file for interface comments.
+ */
+bool modeperf_cancel(void)
+{
+    return threadpool_wake(&pool);
 }

@@ -14,26 +14,23 @@
 #include "system_types.h"
 
 /**
- * @brief Initialize performance mode arguments.
- *
- * @param[in] args A pointer to an arguments object..
- *
- * @return True if performance mode was initialized.
+ * @see modeobj_init() for interface comments.
  */
 bool modeperf_init(struct args_obj * const args);
 
 /**
- * @brief Start performance mode.
- *
- * @return True if performance mode was started.
+ * @see modeobj_start() for interface comments.
  */
 bool modeperf_start(void);
 
 /**
- * @brief Stop performance mode
- *
- * @return True if performance mode was stopped.
+ * @see modeobj_stop() for interface comments.
  */
 bool modeperf_stop(void);
+
+/**
+ * @see modeobj_cancel() for interface comments.
+ */
+bool modeperf_cancel(void);
 
 #endif // _MODE_PERF_H_
