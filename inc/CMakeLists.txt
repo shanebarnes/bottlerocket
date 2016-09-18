@@ -31,6 +31,7 @@ set(BRLIB_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/util_debug.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_ioctl.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_inet.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_math.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_mem.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_stats.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util_string.h
