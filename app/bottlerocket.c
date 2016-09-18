@@ -23,13 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 
-static struct modeobj mode =
-{
-    .ops.mode_init = NULL,
-    .ops.mode_start = NULL,
-    .ops.mode_stop = NULL,
-    .ops.mode_cancel = NULL
-};
+static struct modeobj mode;
 
 /**
  * @brief Signal handler callback function.
@@ -89,6 +83,8 @@ int32_t main(int argc, char **argv)
     int32_t retval = EXIT_SUCCESS;
     struct output_if_ops output_if;
     struct args_obj args;
+
+    memset(&mode, 0, sizeof(mode));
     memset(&args, 0, sizeof(args));
 
     logger_create();
