@@ -9,20 +9,30 @@
 
 #include "args.h"
 #include "logger.h"
+#include "util_debug.h"
 #include "util_inet.h"
+#include "util_math.h"
 #include "util_string.h"
+#include "util_sysctl.h"
 #include "util_unit.h"
 #include "version.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
+#define arg_noobjptr NULL
 #define arg_optional true
 #define arg_required false
 #define val_optional true
 #define val_required false
 
-enum args_flag
+static char        str_somaxconn[16];
+static char        str_nproconln[16];
+static const char *prefix_skey = "-";
+static const char *prefix_lkey = "--";
+
+enum argsopt_flag
 {
     ARGS_FLAG_NULL       = 0x000000,
     ARGS_FLAG_CHAT       = 0x000001,
@@ -42,469 +52,301 @@ enum args_flag
     ARGS_FLAG_PORT       = 0x004000,
     ARGS_FLAG_BACKLOG    = 0x008000,
     ARGS_FLAG_SERVER     = 0x010000,
-    ARGS_FLAG_TIME       = 0x020000,
-    ARGS_FLAG_UDP        = 0x040000,
-    ARGS_FLAG_HELP       = 0x080000,
-    ARGS_FLAG_VERSION    = 0x100000
+    ARGS_FLAG_THREADS    = 0x020000,
+    ARGS_FLAG_TIME       = 0x040000,
+    ARGS_FLAG_UDP        = 0x080000,
+    ARGS_FLAG_HELP       = 0x100000,
+    ARGS_FLAG_VERSION    = 0x200000
 };
 
-struct tuple_element
+struct argsopt
 {
-  const char     *lname;  // Attribute long name (e.g., --argument)
-  const char      sname;  // Attribute short name (e.g., -a)
-  const char     *desc;   // Description
-  const char     *dval;   // Default value
-  const char     *minval; // Minimum value
-  const char     *maxval; // Maximum value
-  const bool      oval;   // Optional value
-  const bool      oarg;   // Optional attribute
-  const uint64_t  cflags; // Conflict flags (i.e., incompatible options)
-  bool           (*copy)(const char * const val,
-                         const char * const min,
-                         const char * const max,
-                         struct args_obj *args); // Tuple copy function pointer
-                         //void * const var);
+    const char      *lname;  // Attribute long name (e.g., --argument)
+    const char       sname;  // Attribute short name (e.g., -a)
+    const char      *desc;   // Description
+    const char      *dval;   // Default value
+    const char      *minval; // Minimum value
+    const char      *maxval; // Maximum value
+    const bool       oval;   // Optional value
+    const bool       oarg;   // Optional attribute
+    const uint64_t   cflags; // Conflict flags (i.e., incompatible options)
+    struct args_obj *args;  // Pointer to current argument values.
+                            // Option copy function pointer
+    bool            (*copy)(const struct argsopt * const opt,
+                            const char * const src,
+                            void * const dst);
+    void            *dest;   // Copy destination.
 };
-
-static char        str_somaxconn[16];
-static const char *prefix_skey = "-";
-static const char *prefix_lkey = "--";
 
 /**
- * @brief Validate and copy an IP address value to an arguments object.
- *
- * @param[in]     val  A pointer to a value to validate.
- * @param[in]     min  A pointer to a minimum value (NULL if no minimum value).
- * @param[in]     max  A pointer to a maximum value (NULL if no maximum value).
- * @param[in,out] args A pointer to an argument object.
- *
- * @return True if a valid IP address value was copied to an arguments object.
+ * @see
  */
-static bool args_copyipaddr(const char * const val,
-                            const char * const min,
-                            const char * const max,
-                            struct args_obj *args)
+static bool args_copyipaddr(const struct argsopt * const opt,
+                            const char * const src,
+                            void * const dst)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if ((val == NULL) || (args == NULL))
+    if (UTILDEBUG_VERIFY((opt != NULL) &&
+                         (opt->args != NULL) &&
+                         (src != NULL) &&
+                         (dst != NULL)) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if ((min != NULL) && (false))
+        if ((opt->minval != NULL) && (false))
         {
             // Do nothing.
         }
-        else if ((max != NULL) && (false))
+        else if ((opt->maxval != NULL) && (false))
         {
             // Do nothing.
         }
         else
         {
-            retval = utilinet_getaddrfromhost(val,
-                                              args->family,
-                                              args->ipaddr,
-                                              sizeof(args->ipaddr));
+            ret = utilinet_getaddrfromhost(src,
+                                           opt->args->family,
+                                           dst,
+                                           INET6_ADDRSTRLEN);
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
- * @brief Validate and copy a 32-bit integer value to a 32-bit integer variable.
- *
- * @param[in]     val A pointer to a value to validate.
- * @param[in]     min A pointer to a minimum value (NULL if no minimum value).
- * @param[in]     max A pointer to a maximum value (NULL if no maximum value).
- * @param[in,out] num A pointer to a 32-bit integer variable.
- *
- * @return True if a valid 32-bit integer value was copied to an 32-bit integer
- *         variable.
+ * @see
  */
-static bool args_copyint32(const char * const val,
-                           const char * const min,
-                           const char * const max,
-                           int32_t * const num)
+static bool args_copyuint16(const struct argsopt * const opt,
+                            const char * const src,
+                            void * const dst)
 {
-    bool retval = false;
-    int32_t dmax, dmin, tmp;
+    bool ret = false;
+    uint32_t max, min, val;
 
-    if ((val == NULL) || (num == NULL))
+    if (UTILDEBUG_VERIFY((opt != NULL) &&
+                         (src != NULL) &&
+                         (dst != NULL)) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if ((utilstring_parse(val, "%d", &tmp) == 1))
+        if ((utilstring_parse(src, "%u", &val) == 1))
         {
-            if ((min != NULL) &&
-                ((utilstring_parse(min, "%d", &dmin) != 1) ||
-                 (tmp < dmin)))
+            if ((opt->minval != NULL) &&
+                ((utilstring_parse(opt->minval, "%u", &min) != 1) ||
+                 (val < min)))
             {
                 // Do nothing.
             }
-            else if ((max != NULL) &&
-                     ((utilstring_parse(max, "%d", &dmax) != 1) ||
-                     (tmp > dmax)))
+            else if ((opt->maxval != NULL) &&
+                     ((utilstring_parse(opt->maxval, "%u", &max) != 1) ||
+                     (val > max)))
             {
                 // Do nothing.
             }
             else
             {
-                *num = tmp;
-                retval = true;
+                *(uint16_t*)dst = (uint16_t)val;
+                ret = true;
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
- * @brief Validate and copy a 32-bit integer value to a 32-bit integer variable.
- *
- * @param[in]     val A pointer to a value to validate.
- * @param[in]     min A pointer to a minimum value (NULL if no minimum value).
- * @param[in]     max A pointer to a maximum value (NULL if no maximum value).
- * @param[in,out] num A pointer to a 32-bit integer variable.
- *
- * @return True if a valid 32-bit integer value was copied to an 32-bit integer
- *         variable.
+ * @see
  */
-static bool args_copyuint32(const char * const val,
-                            const char * const min,
-                            const char * const max,
-                            uint32_t * const num)
+static bool args_copyint32(const struct argsopt * const opt,
+                           const char * const src,
+                           void * const dst)
 {
-    bool retval = false;
-    uint32_t dmax, dmin, tmp;
+    bool ret = false;
+    int32_t max, min, val;
 
-    if ((val == NULL) || (num == NULL))
+    if (UTILDEBUG_VERIFY((opt != NULL) &&
+                         (src != NULL) &&
+                         (dst != NULL)) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if ((utilstring_parse(val, "%u", &tmp) == 1))
+        if ((utilstring_parse(src, "%d", &val) == 1))
         {
-            if ((min != NULL) &&
-                ((utilstring_parse(min, "%u", &dmin) != 1) ||
-                 (tmp < dmin)))
+            if ((opt->minval != NULL) &&
+                ((utilstring_parse(opt->minval, "%d", &min) != 1) ||
+                 (val < min)))
             {
                 // Do nothing.
             }
-            else if ((max != NULL) &&
-                     ((utilstring_parse(max, "%u", &dmax) != 1) ||
-                     (tmp > dmax)))
+            else if ((opt->maxval != NULL) &&
+                     ((utilstring_parse(opt->maxval, "%d", &max) != 1) ||
+                     (val > max)))
             {
                 // Do nothing.
             }
             else
             {
-                *num = tmp;
-                retval = true;
+                *(int32_t*)dst = val;
+                ret = true;
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
- * @brief Validate and copy an IP port number value to an arguments object.
- *
- * @param[in]     val  A pointer to a value to validate.
- * @param[in]     min  A pointer to a minimum value (NULL if no minimum value).
- * @param[in]     max  A pointer to a maximum value (NULL if no maximum value).
- * @param[in,out] args A pointer to an argument object.
- *
- * @return True if a valid IP port number value was copied to an arguments
- *         object.
+ * @see
  */
-static bool args_copyipport(const char * const val,
-                            const char * const min,
-                            const char * const max,
-                            struct args_obj *args)
+static bool args_copyuint32(const struct argsopt * const opt,
+                            const char * const src,
+                            void * const dst)
 {
-    bool retval = false;
-    int32_t port = -1;
+    bool ret = false;
+    uint32_t max, min, val;
 
-    if (args == NULL)
+    if (UTILDEBUG_VERIFY((opt != NULL) &&
+                         (src != NULL) &&
+                         (dst != NULL)) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else if (args_copyint32(val, min, max, &port) == true)
-    {
-        args->ipport = (uint16_t)port;
-        retval = true;
-    }
-
-    return retval;
-}
-
-/**
- * @brief Validate and copy a parallel connections value to an arguments object.
- *
- * @param[in]     val  A pointer to a value to validate.
- * @param[in]     min  A pointer to a minimum value (NULL if no minimum value).
- * @param[in]     max  A pointer to a maximum value (NULL if no maximum value).
- * @param[in,out] args A pointer to an argument object.
- *
- * @return True if a valid parallel connections value was copied to an arguments
- *         object.
- */
-static bool args_copyparallel(const char * const val,
-                              const char * const min,
-                              const char * const max,
-                              struct args_obj *args)
-{
-    bool retval = false;
-    uint32_t maxcon = 0;
-
-    if (args == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else if (args_copyuint32(val, min, max, &maxcon) == true)
-    {
-        args->maxcon = (uint32_t)maxcon;
-        retval = true;
-    }
-
-    return retval;
-}
-
-static bool args_copybacklog(const char * const val,
-                             const char * const min,
-                             const char * const max,
-                             struct args_obj *args)
-{
-    bool retval = false;
-
-    if (args == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else if (args_copyint32(val, min, max, &args->backlog) == true)
-    {
-        retval = true;
-    }
-
-    return retval;
-}
-
-static bool args_copybitrate(const char * const val,
-                             const char * const min,
-                             const char * const max,
-                             uint64_t  * const num)
-{
-    bool retval = false;
-    int64_t dmax, dmin, tmp;
-
-    if ((val == NULL) || (num == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if ((tmp = utilunit_getbitrate(val)) >= 0)
+        if ((utilstring_parse(src, "%u", &val) == 1))
         {
-            if ((min != NULL) &&
-                (((dmin = utilunit_getbitrate(min)) < 0) ||
-                 (tmp < dmin)))
+            if ((opt->minval != NULL) &&
+                ((utilstring_parse(opt->minval, "%u", &min) != 1) ||
+                 (val < min)))
             {
                 // Do nothing.
             }
-            else if ((max != NULL) &&
-                     (((dmax = utilunit_getbitrate(max)) < 0) ||
-                      (tmp > dmax)))
+            else if ((opt->maxval != NULL) &&
+                     ((utilstring_parse(opt->maxval, "%u", &max) != 1) ||
+                     (val > max)))
             {
                 // Do nothing.
             }
             else
             {
-                *num = (uint64_t)tmp;
-                retval = true;
+                *(uint32_t*)dst = val;
+                ret = true;
             }
         }
     }
 
-    return retval;
-}
-
-static bool args_copyratelimit(const char * const val,
-                               const char * const min,
-                               const char * const max,
-                               struct args_obj *args)
-{
-    bool retval = false;
-
-    if (args == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else if (args_copybitrate(val, min, max, &args->ratelimitbps) == true)
-    {
-        retval = true;
-    }
-
-    return retval;
-}
-
-static bool args_copybytes(const char * const val,
-                           const char * const min,
-                           const char * const max,
-                           uint64_t  * const num)
-{
-    bool retval = false;
-    uint64_t dmax, dmin, tmp;
-
-    if ((val == NULL) || (num == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if ((tmp = utilunit_getbytes(val)) > 0)
-        {
-            if ((min != NULL) &&
-                (((dmin = utilunit_getbytes(min)) == 0) ||
-                 (tmp < dmin)))
-            {
-                // Do nothing.
-            }
-            else if ((max != NULL) &&
-                    (((dmax = utilunit_getbytes(max)) == 0) ||
-                     (tmp > dmax)))
-            {
-                // Do nothing.
-            }
-            else
-            {
-                *num = tmp;
-                retval = true;
-            }
-        }
-    }
-
-    return retval;
-}
-
-static bool args_copybuflen(const char * const val,
-                            const char * const min,
-                            const char * const max,
-                            struct args_obj *args)
-{
-    bool retval = false;
-
-    if (args == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else if (args_copybytes(val, min, max, &args->buflen) == true)
-    {
-        retval = true;
-    }
-
-    return retval;
-}
-
-static bool args_copydatalimit(const char * const val,
-                               const char * const min,
-                               const char * const max,
-                               struct args_obj *args)
-{
-    bool retval = false;
-
-    if (args == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else if (args_copybytes(val, min, max, &args->datalimitbyte) == true)
-    {
-        retval = true;
-    }
-
-    return retval;
+    return ret;
 }
 
 /**
- * @brief Validate and copy a time value to an arguments object.
- *
- * @param[in]     val  A pointer to a value to validate.
- * @param[in]     min  A pointer to a minimum value (NULL if no minimum value).
- * @param[in]     max  A pointer to a maximum value (NULL if no maximum value).
- * @param[in,out] args A pointer to an argument object.
- *
- * @return True if a valid time value was copied to an arguments object.
+ * @see
  */
-static bool args_copytime(const char * const val,
-                          const char * const min,
-                          const char * const max,
-                          struct args_obj *args)
+static bool args_copyrateunit(const struct argsopt * const opt,
+                              const char * const src,
+                              void  * const dst)
 {
-    bool retval = false;
-    uint64_t dmax, dmin, time;
+    bool ret = false;
+    int64_t max, min, val;
 
-    if ((val == NULL) || (args == NULL))
+    if (UTILDEBUG_VERIFY((opt != NULL) &&
+                         (src != NULL) &&
+                         (dst != NULL)) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if ((time = utilunit_getsecs(val, UNIT_TIME_PSEC)) > 0)
+        if ((val = utilunit_getbitrate(src)) >= 0)
         {
-            if ((min != NULL) &&
-                (((dmin = utilunit_getsecs(min, UNIT_TIME_PSEC)) == 0) ||
-                 (time < dmin)))
+            if ((opt->minval != NULL) &&
+                (((min = utilunit_getbitrate(opt->minval)) < 0) ||
+                 (val < min)))
             {
                 // Do nothing.
             }
-            else if ((max != NULL) &&
-                    (((dmax = utilunit_getsecs(max, UNIT_TIME_PSEC)) == 0) ||
-                     (time > dmax)))
+            else if ((opt->maxval != NULL) &&
+                     (((max = utilunit_getbitrate(opt->maxval)) < 0) ||
+                      (val > max)))
             {
                 // Do nothing.
             }
             else
             {
-                args->timelimitusec = utilunit_getsecs(val, UNIT_TIME_USEC);
-                retval = true;
+                *(uint64_t*)dst = (uint64_t)val;
+                ret = true;
             }
         }
     }
 
-    return retval;
+    return ret;
 }
 
-static struct tuple_element options[] =
+/**
+ * @see
+ */
+static bool args_copybyteunit(const struct argsopt * const opt,
+                              const char * const src,
+                              void * const dst)
+{
+    bool ret = false;
+    uint64_t max, min, val;
+
+    if (UTILDEBUG_VERIFY((opt != NULL) &&
+                         (src != NULL) &&
+                         (dst != NULL)) == true)
+    {
+        if ((val = utilunit_getbytes(src)) > 0)
+        {
+            if ((opt->minval != NULL) &&
+                (((min = utilunit_getbytes(opt->minval)) == 0) ||
+                 (val < min)))
+            {
+                // Do nothing.
+            }
+            else if ((opt->maxval != NULL) &&
+                    (((max = utilunit_getbytes(opt->maxval)) == 0) ||
+                     (val > max)))
+            {
+                // Do nothing.
+            }
+            else
+            {
+                *(uint64_t*)dst = val;
+                ret = true;
+            }
+        }
+    }
+
+    return ret;
+}
+
+/**
+ * @see
+ */
+static bool args_copytimeunit(const struct argsopt * const opt,
+                              const char * const src,
+                              void * const dst)
+{
+    bool ret = false;
+    uint64_t max, min, val;
+
+    if (UTILDEBUG_VERIFY((opt != NULL) &&
+                         (src != NULL) &&
+                         (dst != NULL)) == true)
+    {
+        if ((val = utilunit_getsecs(src, UNIT_TIME_USEC)) > 0)
+        {
+            if ((opt->minval != NULL) &&
+                (((min = utilunit_getsecs(opt->minval, UNIT_TIME_USEC)) == 0) ||
+                 (val < min)))
+            {
+                // Do nothing.
+            }
+            else if ((opt->maxval != NULL) &&
+                    (((max = utilunit_getsecs(opt->maxval, UNIT_TIME_USEC)) == 0) ||
+                     (val > max)))
+            {
+                // Do nothing.
+            }
+            else
+            {
+                *(uint64_t*)dst = val;
+                ret = true;
+            }
+        }
+    }
+
+    return ret;
+}
+
+static struct argsopt options[] =
 {
     {
         "chat",
@@ -516,6 +358,8 @@ static struct tuple_element options[] =
         val_optional,
         arg_optional,
         ARGS_FLAG_PERF,
+        arg_noobjptr,
+        NULL,
         NULL
     },
     {
@@ -528,6 +372,8 @@ static struct tuple_element options[] =
         val_optional,
         arg_optional,
         ARGS_FLAG_CHAT,
+        arg_noobjptr,
+        NULL,
         NULL
     },
     {
@@ -540,6 +386,8 @@ static struct tuple_element options[] =
         val_optional,
         arg_optional,
         ARGS_FLAG_IPV6,
+        arg_noobjptr,
+        NULL,
         NULL
     },
     {
@@ -552,22 +400,24 @@ static struct tuple_element options[] =
         val_optional,
         arg_optional,
         ARGS_FLAG_IPV4,
+        arg_noobjptr,
+        NULL,
         NULL
     },
-//#if !defined(__APPLE__)
     {
         "--affinity",
         'A',
         "set CPU affinity",
-        "0xFFFFFFFF",
-        NULL,
-        NULL,
+        str_nproconln,
+        "1",
+        str_nproconln,
         val_required,
         arg_optional,
         ARGS_FLAG_NULL,
+        arg_noobjptr,
+        args_copyuint16,
         NULL
     },
-//#endif
     {
         "--bind",
         'B',
@@ -578,7 +428,9 @@ static struct tuple_element options[] =
         val_required,
         arg_optional,
         ARGS_FLAG_SERVER,
-        args_copyipport
+        arg_noobjptr,
+        args_copyuint16,
+        NULL
     },
     {
         "--bandwidth",
@@ -590,7 +442,9 @@ static struct tuple_element options[] =
         val_required,
         arg_optional,
         ARGS_FLAG_NULL,
-        args_copyratelimit
+        arg_noobjptr,
+        args_copyrateunit,
+        NULL
     },
     {
         "--client",
@@ -602,7 +456,9 @@ static struct tuple_element options[] =
         val_optional,
         arg_required,
         ARGS_FLAG_SERVER,
-        args_copyipaddr
+        arg_noobjptr,
+        args_copyipaddr,
+        NULL
     },
     {
         "--echo",
@@ -614,6 +470,8 @@ static struct tuple_element options[] =
         val_optional,
         arg_optional,
         ARGS_FLAG_CLIENT,
+        arg_noobjptr,
+        NULL,
         NULL
     },
     {
@@ -626,7 +484,9 @@ static struct tuple_element options[] =
         val_required,
         arg_optional,
         ARGS_FLAG_NULL,
-        args_copytime
+        arg_noobjptr,
+        args_copytimeunit,
+        NULL
     },
     {
         "--len",
@@ -638,7 +498,9 @@ static struct tuple_element options[] =
         val_required,
         arg_optional,
         ARGS_FLAG_NULL,
-        args_copybuflen
+        arg_noobjptr,
+        args_copybyteunit,
+        NULL
     },
     {
         "--nodelay",
@@ -650,6 +512,8 @@ static struct tuple_element options[] =
         val_optional,
         arg_optional,
         ARGS_FLAG_UDP,
+        arg_noobjptr,
+        NULL,
         NULL
     },
     {
@@ -662,7 +526,9 @@ static struct tuple_element options[] =
         val_required,
         arg_optional,
         ARGS_FLAG_TIME,
-        args_copydatalimit
+        arg_noobjptr,
+        args_copybyteunit,
+        NULL
     },
     {
         "--parallel",
@@ -674,7 +540,9 @@ static struct tuple_element options[] =
         val_required,
         arg_optional,
         ARGS_FLAG_NULL,
-        args_copyparallel
+        arg_noobjptr,
+        args_copyuint32,
+        NULL
     },
     {
         "--port",
@@ -686,7 +554,9 @@ static struct tuple_element options[] =
         val_required,
         arg_optional,
         ARGS_FLAG_NULL,
-        args_copyipport
+        arg_noobjptr,
+        args_copyuint16,
+        NULL
     },
     {
         "--backlog",
@@ -698,7 +568,9 @@ static struct tuple_element options[] =
         val_required,
         arg_optional,
         ARGS_FLAG_NULL,
-        args_copybacklog
+        arg_noobjptr,
+        args_copyint32,
+        NULL
     },
     {
         "--server",
@@ -710,19 +582,37 @@ static struct tuple_element options[] =
         val_optional,
         arg_required,
         ARGS_FLAG_CLIENT,
-        args_copyipaddr
+        arg_noobjptr,
+        args_copyipaddr,
+        NULL
+    },
+    {
+        "--threads",
+        'T',
+        "number of threads to use",
+        "1",
+        "1",
+        str_nproconln,
+        val_required,
+        arg_optional,
+        ARGS_FLAG_CHAT,
+        arg_noobjptr,
+        args_copyuint32,
+        NULL
     },
     {
         "--time",
         't',
         "maximum time duration to send data",
-        "10s",
-        "1ps",
+        "0s",
+        "0s",
         "1000y",
         val_required,
         arg_optional,
         ARGS_FLAG_NUM,
-        args_copytime
+        arg_noobjptr,
+        args_copytimeunit,
+        NULL
     },
     {
         "--udp",
@@ -734,6 +624,8 @@ static struct tuple_element options[] =
         val_optional,
         arg_optional,
         ARGS_FLAG_OPTNODELAY,
+        arg_noobjptr,
+        NULL,
         NULL
     },
     {
@@ -746,6 +638,8 @@ static struct tuple_element options[] =
         val_optional,
         arg_optional,
         ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
         NULL
     },
     {
@@ -758,6 +652,8 @@ static struct tuple_element options[] =
         val_optional,
         arg_optional,
         ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
         NULL
     }
 };
@@ -775,7 +671,7 @@ static void args_usage(FILE * const stream)
 
     fprintf(stream, "\nusage: bottlerocket [options]\n\n");
 
-    for (i = 0; i < sizeof(options) / sizeof(struct tuple_element); i++)
+    for (i = 0; i < sizeof(options) / sizeof(struct argsopt); i++)
     {
         fprintf(stream,
                 "  %s%c%s %-11s %-50s %s\n",
@@ -798,8 +694,6 @@ static void args_usage(FILE * const stream)
  * @param[in]     argv An argument vector.
  * @param[in,out] argi A pointer to an argument vector index.
  * @param[in,out] mask A pointer to an options mask.
- * @param[in,out] args A pointer to a bottlerocket arguments structure to
- *                     populate.
  *
  * @return A character representing the unique bottlerocket argument element (0
  *         on error).
@@ -807,30 +701,25 @@ static void args_usage(FILE * const stream)
 static char args_getarg(const int32_t argc,
                         char ** const argv,
                         int32_t *argi,
-                        uint64_t *mask,
-                        struct args_obj *args)
+                        uint64_t *mask)
 {
-    char retval = 0, c;
+    char ret = 0, c;
     char *name = NULL;
     uint64_t flag;
     uint32_t i;
 
-    if ((argv == NULL) || (argi == NULL) || (mask == NULL) || (args == NULL))
+    if (UTILDEBUG_VERIFY((argv != NULL) &&
+                         (argi != NULL) &&
+                         (mask != NULL)) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        for (i = 0; i < sizeof(options) / sizeof(struct tuple_element); i++)
+        for (i = 0; i < sizeof(options) / sizeof(struct argsopt); i++)
         {
             if (utilstring_parse(argv[*argi], "-%c", &c) == 1)
             {
                 // Short names are case-sensitive.
                 if (c == options[i].sname)
                 {
-                    retval = c;
+                    ret = c;
                     name = argv[*argi];
                     break;
                 }
@@ -842,13 +731,13 @@ static char args_getarg(const int32_t argc,
                                    0,
                                    true) == true)
             {
-                retval = options[i].sname;
+                ret = options[i].sname;
                 name = argv[*argi];
                 break;
             }
         }
 
-        if (retval == 0)
+        if (ret == 0)
         {
             fprintf(stderr, "\nunknown option '%s'\n", name);
         }
@@ -857,12 +746,12 @@ static char args_getarg(const int32_t argc,
                  ((*mask = *mask | flag) == 0))
         {
             fprintf(stderr, "\nduplicate option '%s'\n", name);
-            retval = 0;
+            ret = 0;
         }
         else if ((options[i].cflags & *mask) != 0)
         {
              fprintf(stderr, "\nincompatible option '%s'\n", name);
-             retval = 0;
+             ret = 0;
         }
         else if (options[i].dval == NULL)
         {
@@ -888,35 +777,41 @@ static char args_getarg(const int32_t argc,
             {
                 (*argi)++;
 
-                if (options[i].copy(argv[*argi],
-                                    options[i].minval,
-                                    options[i].maxval,
-                                    args) == false)
+                if (options[i].copy(&options[i],
+                                    argv[*argi],
+                                    options[i].dest) == false)
                 {
                     fprintf(stderr,
-                            "\ninvalid option '%s %s'\n",
+                            "\ninvalid option '%s %s' (limits: [%s, %s])\n",
                             name,
-                            argv[*argi]);
-                    retval = 0;
+                            argv[*argi],
+                            options[i].minval,
+                            options[i].maxval);
+                    ret = 0;
                 }
             }
             else
             {
                 if (options[i].oval == val_required)
                 {
-                    fprintf(stderr, "\nmissing value for option '%s'\n", name);
-                    retval = 0;
+                    fprintf(stderr,
+                            "\nmissing value for option '%s' (limits: [%s, %s])\n",
+                            name,
+                            options[i].minval,
+                            options[i].maxval);
+                    ret = 0;
                 }
-                else if (options[i].copy(options[i].dval,
-                                         options[i].minval,
-                                         options[i].maxval,
-                                         args) == false)
+                else if (options[i].copy(&options[i],
+                                         options[i].dval,
+                                         options[i].dest) == false)
                 {
                     fprintf(stderr,
-                            "\ninvalid option '%s %s'\n",
+                            "\ninvalid option '%s %s' (limits: [%s, %s])\n",
                             name,
-                            options[i].dval);
-                    retval = 0;
+                            options[i].dval,
+                            options[i].minval,
+                            options[i].maxval);
+                    ret = 0;
                 }
             }
         }
@@ -925,25 +820,228 @@ static char args_getarg(const int32_t argc,
             if (options[i].oval == val_required)
             {
                 fprintf(stderr,
-                        "\nmissing value for option '%s'\n",
-                        argv[*argi]);
-                retval = 0;
+                        "\nmissing value for option '%s' (limits: [%s, %s])\n",
+                        argv[*argi],
+                        options[i].minval,
+                        options[i].maxval);
+                ret = 0;
             }
-            else if (options[i].copy(options[i].dval,
-                                     options[i].minval,
-                                     options[i].maxval,
-                                     args) == false)
+            else if (options[i].copy(&options[i],
+                                     options[i].dval,
+                                     options[i].dest) == false)
             {
                 fprintf(stderr,
-                        "\ninvalid option '%s %s'\n",
+                        "\ninvalid option '%s %s' (limits: [%s, %s])\n",
                         argv[*argi],
-                        options[i].dval);
-                retval = 0;
+                        options[i].dval,
+                        options[i].minval,
+                        options[i].maxval);
+                ret = 0;
             }
         }
     }
 
-    return retval;
+    return ret;
+}
+
+/**
+ * @brief Initialze an arguments object with default values.
+ *
+ * @param[in,out] args A pointer to an arguments object.
+ *
+ * @return Void.
+ */
+static void args_init(struct args_obj * const args)
+{
+    uint32_t i;
+
+    // Get system constants.
+    utilstring_fromi32(SOMAXCONN, str_somaxconn, sizeof(str_somaxconn));
+    utilstring_fromi32((int32_t)utilsysctl_getcpusavail(),
+                       str_nproconln,
+                       sizeof(str_nproconln));
+
+    // Map argument fields to options array.
+    args->mode = ARGS_MODE_PERF;
+    args->family = AF_INET;
+    options[utilmath_log2(ARGS_FLAG_AFFINITY)].dest = &args->affinity;
+    options[utilmath_log2(ARGS_FLAG_BIND)].dest = &args->ipport;
+    options[utilmath_log2(ARGS_FLAG_BANDWIDTH)].dest = &args->ratelimitbps;
+    options[utilmath_log2(ARGS_FLAG_CLIENT)].dest = &args->ipaddr;
+    args->arch = SOCKOBJ_MODEL_CLIENT;
+    args->echo = false;
+    options[utilmath_log2(ARGS_FLAG_INTERVAL)].dest = &args->interval;
+    options[utilmath_log2(ARGS_FLAG_LEN)].dest = &args->buflen;
+    args->opts.nodelay = true;
+    options[utilmath_log2(ARGS_FLAG_NUM)].dest = &args->datalimitbyte;
+    options[utilmath_log2(ARGS_FLAG_PARALLEL)].dest = &args->maxcon;
+    options[utilmath_log2(ARGS_FLAG_PORT)].dest = &args->ipport;
+    options[utilmath_log2(ARGS_FLAG_BACKLOG)].dest = &args->backlog;
+    options[utilmath_log2(ARGS_FLAG_SERVER)].dest = &args->ipaddr;
+    options[utilmath_log2(ARGS_FLAG_THREADS)].dest = &args->threads;
+    options[utilmath_log2(ARGS_FLAG_TIME)].dest = &args->timelimitusec;
+    args->type = SOCK_STREAM;
+
+    // Copy default options to arguments object.
+    for (i = 0; i < sizeof(options) / sizeof(options[0]); i++)
+    {
+        options[i].args = args;
+
+        if (options[i].dest != NULL)
+        {
+            if (options[i].copy != NULL)
+            {
+                options[i].copy(&options[i],
+                                options[i].dval,
+                                options[i].dest);
+            }
+
+            logger_printf(LOGGER_LEVEL_INFO, "%s: %s=%" PRIu64 "\n",
+                          __FUNCTION__,
+                          options[i].lname,
+                          *(uint64_t*)options[i].dest);
+        }
+    }
+
+    options[utilmath_log2(ARGS_FLAG_TIME)].minval = "1us";
+}
+
+static bool args_validate(const char c,
+                          const uint32_t pos,
+                          const uint64_t flags,
+                          struct args_obj * const args)
+{
+    bool ret = true;
+    struct argsopt *opt = NULL;
+
+    logger_printf(LOGGER_LEVEL_DEBUG,
+                  "%s: validating argument (pos = %u, val=%c)\n",
+                  __FUNCTION__,
+                  pos,
+                  (!isalnum(c) ? '0' + c : c));
+
+    switch (c)
+    {
+        case 1:
+            if (pos == 1)
+            {
+                args->mode = ARGS_MODE_CHAT;
+            }
+            else
+            {
+                args_usage(stdout);
+                ret = false;
+            }
+            break;
+        case 2:
+            if (pos == 1)
+            {
+                args->mode = ARGS_MODE_PERF;
+            }
+            else
+            {
+                args_usage(stdout);
+                ret = false;
+            }
+            break;
+        case '4':
+// if ip address flag already set and AF_INET != args->family, then we have a problem!
+            args->family = AF_INET;
+            utilinet_getaddrfromhost(args->ipaddr,
+                                     args->family,
+                                     args->ipaddr,
+                                     sizeof(args->ipaddr));
+            break;
+        case '6':
+            args->family = AF_INET6;
+            utilinet_getaddrfromhost(args->ipaddr,
+                                     args->family,
+                                     args->ipaddr,
+                                     sizeof(args->ipaddr));
+            break;
+        case 'A':
+            break;
+        case 'B':
+            break;
+        case 'b':
+            break;
+        case 'c':
+            args->arch = SOCKOBJ_MODEL_CLIENT;
+            break;
+        case 'e':
+            args->echo = true;
+            break;
+        case 'l':
+            break;
+        case 'N':
+            args->opts.nodelay = true;
+            break;
+        case 'n':
+            break;
+        case 's':
+            args->arch = SOCKOBJ_MODEL_SERVER;
+            if ((flags & ARGS_FLAG_NUM) == 0)
+            {
+                args->datalimitbyte = 0;
+            }
+            if ((flags & ARGS_FLAG_PARALLEL) == 0)
+            {
+                args->maxcon = 0;
+            }
+            break;
+        case 'P':
+            if ((flags & ARGS_FLAG_BACKLOG) == 0)
+            {
+                args->backlog = args->maxcon;
+            }
+            break;
+        case 'p':
+            break;
+        case 'q':
+            break;
+        case 'T':
+            break;
+        case 't':
+            if ((flags & ARGS_FLAG_NUM) == 0)
+            {
+                args->datalimitbyte = 0;
+            }
+            break;
+        case 'u':
+            args->type = SOCK_DGRAM;
+            if ((flags & ARGS_FLAG_BANDWIDTH) == 0)
+            {
+                // @todo server should accept at any rate by default.
+                opt = &options[utilmath_log2(ARGS_FLAG_BANDWIDTH)];
+                opt->copy(opt, "1Mbps", opt->dest);
+            }
+            if ((flags & ARGS_FLAG_LEN) == 0)
+            {
+                // @todo what about default mtu?
+                opt = &options[utilmath_log2(ARGS_FLAG_LEN)];
+                opt->copy(opt, "1kB", opt->dest);
+            }
+            break;
+        case 'h':
+            args_usage(stdout);
+            ret = false;
+            break;
+        case 'v':
+            fprintf(stdout,
+                    "bottlerocket version %u.%u.%u (%s)\n",
+                    version_major(),
+                    version_minor(),
+                    version_patch(),
+                    version_date());
+            ret = false;
+            break;
+        default:
+            args_usage(stdout);
+            ret = false;
+            break;
+    }
+
+    return ret;
 }
 
 /**
@@ -953,166 +1051,32 @@ bool args_parse(const int32_t argc,
                 char ** const argv,
                 struct args_obj * const args)
 {
-    bool retval = false;
+    bool ret = false;
     uint64_t flags = 0;
     int32_t i;
 
-    if ((argv == NULL) || (args == NULL))
+    if (UTILDEBUG_VERIFY((argv != NULL) && (args != NULL)) == true)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        // Set defaults.
-        utilstring_fromi32(SOMAXCONN, str_somaxconn, sizeof(str_somaxconn));
-        args->mode = ARGS_MODE_PERF;
-        args->arch = SOCKOBJ_MODEL_CLIENT;
-        args->family = AF_INET;
-        args->type = SOCK_STREAM;
-        args->maxcon = 1;
-        args_copyipaddr("0.0.0.0", "0.0.0.0", "0.0.0.0", args);
-        args_copyipport("5001", "5001", "5001", args);
-        args_copybacklog(str_somaxconn, "0", str_somaxconn, args);
-        args_copydatalimit("1MB", "1MB", "1MB", args);
-        args_copyratelimit("0bps", "0bps", "0bps", args);
-        //args_copytime("0s", "0s", "0s", args);
-        args->timelimitusec = 0;
-        args_copybuflen("128kB", "128kB", "128kB", args);
-
         if (argc > 1)
         {
-            retval = true;
+            args_init(args);
+            ret = true;
+
+            // @todo Validate a second time in order to catch options with
+            //       unordered dependencies (i.e., bottlerocket -s ::1 -6)?
+            for (i = 1; (i < argc) && (ret == true); i++)
+            {
+                ret = args_validate(args_getarg(argc, argv, &i, &flags),
+                                    i,
+                                    flags,
+                                    args);
+            }
         }
         else
         {
             args_usage(stdout);
         }
-
-        for (i = 1; (i < argc) && (retval == true); i++)
-        {
-            switch (args_getarg(argc, argv, &i, &flags, args))
-            {
-                case 1:
-                    if (i == 1)
-                    {
-                        args->mode = ARGS_MODE_CHAT;
-                    }
-                    else
-                    {
-                        args_usage(stdout);
-                        retval = false;
-                    }
-                    break;
-                case 2:
-                    if (i == 1)
-                    {
-                        args->mode = ARGS_MODE_PERF;
-                    }
-                    else
-                    {
-                        args_usage(stdout);
-                        retval = false;
-                    }
-                    break;
-                case '4':
-                    args->family = AF_INET;
-                    utilinet_getaddrfromhost(args->ipaddr,
-                                             args->family,
-                                             args->ipaddr,
-                                             sizeof(args->ipaddr));
-                    break;
-                case '6':
-                    args->family = AF_INET6;
-                    utilinet_getaddrfromhost(args->ipaddr,
-                                             args->family,
-                                             args->ipaddr,
-                                             sizeof(args->ipaddr));
-                    break;
-#if !defined(__APPLE__)
-                case 'A':
-                    break;
-#endif
-                case 'B':
-                    break;
-                case 'b':
-                    break;
-                case 'c':
-                    args->arch = SOCKOBJ_MODEL_CLIENT;
-                    if ((flags & ARGS_FLAG_PARALLEL) == 0)
-                    {
-                        args->maxcon = 1;
-                    }
-                    break;
-                case 'e':
-                    args->echo = true;
-                    break;
-                case 'l':
-                    break;
-                case 'N':
-                    args->opts.nodelay = true;
-                    break;
-                case 'n':
-                    break;
-                case 's':
-                    args->arch = SOCKOBJ_MODEL_SERVER;
-                    if ((flags & ARGS_FLAG_NUM) == 0)
-                    {
-                        args->datalimitbyte = 0;
-                    }
-                    if ((flags & ARGS_FLAG_PARALLEL) == 0)
-                    {
-                        args->maxcon = 0;
-                    }
-                    break;
-                case 'P':
-                    if ((flags & ARGS_FLAG_BACKLOG) == 0)
-                    {
-                        args->backlog = args->maxcon;
-                    }
-                    break;
-                case 'p':
-                    break;
-                case 'q':
-                    break;
-                case 't':
-                    if ((flags & ARGS_FLAG_NUM) == 0)
-                    {
-                        args->datalimitbyte = 0;
-                    }
-                    break;
-                case 'u':
-                    args->type = SOCK_DGRAM;
-                    if ((flags & ARGS_FLAG_BANDWIDTH) == 0)
-                    {
-                        args_copyratelimit("1Mbps", "1Mbps", "1Mbps", args);
-                    }
-                    if ((flags & ARGS_FLAG_LEN) == 0)
-                    {
-                        args_copybuflen("1kB", "1kB", "1kB", args);
-                    }
-                    break;
-                case 'h':
-                    args_usage(stdout);
-                    retval = false;
-                    break;
-                case 'v':
-                    fprintf(stdout,
-                            "bottlerocket version %u.%u.%u (%s)\n",
-                            version_major(),
-                            version_minor(),
-                            version_patch(),
-                            version_date());
-                    retval = false;
-                    break;
-                default:
-                    args_usage(stdout);
-                    retval = false;
-                    break;
-            }
-        }
     }
 
-    return retval;
+    return ret;
 }
