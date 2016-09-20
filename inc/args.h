@@ -30,19 +30,22 @@ struct args_opts
 struct args_obj
 {
     enum args_mode     mode;
-    enum sockobj_model arch;
     int32_t            family;
-    int32_t            type;
+    uint16_t           affinity;
+    uint64_t           ratelimitbps;
     char               ipaddr[INET6_ADDRSTRLEN];
+    enum sockobj_model arch;
+    bool               echo;
+    uint64_t           interval;
+    uint64_t           buflen;
+    struct args_opts   opts;
+    uint64_t           datalimitbyte;
+    uint32_t           maxcon;
     uint16_t           ipport;
     int32_t            backlog;
-    uint64_t           datalimitbyte;
-    uint64_t           ratelimitbps;
+    uint32_t           threads;
     uint64_t           timelimitusec;
-    uint64_t           buflen;
-    uint32_t           maxcon;
-    bool               echo;
-    struct args_opts   opts;
+    int32_t            type;
 };
 
 /**
