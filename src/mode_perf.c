@@ -551,7 +551,7 @@ bool modeperf_start(void)
     {
         // Do nothing.
     }
-    else if (threadpool_create(&pool, 1) == false)
+    else if (threadpool_create(&pool, opts->threads) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to create perf threads\n",
@@ -567,7 +567,7 @@ bool modeperf_start(void)
     else
     {
         ret = threadpool_execute(&pool, modeperf_thread, &pool);
-        threadpool_wait(&pool, 1);
+        threadpool_wait(&pool, 1/*opts->threads*/);
     }
 
     return ret;
