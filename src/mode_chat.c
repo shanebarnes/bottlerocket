@@ -18,6 +18,7 @@
 #include "sock_udp.h"
 #include "thread_pool.h"
 #include "util_debug.h"
+#include "util_mem.h"
 #include "util_string.h"
 
 #include <string.h>
@@ -36,7 +37,7 @@ static void *modechat_thread(void * const arg)
     struct sockobj server, socket;
     struct formobj form;
     struct fionobj fion;
-    char recvbuf[65536], sendbuf[65536];
+    char *recvbuf = NULL, *sendbuf = NULL;
     int32_t count = 0, timeoutms = 500;
     int32_t recvbytes = 0, formbytes = 0;
 
@@ -59,9 +60,26 @@ static void *modechat_thread(void * const arg)
     {
         // Do nothing.
     }
+    else if ((recvbuf = UTILMEM_MALLOC(char, sizeof(char), opts->buflen)) == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: receive buffer allocation failed\n",
+                      __FUNCTION__);
+    }
+    else if ((sendbuf = UTILMEM_MALLOC(char, sizeof(char), opts->buflen)) == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: send buffer allocation failed\n",
+                      __FUNCTION__);
+
+        UTILMEM_FREE(recvbuf);
+        recvbuf = NULL;
+    }
     else if (fionpoll_create(&fion) == false)
     {
         // Do nothing.
+        UTILMEM_FREE(recvbuf);
+        UTILMEM_FREE(sendbuf);
     }
     else
     {
@@ -72,9 +90,9 @@ static void *modechat_thread(void * const arg)
 
         formchat_init(&form);
         form.srcbuf = recvbuf;
-        form.srclen = sizeof(recvbuf);
+        form.srclen = opts->buflen;
         form.dstbuf = sendbuf;
-        form.dstlen = sizeof(sendbuf);
+        form.dstlen = opts->buflen;
 
         if (opts->arch == SOCKOBJ_MODEL_CLIENT)
         {
@@ -132,7 +150,7 @@ static void *modechat_thread(void * const arg)
                 // Flush input.
                 if (fion.ops.fion_getevents(&fion, 0) & FIONOBJ_REVENT_INREADY)
                 {
-                    inputstd_recv(recvbuf, sizeof(recvbuf), 0);
+                    inputstd_recv(recvbuf, opts->buflen, 0);
                 }
             }
             else
@@ -147,7 +165,7 @@ static void *modechat_thread(void * const arg)
 
                 recvbytes = socket.ops.sock_recv(&socket,
                                                  recvbuf,
-                                                 sizeof(recvbuf) - 1);
+                                                 opts->buflen - 1);
 
                 if (recvbytes > 0)
                 {
@@ -184,7 +202,7 @@ static void *modechat_thread(void * const arg)
                 if (fion.ops.fion_getevents(&fion, 0) & FIONOBJ_REVENT_INREADY)
                 {
                     if ((recvbytes = inputstd_recv(recvbuf,
-                                                   sizeof(recvbuf),
+                                                   opts->buflen,
                                                    0)) > 0)
                     {
                         if (count > 0)
@@ -198,6 +216,8 @@ static void *modechat_thread(void * const arg)
         }
 
         fionpoll_destroy(&fion);
+        UTILMEM_FREE(recvbuf);
+        UTILMEM_FREE(sendbuf);
     }
 
     return NULL;
@@ -230,7 +250,7 @@ bool modechat_start(void)
     {
         // Do nothing.
     }
-    else if (threadpool_create(&pool, 2) == false)
+    else if (threadpool_create(&pool, opts->threads) == false)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to create chat threads\n",
@@ -246,7 +266,7 @@ bool modechat_start(void)
     else
     {
         ret = threadpool_execute(&pool, modechat_thread, &pool);
-        threadpool_wait(&pool, 1);
+        threadpool_wait(&pool, 1/*opts->threads*/);
     }
 
     return ret;
