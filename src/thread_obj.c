@@ -22,7 +22,7 @@ struct threadobj_priv
 {
     char            name[64];
     pthread_t       handle;
-    pthread_attr_t  attributes;
+    pthread_attr_t  attr;
     struct mutexobj mutex;
     bool            shutdown;
 };
@@ -47,10 +47,18 @@ bool threadobj_create(struct threadobj * const obj)
                           __FUNCTION__,
                           errno);
         }
-        else if (pthread_attr_init(&obj->priv->attributes) != 0)
+        else if (pthread_attr_init(&obj->priv->attr) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to create thread (%d)\n",
+                          __FUNCTION__,
+                          errno);
+            threadobj_destroy(obj);
+        }
+        else if (pthread_attr_setstacksize(&obj->priv->attr, 64 * 1024) != 0)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to set thread stack size (%d)\n",
                           __FUNCTION__,
                           errno);
             threadobj_destroy(obj);
@@ -95,7 +103,7 @@ bool threadobj_destroy(struct threadobj * const obj)
 
         threadobj_stop(obj);
         mutexobj_destroy(&obj->priv->mutex);
-        pthread_attr_destroy(&obj->priv->attributes);
+        pthread_attr_destroy(&obj->priv->attr);
         UTILMEM_FREE(obj->priv);
         obj->priv = NULL;
         ret = true;
@@ -118,7 +126,7 @@ bool threadobj_start(struct threadobj * const obj)
         mutexobj_unlock(&obj->priv->mutex);
 
         if (pthread_create(&obj->priv->handle,
-                           &obj->priv->attributes,
+                           &obj->priv->attr,
                            obj->function,
                            obj->argument) != 0)
         {
