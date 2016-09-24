@@ -107,9 +107,20 @@ static void *sockcon_thread(void * const arg)
     uint32_t events = 0, hash = 0;
     uint64_t tsus = 0;
     int32_t recvbytes = 0;
-    uint8_t recvbuf[65536];
+    uint8_t *buf = NULL;
+    uint32_t buflen = 65536;
 
-    if (UTILDEBUG_VERIFY((con != NULL) && (con->sock != NULL)) == true)
+    if (UTILDEBUG_VERIFY((con != NULL) && (con->sock != NULL)) == false)
+    {
+        // Do nothing.
+    }
+    else if ((buf = UTILMEM_MALLOC(uint8_t, sizeof(uint8_t), buflen)) == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: buffer allocation failed\n",
+                      __FUNCTION__);
+    }
+    else
     {
         con->priv->fion.timeoutms = 500;
         con->priv->fion.pevents = FIONOBJ_PEVENT_IN;
@@ -133,8 +144,8 @@ static void *sockcon_thread(void * const arg)
             else if (events & FIONOBJ_REVENT_INREADY)
             {
                 recvbytes = con->sock->ops.sock_recv(con->sock,
-                                                     recvbuf,
-                                                     sizeof(recvbuf));
+                                                     buf,
+                                                     buflen);
 
                 if (recvbytes >= 0)
                 {
@@ -145,7 +156,7 @@ static void *sockcon_thread(void * const arg)
                     if (sockcon_send(&con->priv->frontlog,
                                      hash,
                                      tsus,
-                                     recvbuf,
+                                     buf,
                                      recvbytes) == true)
                     {
                         // Do nothing.
@@ -153,7 +164,7 @@ static void *sockcon_thread(void * const arg)
                     else if (sockcon_send(&con->priv->backlog,
                                           hash,
                                           tsus,
-                                          recvbuf,
+                                          buf,
                                           recvbytes) == true)
                     {
                         // Do nothing.
@@ -178,7 +189,7 @@ static void *sockcon_thread(void * const arg)
                             sockcon_send(&con->priv->backlog,
                                          hash,
                                          tsus,
-                                         recvbuf,
+                                         buf,
                                          recvbytes);
                         }
                     }
@@ -209,6 +220,8 @@ static void *sockcon_thread(void * const arg)
                 mutexobj_unlock(&con->priv->mutex);
             }
         }
+
+        UTILMEM_FREE(buf);
     }
 
     return NULL;
