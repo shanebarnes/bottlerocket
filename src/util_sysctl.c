@@ -17,35 +17,15 @@
     #include <netinet/udp.h>
     #include <netinet/udp_var.h>
     #include <sys/sysctl.h>
-#elif defined(__linux__)
-    #include <unistd.h>
 #endif
+#include <unistd.h>
 
 /**
  * @see See header file for interface comments.
  */
 uint32_t utilsysctl_getcpusavail(void)
 {
-    uint32_t retval = 0;
-#if defined(__APPLE__)
-    size_t i = 0, len = 4;
-    int32_t com[2] = { HW_AVAILCPU, HW_NCPU };
-    int32_t mib[2];
-
-    for (i = 0; i < 2; i++)
-    {
-        mib[0] = CTL_HW;
-        mib[1] = com[i];
-
-        if (sysctl(mib, 2, &retval, &len, NULL, 0) == 0)
-        {
-            break;
-        }
-    }
-#elif defined(__linux__)
-    retval = sysconf(_SC_NPROCESSORS_ONLN);
-#endif
-    return retval;
+    return sysconf(_SC_NPROCESSORS_ONLN);
 }
 
 /**
@@ -53,14 +33,14 @@ uint32_t utilsysctl_getcpusavail(void)
  */
 int32_t utilsysctl_getmaxudpsize(void)
 {
-    int32_t retval = -1;
+    int32_t ret = -1;
 #if defined(__APPLE__)
-    size_t len = sizeof(retval);
+    size_t len = sizeof(ret);
     int32_t mib[] = { CTL_NET, PF_INET, IPPROTO_UDP, UDPCTL_MAXDGRAM };
 
     if (sysctl(mib,
                sizeof(mib) / sizeof(int32_t),
-               &retval,
+               &ret,
                &len,
                NULL,
                0) == -1)
@@ -71,7 +51,7 @@ int32_t utilsysctl_getmaxudpsize(void)
                       errno);
     }
 #endif
-    return retval;
+    return ret;
 }
 
 /**
@@ -79,14 +59,14 @@ int32_t utilsysctl_getmaxudpsize(void)
  */
 int32_t utilsysctl_getmaxsockbufsize(void)
 {
-    int32_t retval = -1;
+    int32_t ret = -1;
 #if defined(__APPLE__)
-    size_t len = sizeof(retval);
+    size_t len = sizeof(ret);
     int32_t mib[] = { CTL_KERN, KERN_IPC, KIPC_MAXSOCKBUF };
 
     if (sysctl(mib,
                sizeof(mib) / sizeof(int32_t),
-               &retval,
+               &ret,
                &len,
                NULL,
                0) == -1)
@@ -97,6 +77,6 @@ int32_t utilsysctl_getmaxsockbufsize(void)
                       errno);
     }
 #endif
-    return retval;
+    return ret;
 }
 
