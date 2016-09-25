@@ -177,7 +177,7 @@ bool sockudp_accept(struct sockobj * const listener,
     bool     ret  = false;
     int32_t  fd   = -1;
     uint64_t ts   = 0;
-    socklen_t len = sizeof(struct sockaddr_storage), optval = 0;
+    socklen_t len = sizeof(struct sockaddr_storage);
     struct sockaddr_storage addr;
 
     if (UTILDEBUG_VERIFY((listener != NULL) &&
@@ -244,18 +244,18 @@ bool sockudp_accept(struct sockobj * const listener,
                 //       descriptor.
                 // @todo Listener and child sockets may need to have larger send
                 //       and/or receive buffers than the system defaults.
-                optval = listener->info.recv.winsize;
+                obj->info.recv.winsize = listener->info.recv.winsize;
                 setsockopt(obj->fd,
                            SOL_SOCKET,
                            SO_RCVBUF,
-                           &optval,
-                           sizeof(optval));
-                optval = listener->info.send.winsize;
+                           &obj->info.recv.winsize,
+                           sizeof(obj->info.recv.winsize));
+                obj->info.send.winsize = listener->info.send.winsize;
                 setsockopt(obj->fd,
                            SOL_SOCKET,
                            SO_SNDBUF,
-                           &optval,
-                           sizeof(optval));
+                           &obj->info.send.winsize,
+                           sizeof(obj->info.send.winsize));
 
                 ret = true;
             }
