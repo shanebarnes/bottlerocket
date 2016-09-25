@@ -9,6 +9,7 @@
 
 #include "form_perf.h"
 #include "logger.h"
+//#include "sock_tcp.h"
 #include "util_date.h"
 #include "util_ioctl.h"
 #include "util_string.h"
@@ -57,7 +58,7 @@ int32_t formperf_head(struct formobj * const obj)
         retval = utilstring_concat(obj->dstbuf,
                                    obj->dstlen,
                                    "rwin: %sB, swin: %sB\n"
-                                   "%6s %21s   %-21s %17s %27s %25s %17s\n",
+                                   "%6s %21s   %-21s %17s %27s %25s %11s %17s\n",
                                    recvwin,
                                    sendwin,
                                    "Con ID",
@@ -65,7 +66,9 @@ int32_t formperf_head(struct formobj * const obj)
                                    "Server",         // or peer?
                                    "Progress",
                                    "Goodput",        // or "Bit Rate"?
-                                   "Bytes Received", // or "Bytes Sent"?
+                                   obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ?
+                                       "Bytes Sent" : "Bytes Received",
+                                   "Packets",
                                    "Elapsed Time");
     }
 
@@ -79,11 +82,17 @@ int32_t formperf_body(struct formobj * const obj)
 {
     int32_t  retval   = -1;
     uint64_t diffusec = 0;
-    uint32_t progress = 0;
+    uint32_t progress = 0;//, sendrttms = 0;
     struct util_date_diff diff;
+    char *client = NULL, *server = NULL;
     char strrecvbytes[16], strsendbytes[16];
     char strrecvrate[16], strsendrate[16];
+    char strppi[16]; // packets per interval
+    //struct socktcp_info info;
 
+    // @todo redirect to udp- or tcp-specific function.
+    // udp packets per second, jitter, etc.
+    // tcp packets successful reads per second, jitter, etc.
     if ((obj == NULL) ||
         (obj->sock == NULL) ||
         (obj->srcbuf == NULL) ||
@@ -105,6 +114,48 @@ int32_t formperf_body(struct formobj * const obj)
                                           UNIT_TIME_USEC,
                                           &diff);
 
+            if (obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT)
+            {
+                utilunit_getdecformat(10,
+                                      3,
+                                      obj->sock->info.send.passedcalls,
+                                      strppi,
+                                      sizeof(strppi));
+            }
+            else
+            {
+                utilunit_getdecformat(10,
+                                      3,
+                                      obj->sock->info.recv.passedcalls,
+                                      strppi,
+                                      sizeof(strppi));
+            }
+
+            // This could be done in sock_obj during stats collection but that
+            // would happen after every socket call.
+            //if ((obj->sock->conf.type == SOCK_STREAM) &&
+            //    (obj->sock->state & SOCKOBJ_STATE_OPEN))
+            //{
+            //    if (socktcp_getinfo(obj->sock->fd, &info) == true)
+            //    {
+            //        sendrttms = info.rttcur;
+            //    }
+            //}
+            //else if (obj->sock->conf.type == SOCK_DGRAM)
+            //{
+            //}
+
+            if (obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT)
+            {
+                client = obj->sock->addrself.sockaddrstr;
+                server = obj->sock->addrpeer.sockaddrstr;
+            }
+            else
+            {
+                client = obj->sock->addrpeer.sockaddrstr;
+                server = obj->sock->addrself.sockaddrstr;
+            }
+
             if (obj->sock->conf.timelimitusec > 0)
             {
                 progress = (uint32_t)(diffusec * 100 /
@@ -112,8 +163,27 @@ int32_t formperf_body(struct formobj * const obj)
             }
             else if (obj->sock->conf.datalimitbyte > 0)
             {
-                progress = (uint32_t)(obj->sock->info.send.totalbytes * 100 /
-                                      obj->sock->conf.datalimitbyte);
+                if (obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT)
+                {
+                    progress = (uint32_t)(obj->sock->info.send.totalbytes * 100 /
+                                          obj->sock->conf.datalimitbyte);
+                }
+                else
+                {
+                    progress = (uint32_t)(obj->sock->info.recv.totalbytes * 100 /
+                                          obj->sock->conf.datalimitbyte);
+                }
+            }
+            else
+            {
+                progress = (uint32_t)(diff.sec % 20);
+
+                if (progress > 10)
+                {
+                    progress = 20 - progress;
+                }
+
+                progress *= 10;
             }
 
             utilunit_getdecformat(10,
@@ -147,10 +217,11 @@ int32_t formperf_body(struct formobj * const obj)
                                        "%9sbps | "
                                        "%9sB / "
                                        "%9sB | "
+                                       "%9s | "
                                        "%02u:%02u:%02u:%02u.%03u\r",
                                        obj->sock->id,
-                                       obj->sock->addrself.sockaddrstr,
-                                       obj->sock->addrpeer.sockaddrstr,
+                                       client,
+                                       server,
                                        progress,
                                        progress / 10,
                                        "==========",
@@ -160,6 +231,7 @@ int32_t formperf_body(struct formobj * const obj)
                                        strsendrate,
                                        strrecvbytes,
                                        strsendbytes,
+                                       strppi,
                                        diff.day + (diff.week * 7),
                                        diff.hour,
                                        diff.min,
