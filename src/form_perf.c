@@ -9,7 +9,7 @@
 
 #include "form_perf.h"
 #include "logger.h"
-//#include "sock_tcp.h"
+#include "sock_tcp.h"
 #include "util_date.h"
 #include "util_ioctl.h"
 #include "util_string.h"
@@ -68,7 +68,8 @@ int32_t formperf_head(struct formobj * const obj)
                                    "Goodput",        // or "Bit Rate"?
                                    obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ?
                                        "Bytes Sent" : "Bytes Received",
-                                   "Packets",
+                                   obj->sock->conf.type == SOCK_STREAM ?
+                                       "Segments" : "Datagrams",
                                    "Elapsed Time");
     }
 
@@ -81,14 +82,14 @@ int32_t formperf_head(struct formobj * const obj)
 int32_t formperf_body(struct formobj * const obj)
 {
     int32_t  retval   = -1;
-    uint64_t diffusec = 0;
-    uint32_t progress = 0;//, sendrttms = 0;
+    uint64_t diffusec = 0, packets = 0;
+    uint32_t progress = 0;
     struct util_date_diff diff;
     char *client = NULL, *server = NULL;
     char strrecvbytes[16], strsendbytes[16];
     char strrecvrate[16], strsendrate[16];
     char strppi[16]; // packets per interval
-    //struct socktcp_info info;
+    struct socktcp_info info;
 
     // @todo redirect to udp- or tcp-specific function.
     // udp packets per second, jitter, etc.
@@ -114,22 +115,28 @@ int32_t formperf_body(struct formobj * const obj)
                                           UNIT_TIME_USEC,
                                           &diff);
 
-            if (obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT)
+            if (obj->sock->conf.type == SOCK_DGRAM)
             {
-                utilunit_getdecformat(10,
-                                      3,
-                                      obj->sock->info.send.passedcalls,
-                                      strppi,
-                                      sizeof(strppi));
+                packets = (obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ?
+                              obj->sock->info.send.passedcalls :
+                              obj->sock->info.recv.passedcalls);
             }
             else
             {
-                utilunit_getdecformat(10,
-                                      3,
-                                      obj->sock->info.recv.passedcalls,
-                                      strppi,
-                                      sizeof(strppi));
+                if ((obj->sock->state & SOCKOBJ_STATE_OPEN) &&
+                    (socktcp_getinfo(obj->sock->fd, &info) == true))
+                {
+                    packets = (obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ?
+                                  info.txpackets :
+                                  info.rxpackets);
+                }
             }
+
+            utilunit_getdecformat(10,
+                                  3,
+                                  packets,
+                                  strppi,
+                                  sizeof(strppi));
 
             // This could be done in sock_obj during stats collection but that
             // would happen after every socket call.
