@@ -918,7 +918,7 @@ static bool args_validate(const char c,
                   "%s: validating argument (pos = %u, val=%c)\n",
                   __FUNCTION__,
                   pos,
-                  (!isalnum(c) ? '0' + c : c));
+                  (!isalnum((int32_t)c) ? '0' + c : c));
 
     switch (c)
     {
