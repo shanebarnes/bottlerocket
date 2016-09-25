@@ -74,7 +74,20 @@ bool sockcon_send(struct vector * const vec,
 
         if (pair->hash == hash)
         {
-            send(pair->fds[SOCKCON_SELF_INDEX], buf, len, 0);
+            if (send(pair->fds[SOCKCON_SELF_INDEX], buf, len, 0) != len)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: internal send of %u bytes failed (%d)\n",
+                              __FUNCTION__,
+                              len,
+                              errno);
+
+                if (errno == EMSGSIZE)
+                {
+                    // @todo Fragment the datagram based on the local (Unix) max
+                    //       datagram size.
+                }
+            }
             pair->timeoutus = tsus + SOCKCON_TIMEOUT_USEC;
             ret = true;
         }
