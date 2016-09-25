@@ -10,6 +10,7 @@
 #include "logger.h"
 #include "token_bucket.h"
 #include "util_date.h"
+#include "util_debug.h"
 #include "util_unit.h"
 
 /**
@@ -17,24 +18,18 @@
  */
 bool tokenbucket_init(struct tokenbucket * const tb, const uint64_t rate)
 {
-    bool retval = false;
+    bool ret = false;
 
-    if (tb == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(tb != NULL) == true)
     {
         tb->rate = rate;
         tb->size = 0;
         tb->tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
-        retval = true;
+        ret = true;
     };
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -43,17 +38,11 @@ bool tokenbucket_init(struct tokenbucket * const tb, const uint64_t rate)
 uint64_t tokenbucket_remove(struct tokenbucket * const tb,
                             const uint64_t tokens)
 {
-    uint64_t retval = 0;
+    uint64_t ret = 0;
     uint64_t tsus = 0;
     uint64_t addtokens = 0;
 
-    if (tb == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(tb != NULL) == true)
     {
         if (tb->rate > 0)
         {
@@ -71,17 +60,17 @@ uint64_t tokenbucket_remove(struct tokenbucket * const tb,
                 if (tb->size >= tokens)
                 {
                     tb->size -= tokens;
-                    retval    = tokens;
+                    ret = tokens;
                 }
             }
         }
         else
         {
-            retval = tokens;
+            ret = tokens;
         }
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -90,25 +79,19 @@ uint64_t tokenbucket_remove(struct tokenbucket * const tb,
 uint64_t tokenbucket_return(struct tokenbucket * const tb,
                             const uint64_t tokens)
 {
-    uint64_t retval = 0;
+    uint64_t ret = 0;
 
-    if (tb == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(tb != NULL) == true)
     {
         if (tb->rate > 0)
         {
             tb->size += tokens;
         }
 
-        retval = tokens;
+        ret = tokens;
     }
 
-    return retval;
+    return ret;
 }
 
 /**
@@ -117,21 +100,15 @@ uint64_t tokenbucket_return(struct tokenbucket * const tb,
 uint64_t tokenbucket_delay(struct tokenbucket * const tb,
                            const uint64_t tokens)
 {
-    uint64_t retval = 0;
+    uint64_t ret = 0;
 
-    if (tb == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(tb != NULL) == true)
     {
         if ((tb->rate > 0) && (tb->size < tokens))
         {
-            retval = (tokens - tb->size) * UNIT_TIME_USEC / tb->rate;
+            ret = (tokens - tb->size) * UNIT_TIME_USEC / tb->rate;
         }
     }
 
-    return retval;
+    return ret;
 }
