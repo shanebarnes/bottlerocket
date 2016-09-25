@@ -177,7 +177,7 @@ bool sockudp_accept(struct sockobj * const listener,
     bool     ret  = false;
     int32_t  fd   = -1;
     uint64_t ts   = 0;
-    socklen_t len = sizeof(struct sockaddr_storage);
+    socklen_t len = sizeof(struct sockaddr_storage), optval = 0;
     struct sockaddr_storage addr;
 
     if (UTILDEBUG_VERIFY((listener != NULL) &&
@@ -239,6 +239,23 @@ bool sockudp_accept(struct sockobj * const listener,
                 tokenbucket_init(&obj->tb, obj->conf.ratelimitbps);
                 obj->state = SOCKOBJ_STATE_OPEN | SOCKOBJ_STATE_CONNECT;
                 obj->info.startusec = ts;
+
+                // @todo Need to invoke sockobj_open() without creating a file
+                //       descriptor.
+                // @todo Listener and child sockets may need to have larger send
+                //       and/or receive buffers than the system defaults.
+                optval = listener->info.recv.winsize;
+                setsockopt(obj->fd,
+                           SOL_SOCKET,
+                           SO_RCVBUF,
+                           &optval,
+                           sizeof(optval));
+                optval = listener->info.send.winsize;
+                setsockopt(obj->fd,
+                           SOL_SOCKET,
+                           SO_SNDBUF,
+                           &optval,
+                           sizeof(optval));
 
                 ret = true;
             }
