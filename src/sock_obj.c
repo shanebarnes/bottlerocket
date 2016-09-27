@@ -11,6 +11,7 @@
 #include "logger.h"
 #include "sock_obj.h"
 #include "util_date.h"
+#include "util_debug.h"
 #include "util_inet.h"
 #include "util_unit.h"
 
@@ -67,11 +68,10 @@ bool sockobj_getaddrpeer(struct sockobj * const obj)
     bool ret = false;
     socklen_t socklen = 0;
 
-    if ((obj == NULL) || ((socklen = sizeof(obj->addrpeer.sockaddr)) == 0))
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         ((socklen = sizeof(obj->addrpeer.sockaddr)) > 0)) == false)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
+        // Do nothing.
     }
     else if (getpeername(obj->fd,
                          (struct sockaddr *)&(obj->addrpeer.sockaddr),
@@ -99,11 +99,10 @@ bool sockobj_getaddrself(struct sockobj * const obj)
     bool ret = false;
     socklen_t socklen = 0;
 
-    if ((obj == NULL) || ((socklen = sizeof(obj->addrself.sockaddr)) == 0))
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         ((socklen = sizeof(obj->addrself.sockaddr)) > 0)) == false)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
+        // Do nothing.
     }
     else if (getsockname(obj->fd,
                          (struct sockaddr *)&(obj->addrself.sockaddr),
@@ -131,11 +130,9 @@ bool sockobj_getaddrsock(struct sockobj_addr * const addr)
     bool ret = false;
     uint16_t *port = NULL;
 
-    if (addr == NULL)
+    if (UTILDEBUG_VERIFY(addr != NULL) == false)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
+        // Do nothing.
     }
     else if (inet_ntop(addr->sockaddr.ss_family,
                        utilinet_getaddrfromstorage(&addr->sockaddr),
@@ -210,13 +207,7 @@ bool sockobj_create(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(obj != NULL) == true)
     {
         memset(obj, 0, sizeof(struct sockobj));
 
@@ -244,13 +235,7 @@ bool sockobj_destroy(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(obj != NULL) == true)
     {
         ret = obj->event.ops.fion_destroy(&obj->event);
 
@@ -283,13 +268,7 @@ bool sockobj_open(struct sockobj * const obj)
     socklen_t        optlen, optval;
     char             ipport[6];
 
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(obj != NULL) == true)
     {
         memset(&ahints, 0, sizeof(struct addrinfo));
         ahints.ai_family    = obj->conf.family;
@@ -344,6 +323,7 @@ bool sockobj_open(struct sockobj * const obj)
                                       __FUNCTION__,
                                       obj->id,
                                       errno);
+                        sockobj_close(obj);
                     }
                     // @todo - SO_LINGER? etc
                     else if (setsockopt(obj->fd,
@@ -445,13 +425,7 @@ bool sockobj_close(struct sockobj * const obj)
 {
     int32_t ret = false;
 
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(obj != NULL) == true)
     {
         if (close(obj->fd) != 0)
         {
@@ -487,11 +461,9 @@ bool sockobj_bind(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if (obj == NULL)
+    if (UTILDEBUG_VERIFY(obj != NULL) == false)
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
+        // Do nothing.
     }
     else if (bind(obj->fd, obj->ainfo.ai_addr, obj->ainfo.ai_addrlen) == 0)
     {
@@ -521,13 +493,9 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
     struct sockobj_opt *opt = NULL;
     uint32_t i;
 
-    if ((obj == NULL) || (opts == NULL) || (vector_getsize(opts) == 0))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (opts != NULL) &&
+                         (vector_getsize(opts) > 0)) == true)
     {
         ret = true;
 
@@ -579,13 +547,9 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
     struct sockobj_opt *opt = NULL;
     uint32_t i;
 
-    if ((obj == NULL) || (opts == NULL) || (vector_getsize(opts) == 0))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (opts != NULL) &&
+                         (vector_getsize(opts) > 0)) == true)
     {
         ret = true;
 
@@ -635,13 +599,7 @@ bool sockobj_setstats(struct sockobj_flowstats * const stats, const int32_t len)
     bool ret = false;
     uint64_t tsus = 0;
 
-    if (stats == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(stats != NULL) == true)
     {
         if (stats->lasttsus == 0)
         {
