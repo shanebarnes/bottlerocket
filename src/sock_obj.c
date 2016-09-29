@@ -17,6 +17,7 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -263,7 +264,7 @@ bool sockobj_destroy(struct sockobj * const obj)
 bool sockobj_open(struct sockobj * const obj)
 {
     bool             ret      = false;
-    int32_t          portsize = 0;
+    int32_t          portsize = 0, flags;
     struct addrinfo *anext    = NULL, ahints;
     socklen_t        optlen, optval;
     char             ipport[6];
@@ -315,6 +316,7 @@ bool sockobj_open(struct sockobj * const obj)
                     optlen = sizeof(obj->info.recv.winsize);
                     optval = 1;
                     obj->event.ops.fion_insertfd(&obj->event, obj->fd);
+                    flags = fcntl(obj->fd, F_GETFL, 0);
 
                     if (obj->event.ops.fion_setflags(&obj->event) == false)
                     {
@@ -324,6 +326,15 @@ bool sockobj_open(struct sockobj * const obj)
                                       obj->id,
                                       errno);
                         sockobj_close(obj);
+                    }
+                    else if (fcntl(obj->fd, F_SETFL, flags | O_NONBLOCK) != 0)
+                    {
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: socket %u O_NONBLOCK option failed (%d)\n",
+                                      __FUNCTION__,
+                                      obj->id,
+                                      errno);
+
                     }
                     // @todo - SO_LINGER? etc
                     else if (setsockopt(obj->fd,
