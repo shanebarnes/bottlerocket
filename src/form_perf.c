@@ -27,8 +27,6 @@ int32_t formperf_head(struct formobj * const obj)
 
     if ((obj == NULL) ||
         (obj->sock == NULL) ||
-        (obj->srcbuf == NULL) ||
-        (obj->srclen <= 0) ||
         (obj->dstbuf == NULL) ||
         (obj->dstlen <= 0))
     {
@@ -96,8 +94,6 @@ int32_t formperf_body(struct formobj * const obj)
     // tcp packets successful reads per second, jitter, etc.
     if ((obj == NULL) ||
         (obj->sock == NULL) ||
-        (obj->srcbuf == NULL) ||
-        (obj->srclen <= 0) ||
         (obj->dstbuf == NULL) ||
         (obj->dstlen <= 0))
     {
@@ -272,8 +268,6 @@ int32_t formperf_foot(struct formobj * const obj)
 
     if ((obj == NULL) ||
         (obj->sock == NULL) ||
-        (obj->srcbuf == NULL) ||
-        (obj->srclen <= 0) ||
         (obj->dstbuf == NULL) ||
         (obj->dstlen <= 0))
     {
