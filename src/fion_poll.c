@@ -13,7 +13,6 @@
 #include "util_mem.h"
 
 #include <errno.h>
-#include <fcntl.h>
 #include <poll.h>
 #include <sys/socket.h>
 
@@ -165,7 +164,6 @@ bool fionpoll_setflags(struct fionobj * const obj)
     bool ret = false;
     struct pollfd *pfd = NULL;
     uint32_t i;
-    int32_t flags;
 
     if (UTILDEBUG_VERIFY((obj != NULL) &&
                          (vector_getsize(&obj->fds) > 0)) == true)
@@ -173,14 +171,10 @@ bool fionpoll_setflags(struct fionobj * const obj)
         for (i = 0; i < vector_getsize(&obj->fds); i++)
         {
             pfd = (struct pollfd *)vector_getval(&obj->fds, i);
-            pfd->events = POLLPRI |
+            pfd->events = POLLPRI | POLLERR | POLLHUP | POLLNVAL;
 #if defined(__linux__)
-                          POLLRDHUP |
+            pfd->events |= POLLRDHUP;
 #endif
-                          POLLERR |
-                          POLLHUP |
-                          POLLNVAL;
-
             if (obj->pevents & FIONOBJ_PEVENT_IN)
             {
                 pfd->events |= POLLIN;
@@ -191,19 +185,8 @@ bool fionpoll_setflags(struct fionobj * const obj)
                 pfd->events |= POLLOUT;
             }
 
-            flags = fcntl(pfd->fd, F_GETFL, 0);
-
-            if (fcntl(pfd->fd, F_SETFL, flags | O_NONBLOCK) != 0)
-            {
-                logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %d non-blocking option failed (%d)\n",
-                              __FUNCTION__,
-                              pfd->fd,
-                              errno);
-            }
+            ret = true;
         }
-
-        ret = true;
     }
 
     return ret;
