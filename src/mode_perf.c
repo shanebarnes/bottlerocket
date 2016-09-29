@@ -8,6 +8,7 @@
  */
 
 #include "dlist.h"
+#include "fion_poll.h"
 #include "form_perf.h"
 #include "logger.h"
 #include "mode_perf.h"
@@ -63,8 +64,8 @@ static void modeperf_conf(struct sockobj * const obj, const int32_t timeoutms)
  * @return The number of bytes returned by a socket's receive or send function.
  */
 static int32_t modeperf_call(int32_t (*call)(struct sockobj * const obj,
-                                          void * const buf,
-                                          const uint32_t len),
+                                             void * const buf,
+                                             const uint32_t len),
                              struct sockobj_flowstats *stats,
                              struct sockobj * const sock,
                              void * const buf,
@@ -97,7 +98,15 @@ static int32_t modeperf_call(int32_t (*call)(struct sockobj * const obj,
     {
         ret = call(sock, buf, len);
     }
-    // @todo poll socket if buflen is zero?
+    else
+    {
+        if ((sock->event.ops.fion_poll(&sock->event) == false) ||
+            (sock->event.ops.fion_getevents(&sock->event, 0) & FIONOBJ_REVENT_ERROR))
+        {
+            sock->ops.sock_close(sock);
+            sock->ops.sock_destroy(sock);
+        }
+    }
 
     if (ret < 0)
     {
@@ -119,7 +128,6 @@ static int32_t modeperf_call(int32_t (*call)(struct sockobj * const obj,
 
     tokenbucket_return(&sock->tb, ret < 0 ? 0 : len - (uint32_t)ret);
 
-
     return ret;
 }
 
@@ -136,20 +144,22 @@ static void *modeperf_thread(void *arg)
     // @todo Get the actual thread object from the thread pool so that all
     //       threads are not trying to access the thread-safe
     //       threadpool_isrunning() in the while loop.
+    struct fionobj fion;
     struct threadpool *tpool = (struct threadpool*)arg;
     struct dlist list;
     struct sockobj group, server, *sock = NULL;
     struct formobj form;
-    char *recvbuf = NULL, *sendbuf = NULL;
+    char *formbuf = NULL;
+    uint32_t formlen = 4096;
+    uint8_t *recvbuf = NULL, *sendbuf = NULL;
     int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
     uint32_t count = 0;
 
-    //??
     struct dlist_node *next = NULL, *node = NULL;
     struct sockobj_flowstats *stats = NULL;
     struct utilcpu_info info;
     uint64_t activetimeus = 0;
-    uint64_t inactivetimeus = 0;
+    uint64_t inactivetimeus = 1000;
     uint64_t delayus = 0, mindelayus = 0;
     uint64_t tsus = 0;
     uint32_t burstlimit = opts->backlog <= 0 ? SOMAXCONN : opts->backlog;
@@ -160,13 +170,27 @@ static void *modeperf_thread(void *arg)
     {
         // Do nothing.
     }
-    else if ((recvbuf = UTILMEM_MALLOC(char, sizeof(char), opts->buflen)) == NULL)
+    else if (fionpoll_create(&fion) == false)
+    {
+        // Do nothing.
+    }
+    else if ((formbuf = UTILMEM_MALLOC(char, sizeof(char), formlen)) == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: form buffer allocation failed\n",
+                      __FUNCTION__);
+    }
+    else if ((recvbuf = UTILMEM_CALLOC(uint8_t,
+                                       sizeof(uint8_t),
+                                       opts->buflen)) == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: receive buffer allocation failed\n",
                       __FUNCTION__);
     }
-    else if ((sendbuf = UTILMEM_MALLOC(char, sizeof(char), opts->buflen)) == NULL)
+    else if ((sendbuf = UTILMEM_CALLOC(uint8_t,
+                                       sizeof(uint8_t),
+                                       opts->buflen)) == NULL)
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: send buffer allocation failed\n",
@@ -178,15 +202,17 @@ static void *modeperf_thread(void *arg)
     else
     {
         exit = false;
+        fion.timeoutms = 0;
+        fion.pevents = FIONOBJ_PEVENT_IN;
         memset(&list, 0, sizeof(list));
 
         form.ops.form_head = formperf_head;
         form.ops.form_body = formperf_body;
         form.ops.form_foot = formperf_foot;
-        form.srcbuf = recvbuf;
-        form.srclen = opts->buflen;
-        form.dstbuf = sendbuf;
-        form.dstlen = opts->buflen;
+        form.srcbuf = NULL;
+        form.srclen = 0;
+        form.dstbuf = formbuf;
+        form.dstlen = formlen;
 
         if (opts->arch == SOCKOBJ_MODEL_SERVER)
         {
@@ -237,6 +263,7 @@ static void *modeperf_thread(void *arg)
                         }
                         else
                         {
+                            fion.ops.fion_insertfd(&fion, sock->fd);
                             sock->id = ++count;
                             form.sock = sock;
 
@@ -257,6 +284,7 @@ static void *modeperf_thread(void *arg)
                             if ((opts->maxcon == 0) ||
                                 (list.size <= opts->maxcon))
                             {
+                                fion.ops.fion_insertfd(&fion, sock->fd);
                                 sock->id = ++count;
                                 logger_printf(LOGGER_LEVEL_INFO,
                                               "%s: server accepted connection on %s\n",
@@ -321,7 +349,6 @@ static void *modeperf_thread(void *arg)
                 }
             }
 
-            mindelayus = 0;
             node = list.head;
 
             while (node != NULL)
@@ -353,7 +380,7 @@ static void *modeperf_thread(void *arg)
                                                   &sock->info.send,
                                                   sock,
                                                   sendbuf,
-                                                  opts->buflen,
+                                                  mindelayus > 0 ? 0 : opts->buflen,
                                                   tsus);
                     }
 
@@ -383,17 +410,14 @@ static void *modeperf_thread(void *arg)
                             }
                             else if (tsus - activetimeus > inactivetimeus)
                             {
-                                // @todo This needs to occur on a group of fds.
-                                sock->event.timeoutms = 1;
-                                sock->event.pevents = FIONOBJ_PEVENT_OUT;
-                                sock->event.ops.fion_setflags(&sock->event);
+                                fion.timeoutms++;
+                                fion.pevents = FIONOBJ_PEVENT_OUT;
                             }
                         }
                         else
                         {
-                            sock->event.timeoutms = 0;
-                            sock->event.pevents = FIONOBJ_PEVENT_IN;
-                            sock->event.ops.fion_setflags(&sock->event);
+                            fion.timeoutms = 0;
+                            fion.pevents = FIONOBJ_PEVENT_IN;
                             activetimeus = tsus;
                         }
                     }
@@ -406,7 +430,7 @@ static void *modeperf_thread(void *arg)
                                               &sock->info.recv,
                                               sock,
                                               recvbuf,
-                                              opts->buflen,
+                                              mindelayus > 0 ? 0 : opts->buflen,
                                               tsus);
 
                     if (recvbytes > 0)
@@ -434,13 +458,12 @@ static void *modeperf_thread(void *arg)
                             }
                             else if (tsus - activetimeus > inactivetimeus)
                             {
-                                // @todo This needs to occur on a group of fds.
-                                sock->event.timeoutms = 1;
+                                fion.timeoutms++;
                             }
                         }
                         else
                         {
-                            sock->event.timeoutms = 0;
+                            fion.timeoutms = 0;
                             activetimeus = tsus;
                         }
                     }
@@ -488,6 +511,7 @@ static void *modeperf_thread(void *arg)
                     UTILMEM_FREE(node->val);
                     dlist_remove(&list, node);
                     node = next;
+                    fion.ops.fion_deletefd(&fion, sock->fd);
 
                     if (list.size == 0)
                     {
@@ -511,14 +535,31 @@ static void *modeperf_thread(void *arg)
 
             if (mindelayus > 0)
             {
-                // @todo do not sleep any longer than the reporting interval;
                 // @todo Replace with semaphore.
-                usleep((uint32_t)mindelayus);
+                if (mindelayus > 100000)
+                {
+                    usleep(100000);
+                    mindelayus -= 100000;
+                }
+                else
+                {
+                    usleep((uint32_t)mindelayus);
+                    mindelayus = 0;
+                }
+            }
+            else if ((list.size > 0) && ((uint32_t)fion.timeoutms == list.size))
+            {
+                fion.timeoutms = 1;
+                fion.ops.fion_setflags(&fion);
+                fion.ops.fion_poll(&fion);
+                fion.timeoutms = 0;
             }
         }
 
+        UTILMEM_FREE(formbuf);
         UTILMEM_FREE(recvbuf);
         UTILMEM_FREE(sendbuf);
+        fionpoll_destroy(&fion);
     }
 
     return NULL;
