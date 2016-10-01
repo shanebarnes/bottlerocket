@@ -343,7 +343,9 @@ bool socktcp_connect(struct sockobj * const obj)
         }
 
         if ((obj->state == SOCKOBJ_STATE_OPEN) &&
-            (connect(obj->fd, obj->ainfo.ai_addr, obj->ainfo.ai_addrlen) == 0))
+            (connect(obj->fd,
+                     (struct sockaddr*)&obj->addrpeer.sockaddr,
+                     obj->addrpeer.socklen) == 0))
         {
             ret = true;
         }
