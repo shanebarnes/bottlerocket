@@ -164,6 +164,7 @@ static void *modeperf_thread(void *arg)
     uint64_t tsus = 0;
     uint32_t burstlimit = opts->backlog <= 0 ? SOMAXCONN : opts->backlog;
     uint32_t burst = 0;
+    memset(&fion, 0, sizeof(fion));
     memset(&group, 0, sizeof(group));
 
     if (UTILDEBUG_VERIFY(tpool != NULL) == false)
