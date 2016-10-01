@@ -290,8 +290,8 @@ bool sockudp_connect(struct sockobj * const obj)
         // The socket can be disconnected by calling connect() again with the
         // socket family set AF_UNSPEC.
         if (connect(obj->fd,
-                    obj->ainfo.ai_addr,
-                    obj->ainfo.ai_addrlen) == 0)
+                    (struct sockaddr*)&obj->addrpeer.sockaddr,
+                    obj->addrpeer.socklen) == 0)
         {
             obj->state |= SOCKOBJ_STATE_CONNECT;
 
