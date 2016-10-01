@@ -265,7 +265,7 @@ bool sockobj_open(struct sockobj * const obj)
 {
     bool             ret      = false;
     int32_t          portsize = 0, flags;
-    struct addrinfo *anext    = NULL, ahints;
+    struct addrinfo *alist    = NULL, *anext = NULL, ahints;
     socklen_t        optlen, optval;
     char             ipport[6];
 
@@ -282,36 +282,31 @@ bool sockobj_open(struct sockobj * const obj)
 
         portsize = snprintf(ipport, 6, "%d", obj->conf.ipport);
 
-        obj->alist = NULL;
-
         if ((portsize > 0) &&
             (portsize < 6) &&
-            (getaddrinfo(obj->conf.ipaddr,
-                         ipport,
-                         &ahints,
-                         &(obj->alist)) == 0))
+            (getaddrinfo(obj->conf.ipaddr, ipport, &ahints, &alist) == 0))
         {
-            for (anext = obj->alist; anext != NULL; anext = anext->ai_next)
+            for (anext = alist; anext != NULL; anext = anext->ai_next)
             {
                 if ((anext->ai_family == obj->conf.family) &&
                     ((obj->fd = socket(anext->ai_family,
                                        anext->ai_socktype,
                                        anext->ai_protocol)) != -1))
                 {
-                    obj->ainfo = *anext;
-
                     obj->addrself.sockaddr.ss_family = anext->ai_family;
 
                     inet_pton(obj->addrself.sockaddr.ss_family,
                               obj->conf.ipaddr,
                               utilinet_getaddrfromstorage(&obj->addrself.sockaddr));
                     *utilinet_getportfromstorage(&obj->addrself.sockaddr) = htons(obj->conf.ipport);
+                    obj->addrself.socklen = anext->ai_addrlen;
 
                     obj->addrpeer.sockaddr.ss_family = anext->ai_family;
                     inet_pton(obj->addrpeer.sockaddr.ss_family,
                               obj->conf.ipaddr,
                               utilinet_getaddrfromstorage(&obj->addrpeer.sockaddr));
                     *utilinet_getportfromstorage(&obj->addrpeer.sockaddr) = htons(obj->conf.ipport);
+                    obj->addrpeer.socklen = anext->ai_addrlen;
 
                     optlen = sizeof(obj->info.recv.winsize);
                     optval = 1;
@@ -416,6 +411,8 @@ bool sockobj_open(struct sockobj * const obj)
                     break;
                 }
             }
+
+            freeaddrinfo(alist);
         }
         else
         {
@@ -453,12 +450,6 @@ bool sockobj_close(struct sockobj * const obj)
             ret = true;
         }
 
-        if (obj->alist != NULL)
-        {
-            freeaddrinfo(obj->alist);
-            obj->alist = NULL;
-        }
-
         obj->state = SOCKOBJ_STATE_CLOSE;
     }
 
@@ -476,7 +467,9 @@ bool sockobj_bind(struct sockobj * const obj)
     {
         // Do nothing.
     }
-    else if (bind(obj->fd, obj->ainfo.ai_addr, obj->ainfo.ai_addrlen) == 0)
+    else if (bind(obj->fd,
+                  (struct sockaddr*)&obj->addrself.sockaddr,
+                  obj->addrself.socklen) == 0)
     {
         sockobj_getaddrself(obj);
         obj->state |= SOCKOBJ_STATE_BIND;
