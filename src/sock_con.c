@@ -50,6 +50,7 @@ struct sockcon_pair
  *        "connected" UDP socket via a local socket pair. Garbage collection is
  *        also performed on timed out "connections."
  *
+ * @param[in,out] con  A pointer to a socket connection manager.
  * @param[in,out] vec  A pointer to a socket pair queue.
  * @param[in]     hash Datagram hash.
  * @param[in]     tsus Current Unix timestamp in microseconds.
@@ -58,7 +59,8 @@ struct sockcon_pair
  *
  * @return True if a datagram was sent to a "connection" UDP socket.
  */
-bool sockcon_send(struct vector * const vec,
+bool sockcon_send(struct sockcon * const con,
+                  struct vector * const vec,
                   const uint32_t hash,
                   const uint64_t tsus,
                   const uint8_t * const buf,
@@ -88,6 +90,7 @@ bool sockcon_send(struct vector * const vec,
                     //       datagram size.
                 }
             }
+
             pair->timeoutus = tsus + SOCKCON_TIMEOUT_USEC;
             ret = true;
         }
@@ -97,6 +100,8 @@ bool sockcon_send(struct vector * const vec,
                           "%s: pair %u timeout\n",
                           __FUNCTION__,
                           i);
+            con->priv->fion.ops.fion_deletefd(&con->priv->fion,
+                                              pair->fds[SOCKCON_SELF_INDEX]);
             close(pair->fds[SOCKCON_SELF_INDEX]);
             vector_delete(vec, i);
         }
@@ -115,15 +120,15 @@ bool sockcon_send(struct vector * const vec,
 static void *sockcon_thread(void * const arg)
 {
     struct sockcon *con = (struct sockcon *)arg;
-    struct sockcon_pair pair;
+    struct sockcon_pair pair, *entry = NULL;
     bool exit = false;
-    uint32_t events = 0, hash = 0;
+    uint32_t i, events = 0, hash = 0;
     uint64_t tsus = 0;
     int32_t recvbytes = 0;
     uint8_t *buf = NULL;
     uint32_t buflen = 65536;
 
-    if (UTILDEBUG_VERIFY((con != NULL) && (con->sock != NULL)) == false)
+    if (!UTILDEBUG_VERIFY((con != NULL) && (con->sock != NULL)))
     {
         // Do nothing.
     }
@@ -140,97 +145,125 @@ static void *sockcon_thread(void * const arg)
         con->priv->fion.ops.fion_insertfd(&con->priv->fion, con->sock->fd);
         con->priv->fion.ops.fion_setflags(&con->priv->fion);
 
-        while ((exit == false) &&
-               (threadobj_isrunning(&con->priv->thread) == true))
+        while ((!exit) && (threadobj_isrunning(&con->priv->thread)))
         {
             con->priv->fion.ops.fion_poll(&con->priv->fion);
             tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
-            events = con->priv->fion.ops.fion_getevents(&con->priv->fion, 0);
 
-            if (events & FIONOBJ_REVENT_ERROR)
+            for (i = 0; i < vector_getsize(&con->priv->fion.fds); i++)
             {
-                logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: listening socket has error\n",
-                              __FUNCTION__);
-                exit = true;
-            }
-            else if (events & FIONOBJ_REVENT_INREADY)
-            {
-                recvbytes = con->sock->ops.sock_recv(con->sock,
-                                                     buf,
-                                                     buflen);
+                events = con->priv->fion.ops.fion_getevents(&con->priv->fion, i);
 
-                if (recvbytes >= 0)
+                if (events & FIONOBJ_REVENT_ERROR)
                 {
-                    hash = ntohs(*utilinet_getportfromstorage(&con->sock->addrpeer.sockaddr));
-
-                    mutexobj_lock(&con->priv->mutex);
-
-                    if (sockcon_send(&con->priv->frontlog,
-                                     hash,
-                                     tsus,
-                                     buf,
-                                     recvbytes) == true)
+                    if (i == 0)
                     {
-                        // Do nothing.
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: listening socket has error\n",
+                                      __FUNCTION__);
+                        exit = true;
                     }
-                    else if (sockcon_send(&con->priv->backlog,
-                                          hash,
-                                          tsus,
-                                          buf,
-                                          recvbytes) == true)
+                    else
                     {
-                        // Do nothing.
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: unhandled UDP socket error\n",
+                                      __FUNCTION__);
                     }
-                    else if ((int32_t)vector_getsize(&con->priv->backlog) <
-                             con->priv->maxcon)
+                }
+                else if (events & FIONOBJ_REVENT_INREADY)
+                {
+                    if (i == 0)
                     {
-                        if (socketpair(AF_UNIX, SOCK_DGRAM, 0, pair.fds) != 0)
+                        recvbytes = con->sock->ops.sock_recv(con->sock,
+                                                             buf,
+                                                             buflen);
+
+                        if (recvbytes >= 0)
                         {
-                            logger_printf(LOGGER_LEVEL_ERROR,
-                                          "%s: failed to create socket pair (%d)\n",
-                                          __FUNCTION__,
-                                          errno);
-                        }
-                        else
-                        {
-                            memcpy(&pair.sockaddr,
-                                   &con->sock->addrpeer.sockaddr,
-                                   sizeof(pair.sockaddr));
-                            pair.hash = hash;
-                            vector_inserttail(&con->priv->backlog, &pair);
-                            sockcon_send(&con->priv->backlog,
-                                         hash,
-                                         tsus,
-                                         buf,
-                                         recvbytes);
+                            hash = ntohs(*utilinet_getportfromstorage(&con->sock->addrpeer.sockaddr));
+
+                            mutexobj_lock(&con->priv->mutex);
+
+                            if (sockcon_send(con,
+                                             &con->priv->frontlog,
+                                             hash,
+                                             tsus,
+                                             buf,
+                                             recvbytes))
+                            {
+                                // Do nothing.
+                            }
+                            else if (sockcon_send(con,
+                                                  &con->priv->backlog,
+                                                  hash,
+                                                  tsus,
+                                                  buf,
+                                                  recvbytes))
+                            {
+                                // Do nothing.
+                            }
+                            else if ((int32_t)vector_getsize(&con->priv->backlog) <
+                                     con->priv->maxcon)
+                            {
+                                if (socketpair(AF_UNIX, SOCK_DGRAM, 0, pair.fds) != 0)
+                                {
+                                    logger_printf(LOGGER_LEVEL_ERROR,
+                                                  "%s: failed to create socket pair (%d)\n",
+                                                  __FUNCTION__,
+                                                  errno);
+                                }
+                                else
+                                {
+                                    memcpy(&pair.sockaddr,
+                                           &con->sock->addrpeer.sockaddr,
+                                           sizeof(pair.sockaddr));
+                                    pair.hash = hash;
+                                    con->priv->fion.ops.fion_insertfd(&con->priv->fion, pair.fds[SOCKCON_SELF_INDEX]);
+                                    vector_inserttail(&con->priv->backlog, &pair);
+                                    sockcon_send(con,
+                                                 &con->priv->backlog,
+                                                 hash,
+                                                 tsus,
+                                                 buf,
+                                                 recvbytes);
+                                }
+                            }
+                            else
+                            {
+                                logger_printf(LOGGER_LEVEL_WARN,
+                                              "%s: backlog is full (%d)\n",
+                                              __FUNCTION__,
+                                              con->priv->maxcon);
+                            }
+
+                            mutexobj_unlock(&con->priv->mutex);
                         }
                     }
                     else
                     {
-                        logger_printf(LOGGER_LEVEL_WARN,
-                                      "%s: backlog is full (%d)\n",
-                                      __FUNCTION__,
-                                      con->priv->maxcon);
+                        entry = vector_getval(&con->priv->frontlog, i - 1);
+                        logger_printf(LOGGER_LEVEL_ERROR,
+                                      "%s: unhandled UDP socket read event\n",
+                                      __FUNCTION__);
                     }
-
+                }
+                else
+                {
+                    mutexobj_lock(&con->priv->mutex);
+                    sockcon_send(con,
+                                 &con->priv->backlog,
+                                 0,
+                                 tsus,
+                                 NULL,
+                                 0);
+                    sockcon_send(con,
+                                 &con->priv->frontlog,
+                                 0,
+                                 tsus,
+                                 NULL,
+                                 0);
                     mutexobj_unlock(&con->priv->mutex);
                 }
-            }
-            else
-            {
-                mutexobj_lock(&con->priv->mutex);
-                sockcon_send(&con->priv->backlog,
-                             0,
-                             tsus,
-                             NULL,
-                             0);
-                sockcon_send(&con->priv->frontlog,
-                             0,
-                             tsus,
-                             NULL,
-                             0);
-                mutexobj_unlock(&con->priv->mutex);
             }
         }
 
@@ -240,22 +273,17 @@ static void *sockcon_thread(void * const arg)
     return NULL;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockcon_create(struct sockcon * const con)
 {
     bool ret = false;
 
     if (UTILDEBUG_VERIFY((con != NULL) &&
                          (con->sock == NULL) &&
-                         (con->priv == NULL)) == true)
+                         (con->priv == NULL)))
     {
         con->priv = UTILMEM_CALLOC(struct sockcon_priv,
                                    sizeof(struct sockcon_priv),
                                    1);
-con->priv->thread.function = sockcon_thread;
-con->priv->thread.argument = con;
 
         if (con->priv == NULL)
         {
@@ -264,27 +292,31 @@ con->priv->thread.argument = con;
                           __FUNCTION__,
                           errno);
         }
-        else if (vector_create(&con->priv->backlog,
-                               0,
-                               sizeof(struct sockcon_pair)) == false)
+        else if (!vector_create(&con->priv->backlog,
+                                0,
+                                sizeof(struct sockcon_pair)))
         {
             sockcon_destroy(con);
         }
-        else if (vector_create(&con->priv->frontlog,
-                               0,
-                               sizeof(struct sockcon_pair)) == false)
+        else if (!vector_create(&con->priv->frontlog,
+                                0,
+                                sizeof(struct sockcon_pair)))
         {
             sockcon_destroy(con);
         }
-        else if (fionpoll_create(&con->priv->fion) == false)
+        else if (!fionpoll_create(&con->priv->fion))
         {
             sockcon_destroy(con);
         }
-        else if (mutexobj_create(&con->priv->mutex) == false)
+        else if (!mutexobj_create(&con->priv->mutex))
         {
             sockcon_destroy(con);
         }
-        else if (threadobj_create(&con->priv->thread) == false)
+        else if (!threadobj_create(&con->priv->thread))
+        {
+            sockcon_destroy(con);
+        }
+        else if (!threadobj_init(&con->priv->thread, sockcon_thread, con))
         {
             sockcon_destroy(con);
         }
@@ -297,14 +329,11 @@ con->priv->thread.argument = con;
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockcon_destroy(struct sockcon * const con)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((con != NULL) && (con->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((con != NULL) && (con->priv != NULL)))
     {
         threadobj_stop(&con->priv->thread);
         threadobj_destroy(&con->priv->thread);
@@ -321,9 +350,6 @@ bool sockcon_destroy(struct sockcon * const con)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockcon_listen(struct sockcon * const con,
                     struct sockobj * const sock,
                     const int32_t backlog)
@@ -332,7 +358,7 @@ bool sockcon_listen(struct sockcon * const con,
 
     if (UTILDEBUG_VERIFY((con != NULL) &&
                          (con->priv != NULL) &&
-                         (sock != NULL)) == true)
+                         (sock != NULL)))
     {
         con->sock         = sock;
         con->priv->maxcon = (backlog > 0 ? backlog : SOMAXCONN);
@@ -343,9 +369,6 @@ bool sockcon_listen(struct sockcon * const con,
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t sockcon_accept(struct sockcon * const con,
                        struct sockaddr * const addr,
                        socklen_t * const len)
@@ -358,14 +381,14 @@ int32_t sockcon_accept(struct sockcon * const con,
                          (con->priv != NULL) &&
                          (addr != NULL) &&
                          (len != NULL) &&
-                         (*len > 0)) == true)
+                         (*len > 0)))
     {
         mutexobj_lock(&con->priv->mutex);
         backlog = vector_getsize(&con->priv->backlog);
         mutexobj_unlock(&con->priv->mutex);
 
         if ((backlog > 0) ||
-            (con->sock->event.ops.fion_poll(&con->sock->event) == true))
+            (con->sock->event.ops.fion_poll(&con->sock->event)))
         {
             mutexobj_lock(&con->priv->mutex);
 
