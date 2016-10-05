@@ -19,7 +19,7 @@
  *
  * @return True if an expression was verified.
  */
-#define UTILDEBUG_VERIFY(expr) utildebug_verify((!(expr) ? 0 : 1), #expr, __FUNCTION__, __LINE__)
+#define UTILDEBUG_VERIFY(expr) utildebug_verify((!(expr) ? false : true), #expr, __FUNCTION__, __LINE__)
 
 /**
  * @brief Print the function return addresses of the current thread's call

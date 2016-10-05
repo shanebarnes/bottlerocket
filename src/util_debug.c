@@ -15,9 +15,6 @@
 #endif
 #include <stdio.h>
 
-/**
- * @see See header file for interface comments.
- */
 void utildebug_backtrace(void)
 {
 #if defined(__APPLE__) || defined(__linux__)
@@ -37,9 +34,6 @@ void utildebug_backtrace(void)
 #endif
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool utildebug_verify(const bool eval,
                       const char * const expr,
                       const char * const func,
