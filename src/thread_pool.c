@@ -18,7 +18,6 @@
 
 #include <errno.h>
 #include <string.h>
-#include <unistd.h>
 
 struct threadpool_priv
 {
@@ -52,12 +51,12 @@ static void *threadpool_thread(void *arg)
     struct threadpool *pool = (struct threadpool*)arg;
     struct threadpool_task task, *temp = NULL;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
         mutexobj_lock(&pool->priv->mtx);
         pool->priv->startup--;
 
-        while (pool->priv->shutdown == false)
+        while (!pool->priv->shutdown)
         {
             task.func = NULL;
 
@@ -84,7 +83,7 @@ static void *threadpool_thread(void *arg)
                 }
             }
 
-            if ((pool->priv->shutdown == false) &&
+            if ((!pool->priv->shutdown) &&
                 (vector_getsize(&pool->priv->tasks) == 0))
             {
                 cvobj_wait(&pool->priv->cv_task, &pool->priv->mtx);
@@ -98,18 +97,13 @@ static void *threadpool_thread(void *arg)
     return NULL;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool threadpool_create(struct threadpool * pool, const uint32_t size)
 {
     bool ret = false;
     uint32_t i = 0;
     struct threadobj *thread = NULL;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) &&
-                         (pool->priv == NULL) &&
-                         (size > 0)) == true)
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv == NULL) && (size > 0)))
     {
         pool->priv = UTILMEM_CALLOC(struct threadpool_priv,
                                     sizeof(struct threadpool_priv),
@@ -122,27 +116,27 @@ bool threadpool_create(struct threadpool * pool, const uint32_t size)
                           __FUNCTION__,
                           errno);
         }
-        else if (vector_create(&pool->priv->threads,
-                               size,
-                               sizeof(struct threadobj)) == false)
+        else if (!vector_create(&pool->priv->threads,
+                                size,
+                                sizeof(struct threadobj)))
         {
             threadpool_destroy(pool);
         }
-        else if (vector_create(&pool->priv->tasks,
-                               0,
-                               sizeof(struct threadpool_task)) == false)
+        else if (!vector_create(&pool->priv->tasks,
+                                0,
+                                sizeof(struct threadpool_task)))
         {
             threadpool_destroy(pool);
         }
-        else if (cvobj_create(&pool->priv->cv_task) == false)
+        else if (!cvobj_create(&pool->priv->cv_task))
         {
             threadpool_destroy(pool);
         }
-        else if (cvobj_create(&pool->priv->cv_wait) == false)
+        else if (!cvobj_create(&pool->priv->cv_wait))
         {
             threadpool_destroy(pool);
         }
-        else if (mutexobj_create(&pool->priv->mtx) == false)
+        else if (!mutexobj_create(&pool->priv->mtx))
         {
             threadpool_destroy(pool);
         }
@@ -153,17 +147,19 @@ bool threadpool_create(struct threadpool * pool, const uint32_t size)
                 thread = vector_getval(&pool->priv->threads, i);
                 memset(thread, 0, sizeof(*thread));
 
-                if (threadobj_create(thread) == false)
+                if (!threadobj_create(thread))
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: failed to create thread #%u\n",
                                   __FUNCTION__,
                                   i);
                 }
-                else
+                else if (!threadobj_init(thread, threadpool_thread, pool))
                 {
-                    thread->function = threadpool_thread;
-                    thread->argument = pool;
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: failed to initialize thread #%u\n",
+                                  __FUNCTION__,
+                                  i);
                 }
             }
 
@@ -185,16 +181,13 @@ bool threadpool_create(struct threadpool * pool, const uint32_t size)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool threadpool_destroy(struct threadpool * const pool)
 {
     bool ret = false;
     uint32_t i = 0;
     struct threadobj *thread = NULL;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
         threadpool_stop(pool);
         mutexobj_destroy(&pool->priv->mtx);
@@ -206,7 +199,7 @@ bool threadpool_destroy(struct threadpool * const pool)
         {
             thread = vector_getval(&pool->priv->threads, i);
 
-            if (threadobj_destroy(thread) == false)
+            if (!threadobj_destroy(thread))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: failed to destroy thread #%u\n",
@@ -224,16 +217,13 @@ bool threadpool_destroy(struct threadpool * const pool)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool threadpool_start(struct threadpool * const pool)
 {
     bool ret = false;
     uint32_t i = 0;
     struct threadobj *thread = NULL;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
         mutexobj_lock(&pool->priv->mtx);
         pool->priv->shutdown = false;
@@ -252,7 +242,7 @@ bool threadpool_start(struct threadpool * const pool)
             mutexobj_unlock(&pool->priv->mtx);
 
             thread = vector_getval(&pool->priv->threads, i);
-            if (threadobj_start(thread) == false)
+            if (!threadobj_start(thread))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: failed to start thread #%u\n",
@@ -273,16 +263,13 @@ bool threadpool_start(struct threadpool * const pool)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool threadpool_stop(struct threadpool * const pool)
 {
     bool ret = false;
     uint32_t i = 0;
     struct threadobj *thread = NULL;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
         mutexobj_lock(&pool->priv->mtx);
         pool->priv->shutdown = true;
@@ -293,7 +280,7 @@ bool threadpool_stop(struct threadpool * const pool)
         {
             thread = vector_getval(&pool->priv->threads, i);
 
-            if (threadobj_stop(thread) == false)
+            if (!threadobj_stop(thread))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: failed to stop thread #%u\n",
@@ -308,7 +295,7 @@ bool threadpool_stop(struct threadpool * const pool)
 
         while (threadpool_getthreadcount(pool) > 0)
         {
-            usleep(1000);
+            threadobj_sleepusec(1000);
         }
 
         cvobj_signalall(&pool->priv->cv_wait);
@@ -317,9 +304,6 @@ bool threadpool_stop(struct threadpool * const pool)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool threadpool_execute(struct threadpool * const pool,
                         void * const func,
                         void * const arg)
@@ -329,14 +313,14 @@ bool threadpool_execute(struct threadpool * const pool,
 
     if (UTILDEBUG_VERIFY((pool != NULL) &&
                          (pool->priv != NULL) &&
-                         (func != NULL)) == true)
+                         (func != NULL)))
     {
         // Wait for all threads to complete startup.
         mutexobj_lock(&pool->priv->mtx);
         while (pool->priv->startup > 0)
         {
             mutexobj_unlock(&pool->priv->mtx);
-            usleep(1000);
+            threadobj_sleepusec(1000);
             mutexobj_lock(&pool->priv->mtx);
 
         }
@@ -353,16 +337,13 @@ bool threadpool_execute(struct threadpool * const pool,
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool threadpool_wait(struct threadpool * const pool, const uint32_t wait_count)
 {
     bool ret = false;
 
     if (UTILDEBUG_VERIFY((pool != NULL) &&
                          (pool->priv != NULL) &&
-                         (wait_count > 0)) == true)
+                         (wait_count > 0)))
     {
         mutexobj_lock(&pool->priv->mtx);
 
@@ -391,14 +372,11 @@ bool threadpool_wait(struct threadpool * const pool, const uint32_t wait_count)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool threadpool_wake(struct threadpool * const pool)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
         ret = cvobj_signalall(&pool->priv->cv_wait);
     }
@@ -406,14 +384,35 @@ bool threadpool_wake(struct threadpool * const pool)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
+uint32_t threadpool_getid(struct threadpool * const pool)
+{
+    uint32_t ret = 0;
+    uint32_t tid = threadobj_getcallerid();
+    uint32_t i;
+    struct threadobj *thread = NULL;
+
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
+    {
+        for (i = 0; i < vector_getsize(&pool->priv->threads); i++)
+        {
+            thread = vector_getval(&pool->priv->threads, i);
+
+            if (tid == threadobj_getthreadid(thread))
+            {
+                ret = i;
+                break;
+            }
+        }
+    }
+
+    return ret;
+}
+
 bool threadpool_isrunning(struct threadpool * const pool)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
         mutexobj_lock(&pool->priv->mtx);
         ret = !pool->priv->shutdown;
@@ -423,14 +422,11 @@ bool threadpool_isrunning(struct threadpool * const pool)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 uint32_t threadpool_getexeccount(struct threadpool * const pool)
 {
     uint32_t ret = 0;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
         mutexobj_lock(&pool->priv->mtx);
         ret = pool->priv->busy;
@@ -440,14 +436,11 @@ uint32_t threadpool_getexeccount(struct threadpool * const pool)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 uint32_t threadpool_gettaskcount(struct threadpool * const pool)
 {
     uint32_t ret = 0;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
         mutexobj_lock(&pool->priv->mtx);
         ret = pool->priv->busy + vector_getsize(&pool->priv->tasks);
@@ -457,14 +450,11 @@ uint32_t threadpool_gettaskcount(struct threadpool * const pool)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 uint32_t threadpool_getthreadcount(struct threadpool * const pool)
 {
     uint32_t ret = 0;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
         mutexobj_lock(&pool->priv->mtx);
         ret = pool->priv->running;
@@ -474,14 +464,11 @@ uint32_t threadpool_getthreadcount(struct threadpool * const pool)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 uint32_t threadpool_getwaitcount(struct threadpool * const pool)
 {
     uint32_t ret = 0;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
         mutexobj_lock(&pool->priv->mtx);
         ret = vector_getsize(&pool->priv->tasks);

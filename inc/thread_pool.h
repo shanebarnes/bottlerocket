@@ -92,6 +92,15 @@ bool threadpool_wait(struct threadpool * const pool, const uint32_t wait_count);
 bool threadpool_wake(struct threadpool * const pool);
 
 /**
+ * @brief Get the thread pool id of the calling thread.
+ *
+ * @param[in] pool A pointer to a thread pool.
+ *
+ * @return A thread pool id of the calling thread.
+ */
+uint32_t threadpool_getid(struct threadpool * const pool);
+
+/**
  * @brief Check if a thread pool is running.
  *
  * @param[in] pool A pointer to a thread pool.
