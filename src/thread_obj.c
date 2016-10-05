@@ -15,61 +15,60 @@
 
 #include <errno.h>
 #include <pthread.h>
-#include <signal.h>
 #include <unistd.h>
 
 struct threadobj_priv
 {
-    char            name[64];
-    pthread_t       handle;
-    pthread_attr_t  attr;
-    struct mutexobj mutex;
-    bool            shutdown;
+    char             name[64];
+    uint32_t         id;
+    pthread_t        handle;
+    pthread_attr_t   attr;
+    void            *func;
+    void            *arg;
+    struct mutexobj  mutex;
+    bool             shutdown;
 };
 
-/**
- * @see See header file for interface comments.
- */
-bool threadobj_create(struct threadobj * const obj)
+bool threadobj_create(struct threadobj * const thread)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv == NULL)) == true)
+    if (UTILDEBUG_VERIFY((thread != NULL) && (thread->priv == NULL)))
     {
-        obj->priv = UTILMEM_CALLOC(struct threadobj_priv,
-                                   sizeof(struct threadobj_priv),
-                                   1);
+        thread->priv = UTILMEM_CALLOC(struct threadobj_priv,
+                                      sizeof(struct threadobj_priv),
+                                      1);
 
-        if (obj->priv == NULL)
+        if (thread->priv == NULL)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to allocate private memory (%d)\n",
                           __FUNCTION__,
                           errno);
         }
-        else if (pthread_attr_init(&obj->priv->attr) != 0)
+        else if (pthread_attr_init(&thread->priv->attr) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to create thread (%d)\n",
                           __FUNCTION__,
                           errno);
-            threadobj_destroy(obj);
+            threadobj_destroy(thread);
         }
-        else if (pthread_attr_setstacksize(&obj->priv->attr, 64 * 1024) != 0)
+        else if (pthread_attr_setstacksize(&thread->priv->attr, 64 * 1024) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to set thread stack size (%d)\n",
                           __FUNCTION__,
                           errno);
-            threadobj_destroy(obj);
+            threadobj_destroy(thread);
         }
-        else if (mutexobj_create(&obj->priv->mutex) == false)
+        else if (!mutexobj_create(&thread->priv->mutex))
         {
-            threadobj_destroy(obj);
+            threadobj_destroy(thread);
         }
         else
         {
-            obj->priv->shutdown = true;
+            thread->priv->shutdown = true;
             ret = true;
         }
     }
@@ -77,58 +76,51 @@ bool threadobj_create(struct threadobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
-bool threadobj_destroy(struct threadobj * const obj)
+bool threadobj_destroy(struct threadobj * const thread)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv) != NULL) == true)
+    if (UTILDEBUG_VERIFY((thread != NULL) && (thread->priv != NULL)))
     {
-        //pthread_detach
-#if 0
-        if (pthread_join(obj->priv->handle, NULL) == 0)
-        {
-            ret = true;
-        }
-        else
-        {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to suspend the calling thread (%d)\n",
-                          __FUNCTION__,
-                          errno);
-        }
-#endif
-
-        threadobj_stop(obj);
-        mutexobj_destroy(&obj->priv->mutex);
-        pthread_attr_destroy(&obj->priv->attr);
-        UTILMEM_FREE(obj->priv);
-        obj->priv = NULL;
+        threadobj_stop(thread);
+        mutexobj_destroy(&thread->priv->mutex);
+        pthread_attr_destroy(&thread->priv->attr);
+        UTILMEM_FREE(thread->priv);
+        thread->priv = NULL;
         ret = true;
     }
 
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
-bool threadobj_start(struct threadobj * const obj)
+bool threadobj_init(struct threadobj * const thread, void *func, void *arg)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((thread != NULL) && (thread->priv != NULL)))
     {
-        mutexobj_lock(&obj->priv->mutex);
-        obj->priv->shutdown = false;
-        mutexobj_unlock(&obj->priv->mutex);
+        thread->priv->func = func;
+        thread->priv->arg  = arg;
+        ret = true;
+    }
 
-        if (pthread_create(&obj->priv->handle,
-                           &obj->priv->attr,
-                           obj->function,
-                           obj->argument) != 0)
+    return ret;
+}
+
+bool threadobj_start(struct threadobj * const thread)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((thread != NULL) && (thread->priv != NULL)))
+    {
+        mutexobj_lock(&thread->priv->mutex);
+        thread->priv->shutdown = false;
+        mutexobj_unlock(&thread->priv->mutex);
+
+        if (pthread_create(&thread->priv->handle,
+                           &thread->priv->attr,
+                           thread->priv->func,
+                           thread->priv->arg) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to start thread (%d)\n",
@@ -144,23 +136,19 @@ bool threadobj_start(struct threadobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
-bool threadobj_stop(struct threadobj * const obj)
+bool threadobj_stop(struct threadobj * const thread)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((thread != NULL) && (thread->priv != NULL)))
     {
-        mutexobj_lock(&obj->priv->mutex);
-        obj->priv->shutdown = true;
-        mutexobj_unlock(&obj->priv->mutex);
+        mutexobj_lock(&thread->priv->mutex);
+        thread->priv->shutdown = true;
+        mutexobj_unlock(&thread->priv->mutex);
 
-        // Wait for thread to exit.
-        while (pthread_kill(obj->priv->handle, 0) == 0)
+        while (pthread_kill(thread->priv->handle, 0) == 0)
         {
-            usleep(10 * 1000);
+            threadobj_sleepusec(10 * 1000);
         }
 
         ret = true;
@@ -169,34 +157,61 @@ bool threadobj_stop(struct threadobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
-bool threadobj_isrunning(struct threadobj * const obj)
+uint32_t threadobj_getthreadid(struct threadobj * const thread)
 {
-    bool ret = false;
+    uint32_t ret = 0;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((thread != NULL) && (thread->priv != NULL)))
     {
-        mutexobj_lock(&obj->priv->mutex);
-        ret = !obj->priv->shutdown;
-        mutexobj_unlock(&obj->priv->mutex);
+        ret = (uint32_t)thread->priv->handle;
     }
 
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
-bool threadobj_join(struct threadobj * const obj)
+uint32_t threadobj_getcallerid(void)
+{
+    return (uint32_t)pthread_self();
+}
+
+bool threadobj_sleepusec(const int32_t interval)
+{
+    bool ret = true;
+
+    if (usleep(interval) != 0)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: failed to suspend thread execution (%d)\n",
+                      __FUNCTION__,
+                      errno);
+        ret = false;
+    }
+
+    return ret;
+}
+
+bool threadobj_isrunning(struct threadobj * const thread)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((thread != NULL) && (thread->priv != NULL)))
+    {
+        mutexobj_lock(&thread->priv->mutex);
+        ret = !thread->priv->shutdown;
+        mutexobj_unlock(&thread->priv->mutex);
+    }
+
+    return ret;
+}
+
+bool threadobj_join(struct threadobj * const thread)
 {
     bool ret = false;
     int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((thread != NULL) && (thread->priv != NULL)))
     {
-        err = pthread_join(obj->priv->handle, NULL);
+        err = pthread_join(thread->priv->handle, NULL);
 
         if (err != 0)
         {
