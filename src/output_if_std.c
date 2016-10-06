@@ -11,9 +11,6 @@
 
 #include <stdio.h>
 
-/**
- * @see See header file for interface comments.
- */
 int32_t output_if_std_send(void * const buf, const uint32_t len)
 {
     int32_t retval = -1;
