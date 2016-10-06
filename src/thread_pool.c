@@ -387,7 +387,7 @@ bool threadpool_wake(struct threadpool * const pool)
 uint32_t threadpool_getid(struct threadpool * const pool)
 {
     uint32_t ret = 0;
-    uint32_t tid = threadobj_getcallerid();
+    uint64_t tid = threadobj_getcallerid();
     uint32_t i;
     struct threadobj *thread = NULL;
 
