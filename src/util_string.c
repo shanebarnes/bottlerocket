@@ -8,6 +8,7 @@
  */
 
 #include "logger.h"
+#include "util_debug.h"
 #include "util_string.h"
 
 #include <ctype.h>
@@ -16,9 +17,6 @@
 #include <stdio.h>
 #include <string.h>
 
-/**
- * @see See header file for interface comments.
- */
 bool utilstring_compare(const char * const str1,
                         const char * const str2,
                         const size_t len,
@@ -26,13 +24,11 @@ bool utilstring_compare(const char * const str1,
 {
     bool retval = false;
 
-    if ((str1 == NULL) || (str2 == NULL))
+    if (!UTILDEBUG_VERIFY((str1 != NULL) && (str2 != NULL)))
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
+        // Do nothing.
     }
-    else if (ignorecase == true)
+    else if (ignorecase)
     {
         if (len != 0)
         {
@@ -58,9 +54,6 @@ bool utilstring_compare(const char * const str1,
     return retval;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t utilstring_concat(char * const buf,
                           const size_t len,
                           const char * const format,
@@ -69,13 +62,7 @@ int32_t utilstring_concat(char * const buf,
     int32_t retval = -1;
     va_list args;
 
-    if ((buf == NULL) || (len == 0) || (format == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((buf != NULL) && (len > 0) && (format != NULL)))
     {
         va_start(args, format);
         retval = vsnprintf(buf, len, format, args);
@@ -90,23 +77,12 @@ int32_t utilstring_concat(char * const buf,
     return retval;
 }
 
-/**
- * @see See header file for interface comments.
- */
-int32_t utilstring_parse(const char * const str,
-                         const char * const format,
-                         ...)
+int32_t utilstring_parse(const char * const str, const char * const format, ...)
 {
     int32_t retval = -1;
     va_list args;
 
-    if ((str == NULL) || (format == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((str != NULL) && (format != NULL)))
     {
         va_start(args, format);
         retval = vsscanf(str, format, args);
@@ -116,20 +92,11 @@ int32_t utilstring_parse(const char * const str,
     return retval;
 }
 
-/**
- * @see See header file for interface comments.
- */
 void utilstring_tolower(char * const str)
 {
     uint32_t i = 0;
 
-    if (str == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(str != NULL))
     {
         for (i = 0; i < strlen(str); i++)
         {
@@ -138,20 +105,11 @@ void utilstring_tolower(char * const str)
     }
 }
 
-/**
- * @see See header file for interface comments.
- */
 void utilstring_toupper(char * const str)
 {
     uint32_t i = 0;
 
-    if (str == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(str != NULL))
     {
         for (i = 0; i < strlen(str); i++)
         {
@@ -160,21 +118,12 @@ void utilstring_toupper(char * const str)
     }
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool utilstring_fromi32(const int32_t num, char * const str, const size_t len)
 {
     bool retval = false;
     int32_t errval = 0;
 
-    if ((str == NULL) || (len == 0))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((str != NULL) && (len > 0)))
     {
         errval = snprintf(str, len, "%d", num);
 
