@@ -120,7 +120,7 @@ bool sockcon_send(struct sockcon * const con,
 static void *sockcon_thread(void * const arg)
 {
     struct sockcon *con = (struct sockcon *)arg;
-    struct sockcon_pair pair, *entry = NULL;
+    struct sockcon_pair pair;//, *entry = NULL;
     bool exit = false;
     uint32_t i, events = 0, hash = 0;
     uint64_t tsus = 0;
@@ -241,7 +241,7 @@ static void *sockcon_thread(void * const arg)
                     }
                     else
                     {
-                        entry = vector_getval(&con->priv->frontlog, i - 1);
+                        //entry = vector_getval(&con->priv->frontlog, i - 1);
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: unhandled UDP socket read event\n",
                                       __FUNCTION__);
