@@ -15,49 +15,31 @@ static const uint16_t  patch = 7;
 static const char     *date  = "Sep 28 2016 23:52:00";
 static const char     *build = __DATE__ " " __TIME__;
 
-/**
- * @see See header file for interface comments.
- */
 uint64_t version_number(void)
 {
     return (uint64_t)(((uint64_t)major << 32) + ((uint64_t)minor << 16) + patch);
 }
 
-/**
- * @see See header file for interface comments.
- */
 uint16_t version_major(void)
 {
     return major;
 }
 
-/**
- * @see See header file for interface comments.
- */
 uint16_t version_minor(void)
 {
     return minor;
 }
 
-/**
- * @see See header file for interface comments.
- */
 uint16_t version_patch(void)
 {
     return patch;
 }
 
-/**
- * @see See header file for interface comments.
- */
 const char * version_date(void)
 {
     return date;
 }
 
-/**
- * @see See header file for interface comments.
- */
 const char * version_build(void)
 {
     return build;
