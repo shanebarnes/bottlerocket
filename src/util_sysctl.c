@@ -20,17 +20,11 @@
 #endif
 #include <unistd.h>
 
-/**
- * @see See header file for interface comments.
- */
 uint32_t utilsysctl_getcpusavail(void)
 {
     return sysconf(_SC_NPROCESSORS_ONLN);
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t utilsysctl_getmaxudpsize(void)
 {
     int32_t ret = -1;
@@ -54,9 +48,6 @@ int32_t utilsysctl_getmaxudpsize(void)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t utilsysctl_getmaxsockbufsize(void)
 {
     int32_t ret = -1;
