@@ -73,14 +73,14 @@ bool threadobj_stop(struct threadobj * const thread);
  *
  * @return A thread object's thread id (0 on error).
  */
-uint32_t threadobj_getthreadid(struct threadobj * const thread);
+uint64_t threadobj_getthreadid(struct threadobj * const thread);
 
 /**
  * @brief Get a calling thread's id.
  *
  * @return A calling thread's id.
  */
-uint32_t threadobj_getcallerid(void);
+uint64_t threadobj_getcallerid(void);
 
 /**
  * @brief Suspend thread execution for a specified amounf of time in

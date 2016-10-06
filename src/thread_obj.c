@@ -158,21 +158,21 @@ bool threadobj_stop(struct threadobj * const thread)
     return ret;
 }
 
-uint32_t threadobj_getthreadid(struct threadobj * const thread)
+uint64_t threadobj_getthreadid(struct threadobj * const thread)
 {
-    uint32_t ret = 0;
+    uint64_t ret = 0;
 
     if (UTILDEBUG_VERIFY((thread != NULL) && (thread->priv != NULL)))
     {
-        ret = (uint32_t)thread->priv->handle;
+        ret = (uint64_t)thread->priv->handle;
     }
 
     return ret;
 }
 
-uint32_t threadobj_getcallerid(void)
+uint64_t threadobj_getcallerid(void)
 {
-    return (uint32_t)pthread_self();
+    return (uint64_t)pthread_self();
 }
 
 bool threadobj_sleepusec(const int32_t interval)
