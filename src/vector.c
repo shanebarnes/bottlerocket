@@ -15,7 +15,7 @@
 #include <errno.h>
 #include <string.h>
 
-struct internals
+struct vector_priv
 {
     uint8_t  *array;
     uint32_t  count; // allocated member count (used/unused member count)
@@ -23,9 +23,6 @@ struct internals
     uint32_t  vsize; // vector size (used member count)
 };
 
-/**
- * @see See header file for interface comments.
- */
 bool vector_create(struct vector * const vector,
                    const uint32_t count,
                    const uint32_t size)
@@ -34,27 +31,27 @@ bool vector_create(struct vector * const vector,
 
     if (UTILDEBUG_VERIFY((vector != NULL) &&
                          (size > 0) &&
-                         (vector->internal == NULL)) == true)
+                         (vector->priv == NULL)))
     {
-        vector->internal = UTILMEM_CALLOC(struct internals,
-                                          sizeof(struct internals),
-                                          1);
+        vector->priv = UTILMEM_CALLOC(struct privs,
+                                      sizeof(struct vector_priv),
+                                      1);
 
-        if (vector->internal == NULL)
+        if (vector->priv == NULL)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to allocate internals (%d)\n",
+                          "%s: failed to allocate privs (%d)\n",
                           __FUNCTION__,
                           errno);
         }
         else
         {
-            vector->internal->array = UTILMEM_MALLOC(uint8_t, size, 1);
+            vector->priv->array = UTILMEM_MALLOC(uint8_t, size, 1);
 
-            if (vector->internal->array != NULL)
+            if (vector->priv->array != NULL)
             {
-                vector->internal->count = vector->internal->vsize = 1;
-                vector->internal->msize = size;
+                vector->priv->count = vector->priv->vsize = 1;
+                vector->priv->msize = size;
                 ret = vector_resize(vector, count);
             }
         }
@@ -63,25 +60,22 @@ bool vector_create(struct vector * const vector,
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool vector_destroy(struct vector * const vector)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(vector != NULL) == true)
+    if (UTILDEBUG_VERIFY(vector != NULL))
     {
-        if (vector->internal != NULL)
+        if (vector->priv != NULL)
         {
-            if (vector->internal->array != NULL)
+            if (vector->priv->array != NULL)
             {
-                UTILMEM_FREE(vector->internal->array);
-                vector->internal->array = NULL;
+                UTILMEM_FREE(vector->priv->array);
+                vector->priv->array = NULL;
             }
 
-            UTILMEM_FREE(vector->internal);
-            vector->internal = NULL;
+            UTILMEM_FREE(vector->priv);
+            vector->priv = NULL;
 
             ret = true;
         }
@@ -90,58 +84,54 @@ bool vector_destroy(struct vector * const vector)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool vector_resize(struct vector * const vector, const uint32_t size)
 {
     bool ret = false;
     uint32_t nsize = size;
 
-    if (UTILDEBUG_VERIFY((vector != NULL) &&
-                         (vector->internal != NULL)) == false)
+    if (!UTILDEBUG_VERIFY((vector != NULL) && (vector->priv != NULL)))
     {
         // Do nothing.
     }
-    else if (vector->internal->vsize != size)
+    else if (vector->priv->vsize != size)
     {
-        if (((size > vector->internal->vsize) &&
-             (size > vector->internal->count)) ||
-            ((size < vector->internal->vsize) &&
-             (size < vector->internal->count / 2)))
+        if (((size > vector->priv->vsize) &&
+             (size > vector->priv->count)) ||
+            ((size < vector->priv->vsize) &&
+             (size < vector->priv->count / 2)))
         {
             // Round the array size up to the nearest power of 2 using a power
             // of two ceiling operation (note: start with a size of 1 for a
             // floor operation).
-            vector->internal->count = 2;
+            vector->priv->count = 2;
             while (nsize >>= 1)
             {
-                vector->internal->count <<= 1;
+                vector->priv->count <<= 1;
             }
 
-            vector->internal->array = UTILMEM_REALLOC(uint8_t,
-                                                      vector->internal->array,
-                                                      vector->internal->msize *
-                                                      vector->internal->count);
+            vector->priv->array = UTILMEM_REALLOC(uint8_t,
+                                                  vector->priv->array,
+                                                  vector->priv->msize *
+                                                  vector->priv->count);
 
-            if (vector->internal->array == NULL)
+            if (vector->priv->array == NULL)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: failed to resize vector (%d)\n",
                               __FUNCTION__,
                               errno);
 
-                vector->internal->count = vector->internal->vsize = 0;
+                vector->priv->count = vector->priv->vsize = 0;
             }
             else
             {
-                vector->internal->vsize = size;
+                vector->priv->vsize = size;
                 ret = true;
             }
         }
         else
         {
-            vector->internal->vsize = size;
+            vector->priv->vsize = size;
             ret = true;
         }
     }
@@ -152,9 +142,7 @@ bool vector_resize(struct vector * const vector, const uint32_t size)
 
     return ret;
 }
-/**
- * @see See header file for interface comments.
- */
+
 void *vector_gettail(struct vector * const vector)
 {
     void *ret = NULL;
@@ -162,50 +150,41 @@ void *vector_gettail(struct vector * const vector)
 
     if (size > 0)
     {
-        ret = &vector->internal->array[(size - 1) * vector->internal->msize];
+        ret = &vector->priv->array[(size - 1) * vector->priv->msize];
     }
 
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 void *vector_getval(struct vector * const vector, const uint32_t index)
 {
     void *ret = NULL;
 
     if (UTILDEBUG_VERIFY((vector != NULL) &&
-                         (vector->internal != NULL) &&
-                         (index < vector->internal->vsize)) == true)
+                         (vector->priv != NULL) &&
+                         (index < vector->priv->vsize)))
     {
-        ret = &vector->internal->array[index * vector->internal->msize];
+        ret = &vector->priv->array[index * vector->priv->msize];
     }
 
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 uint32_t vector_getsize(struct vector * const vector)
 {
     uint32_t ret = 0;
 
-    if (UTILDEBUG_VERIFY(vector != NULL) == true)
+    if (UTILDEBUG_VERIFY(vector != NULL))
     {
-        if (vector->internal != NULL)
+        if (vector->priv != NULL)
         {
-            ret = vector->internal->vsize;
+            ret = vector->priv->vsize;
         }
     }
 
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool vector_insert(struct vector * const vector,
                    const uint32_t index,
                    void * const val)
@@ -213,24 +192,24 @@ bool vector_insert(struct vector * const vector,
     bool ret = false;
 
     if (UTILDEBUG_VERIFY((vector != NULL) &&
-                         (vector->internal != NULL) &&
-                         (index < vector->internal->vsize)) == true)
+                         (vector->priv != NULL) &&
+                         (index < vector->priv->vsize)))
     {
-        if (vector_resize(vector, vector->internal->vsize + 1) == true)
+        if (vector_resize(vector, vector->priv->vsize + 1))
         {
-            if (vector->internal->vsize > 1)
+            if (vector->priv->vsize > 1)
             {
-                memmove(&vector->internal->array[(index+1)*vector->internal->msize],
-                        &vector->internal->array[index*vector->internal->msize],
-                        (vector->internal->vsize - index - 1) *
-                         vector->internal->msize);
+                memmove(&vector->priv->array[(index+1)*vector->priv->msize],
+                        &vector->priv->array[index*vector->priv->msize],
+                        (vector->priv->vsize - index - 1) *
+                         vector->priv->msize);
             }
 
             // There is no guarantee that memory will not overlap.
-            memmove(&vector->internal->array[index*vector->internal->msize],
+            memmove(&vector->priv->array[index*vector->priv->msize],
                     val,
-                    vector->internal->msize);
-            vector->internal->vsize++;
+                    vector->priv->msize);
+            vector->priv->vsize++;
             ret = true;
         }
     }
@@ -238,23 +217,20 @@ bool vector_insert(struct vector * const vector,
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool vector_inserttail(struct vector * const vector, void * const val)
 {
     bool ret = false;
 
     if (UTILDEBUG_VERIFY((vector != NULL) &&
-                         (vector->internal != NULL) &&
-                         (val != NULL)) == true)
+                         (vector->priv != NULL) &&
+                         (val != NULL)))
     {
-        if (vector_resize(vector, vector->internal->vsize + 1) == true)
+        if (vector_resize(vector, vector->priv->vsize + 1))
         {
             // There is no guarantee that memory will not overlap.
-            memmove(&vector->internal->array[(vector->internal->vsize - 1) * vector->internal->msize],
+            memmove(&vector->priv->array[(vector->priv->vsize - 1) * vector->priv->msize],
                     val,
-                    vector->internal->msize);
+                    vector->priv->msize);
             ret = true;
         }
     }
@@ -262,44 +238,37 @@ bool vector_inserttail(struct vector * const vector, void * const val)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool vector_delete(struct vector * const vector, const uint32_t index)
 {
     bool ret = false;
 
     if (UTILDEBUG_VERIFY((vector != NULL) &&
-                         (vector->internal != NULL) &&
-                         (index < vector->internal->vsize)) == true)
+                         (vector->priv != NULL) &&
+                         (index < vector->priv->vsize)))
     {
-        if (index < (vector->internal->vsize - 1))
+        if (index < (vector->priv->vsize - 1))
         {
-            memmove(&vector->internal->array[index*vector->internal->msize],
-                    &vector->internal->array[(index+1)*vector->internal->msize],
-                    (vector->internal->vsize - index - 1) *
-                     vector->internal->msize);
+            memmove(&vector->priv->array[index*vector->priv->msize],
+                    &vector->priv->array[(index+1)*vector->priv->msize],
+                    (vector->priv->vsize - index - 1) *
+                     vector->priv->msize);
         }
 
-        ret = vector_resize(vector, vector->internal->vsize - 1);
+        ret = vector_resize(vector, vector->priv->vsize - 1);
     }
 
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool vector_deletetail(struct vector * const vector)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((vector != NULL) &&
-                         (vector->internal != NULL)) == true)
+    if (UTILDEBUG_VERIFY((vector != NULL) && (vector->priv != NULL)))
     {
-        if (vector->internal->vsize > 0)
+        if (vector->priv->vsize > 0)
         {
-            ret = vector_resize(vector, vector->internal->vsize - 1);
+            ret = vector_resize(vector, vector->priv->vsize - 1);
         }
     }
 

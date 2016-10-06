@@ -12,11 +12,11 @@
 
 #include "system_types.h"
 
-struct internals;
+struct vector_priv;
 
 struct vector
 {
-    struct internals *internal;
+    struct vector_priv *priv;
 };
 
 /**
