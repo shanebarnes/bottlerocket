@@ -10,6 +10,7 @@
 #include "form_chat.h"
 #include "logger.h"
 #include "util_date.h"
+#include "util_debug.h"
 #include "util_ioctl.h"
 #include "util_string.h"
 #include "util_unit.h"
@@ -22,20 +23,11 @@ static const char * formdiv = "----------------------------------------"
                               "----------------------------------------"
                               "----------------------------------------";
 
-/**
- * @see See header file for interface comments.
- */
 bool formchat_init(struct formobj * const obj)
 {
     bool ret = false;
 
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
         obj->ops.form_head = formchat_head;
         obj->ops.form_body = formchat_body;
@@ -48,9 +40,6 @@ bool formchat_init(struct formobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t formchat_head(struct formobj * const obj)
 {
     int32_t  ret  = -1;
@@ -61,18 +50,12 @@ int32_t formchat_head(struct formobj * const obj)
              nsec = 0;
     char strdate[32];
 
-    if ((obj == NULL) ||
-        (obj->sock == NULL) ||
-        (obj->srcbuf == NULL) ||
-        (obj->srclen <= 0) ||
-        (obj->dstbuf == NULL) ||
-        (obj->dstlen <= 0))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (obj->sock != NULL) &&
+                         (obj->srcbuf != NULL) &&
+                         (obj->srclen > 0) &&
+                         (obj->dstbuf != NULL) &&
+                         (obj->dstlen > 0)))
     {
         utilioctl_gettermsize(&rows, &cols);
 
@@ -103,9 +86,6 @@ int32_t formchat_head(struct formobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t formchat_body(struct formobj * const obj)
 {
     int32_t  ret      = -1;
@@ -119,18 +99,12 @@ int32_t formchat_body(struct formobj * const obj)
              nsec     = 0;
     char strdate[32];
 
-    if ((obj == NULL) ||
-        (obj->sock == NULL) ||
-        (obj->srcbuf == NULL) ||
-        (obj->srclen <= 0) ||
-        (obj->dstbuf == NULL) ||
-        (obj->dstlen <= 0))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (obj->sock != NULL) &&
+                         (obj->srcbuf != NULL) &&
+                         (obj->srclen > 0) &&
+                         (obj->dstbuf != NULL) &&
+                         (obj->dstlen > 0)))
     {
         ret = 0;
         utilioctl_gettermsize(&rows, &cols);
@@ -191,9 +165,6 @@ int32_t formchat_body(struct formobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t formchat_foot(struct formobj * const obj)
 {
     int32_t  ret  = -1;
@@ -211,18 +182,12 @@ int32_t formchat_foot(struct formobj * const obj)
          strrecvrate[16],
          strsendrate[16];
 
-    if ((obj == NULL) ||
-        (obj->sock == NULL) ||
-        (obj->srcbuf == NULL) ||
-        (obj->srclen <= 0) ||
-        (obj->dstbuf == NULL) ||
-        (obj->dstlen <= 0))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (obj->sock != NULL) &&
+                         (obj->srcbuf != NULL) &&
+                         (obj->srclen > 0) &&
+                         (obj->dstbuf != NULL) &&
+                         (obj->dstlen > 0)))
     {
         utilioctl_gettermsize(&rows, &cols);
 
