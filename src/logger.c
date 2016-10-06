@@ -21,15 +21,14 @@ static struct mutexobj      *lock         = NULL;
 static struct output_if_ops *output_if    = NULL;
 static int32_t               refcount     = 0;
 
-/**
- * @see See header file for interface comments.
- */
 bool logger_create(void)
 {
     bool retval = false;
 
-    //@todo Replace with a read/write lock for multiple threads?
-    lock = UTILMEM_MALLOC(struct mutexobj, sizeof(struct mutexobj), 1);
+    // @todo Add token bucket to limit potential logging frequency.
+    // @todo Add message hashing to compress repetitive messages.
+    // @todo Replace with a read/write lock for multiple threads?
+    lock = UTILMEM_CALLOC(struct mutexobj, sizeof(struct mutexobj), 1);
 
     if (lock != NULL)
     {
@@ -39,9 +38,6 @@ bool logger_create(void)
     return retval;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool logger_destroy(void)
 {
     bool retval = false;
@@ -56,9 +52,6 @@ bool logger_destroy(void)
     return retval;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool logger_set_output(struct output_if_ops * const obj)
 {
     bool retval = false;
@@ -72,9 +65,6 @@ bool logger_set_output(struct output_if_ops * const obj)
     return retval;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool logger_set_level(const enum logger_level level)
 {
     bool retval = false;
@@ -134,9 +124,6 @@ static char *logger_get_level_string(const enum logger_level level)
     return retval;
 }
 
-/**
- * @see See header file for interface comments.
- */
 void logger_printf(const enum logger_level level, const char *format, ...)
 {
     int32_t error = 0, len;
@@ -146,15 +133,14 @@ void logger_printf(const enum logger_level level, const char *format, ...)
     enum logger_level setlevel = LOGGER_LEVEL_OFF;
     bool dropmsg = false;
 
-    if ((lock != NULL) &&
-        (output_if != NULL))
+    if ((lock != NULL) && (output_if != NULL))
     {
         mutexobj_lock(lock);
         // At the expense of more processing overhead, stop logging messages if
         // the number of incomplete logging transactions exceeds 10 in the event
         // that the high number of concurrent transactions is due to an
         // unintended circular dependency.
-        if (refcount > 10)
+        if (refcount > 100)
         {
             dropmsg = true;
             fprintf(stderr,
@@ -168,9 +154,7 @@ void logger_printf(const enum logger_level level, const char *format, ...)
         }
         mutexobj_unlock(lock);
 
-        if ((dropmsg == false) &&
-            (level >= setlevel) &&
-            (level < LOGGER_LEVEL_OFF))
+        if ((!dropmsg) && (level >= setlevel) && (level < LOGGER_LEVEL_OFF))
         {
             va_start(args, format);
             error = vsnprintf(msgbuf, sizeof(msgbuf), format, args);
@@ -200,7 +184,7 @@ void logger_printf(const enum logger_level level, const char *format, ...)
             }
         }
 
-        if (dropmsg == false)
+        if (!dropmsg)
         {
             mutexobj_lock(lock);
             refcount--;
