@@ -20,15 +20,12 @@ struct cvobj_priv
     pthread_cond_t handle;
 };
 
-/**
- * @see See header file for interface comments.
- */
 bool cvobj_create(struct cvobj * const cv)
 {
     bool ret = false;
     int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv == NULL)) == true)
+    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv == NULL)))
     {
         cv->priv = UTILMEM_CALLOC(struct cvobj_priv,
                                   sizeof(struct cvobj_priv),
@@ -58,14 +55,11 @@ bool cvobj_create(struct cvobj * const cv)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool cvobj_destroy(struct cvobj * const cv)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL)))
     {
         pthread_cond_destroy(&cv->priv->handle);
         UTILMEM_FREE(cv->priv);
@@ -76,15 +70,12 @@ bool cvobj_destroy(struct cvobj * const cv)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool cvobj_signalall(struct cvobj * const cv)
 {
     bool ret = false;
     int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL)))
     {
         if ((err = pthread_cond_broadcast(&cv->priv->handle)) != 0)
         {
@@ -102,15 +93,12 @@ bool cvobj_signalall(struct cvobj * const cv)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool cvobj_signalone(struct cvobj * const cv)
 {
     bool ret = false;
     int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL)) == true)
+    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL)))
     {
         if ((err = pthread_cond_signal(&cv->priv->handle)) != 0)
         {
@@ -128,17 +116,12 @@ bool cvobj_signalone(struct cvobj * const cv)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool cvobj_wait(struct cvobj * const cv, struct mutexobj * const mtx)
 {
     bool ret = false;
     int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY((cv != NULL) &&
-                         (cv->priv != NULL) &&
-                         (mtx != NULL)) == true)
+    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL) && (mtx != NULL)))
     {
         if ((err = pthread_cond_wait(&cv->priv->handle, &mtx->obj)) != 0)
         {
