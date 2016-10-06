@@ -9,13 +9,11 @@
 
 #include "dlist.h"
 #include "logger.h"
+#include "util_debug.h"
 #include "util_mem.h"
 
 #include <errno.h>
 
-/**
- * @see See header file for interface comments.
- */
 bool dlist_insertafter(struct dlist * const list,
                        struct dlist_node * const node,
                        void * const val)
@@ -23,13 +21,7 @@ bool dlist_insertafter(struct dlist * const list,
     bool ret = false;
     struct dlist_node *new = NULL;
 
-    if (list == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(list != NULL))
     {
         new = UTILMEM_MALLOC(struct dlist_node, sizeof(struct dlist_node), 1);
 
@@ -73,9 +65,6 @@ bool dlist_insertafter(struct dlist * const list,
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool dlist_insertbefore(struct dlist * const list,
                         struct dlist_node * const node,
                         void * const val)
@@ -83,13 +72,7 @@ bool dlist_insertbefore(struct dlist * const list,
     bool ret = false;
     struct dlist_node *new = NULL;
 
-    if (list == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(list != NULL))
     {
         new = UTILMEM_MALLOC(struct dlist_node, sizeof(struct dlist_node), 1);
 
@@ -133,36 +116,21 @@ bool dlist_insertbefore(struct dlist * const list,
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool dlist_inserthead(struct dlist * const list, void * const val)
 {
     return dlist_insertbefore(list, list->head, val);
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool dlist_inserttail(struct dlist * const list, void * const val)
 {
     return dlist_insertafter(list, list->tail, val);
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool dlist_remove(struct dlist * const list, struct dlist_node * const node)
 {
     bool ret = false;
 
-    if ((list == NULL) || (list->size == 0) || (node == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((list != NULL) && (list->size > 0) && (node != NULL)))
     {
         if (list->size == 1)
         {
@@ -193,17 +161,11 @@ bool dlist_remove(struct dlist * const list, struct dlist_node * const node)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool dlist_removehead(struct dlist * const list)
 {
     return dlist_remove(list, list->head);
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool dlist_removetail(struct dlist * const list)
 {
     return dlist_remove(list, list->tail);
