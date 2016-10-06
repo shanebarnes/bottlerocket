@@ -16,15 +16,11 @@
 #include <poll.h>
 #include <sys/socket.h>
 
-/**
- * @see See header file for interface comments.
- */
 bool fionpoll_create(struct fionobj * const obj)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) &&
-                         (vector_getsize(&obj->fds) == 0)) == true)
+    if (UTILDEBUG_VERIFY((obj != NULL) && (vector_getsize(&obj->fds) == 0)))
     {
         obj->ops.fion_create    = fionpoll_create;
         obj->ops.fion_destroy   = fionpoll_destroy;
@@ -37,7 +33,7 @@ bool fionpoll_create(struct fionobj * const obj)
         obj->pevents            = 0;
         obj->revents            = 0;
 
-        if (vector_create(&obj->fds, 0, sizeof(struct pollfd)) == false)
+        if (!vector_create(&obj->fds, 0, sizeof(struct pollfd)))
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: vector allocation failed (%d)\n",
@@ -53,14 +49,11 @@ bool fionpoll_create(struct fionobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool fionpoll_destroy(struct fionobj * const obj)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(obj != NULL) == true)
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
         vector_destroy(&obj->fds);
 
@@ -78,9 +71,6 @@ bool fionpoll_destroy(struct fionobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
 {
     bool ret = false, found = false;
@@ -88,7 +78,7 @@ bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
     struct pollfd val = {.fd = fd, .events = 0, .revents = 0};
     uint32_t i;
 
-    if (UTILDEBUG_VERIFY(obj != NULL) == true)
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
         for (i = 0; i < vector_getsize(&obj->fds); i++)
         {
@@ -105,10 +95,10 @@ bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
             }
         }
 
-        if (found == false)
+        if (!found)
         {
-            if ((vector_inserttail(&obj->fds, &val) == true) &&
-                (obj->ops.fion_setflags(obj) == true))
+            if ((vector_inserttail(&obj->fds, &val)) &&
+                (obj->ops.fion_setflags(obj)))
             {
                 ret = true;
             }
@@ -118,16 +108,13 @@ bool fionpoll_insertfd(struct fionobj * const obj, const int32_t fd)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd)
 {
     bool ret = false, found = false;
     struct pollfd *pfd = NULL;
     uint32_t i;
 
-    if (UTILDEBUG_VERIFY(obj != NULL) == true)
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
         for (i = 0; i < vector_getsize(&obj->fds); i++)
         {
@@ -140,7 +127,7 @@ bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd)
             }
         }
 
-        if (found == false)
+        if (!found)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: fd %d is not in the list\n",
@@ -156,17 +143,13 @@ bool fionpoll_deletefd(struct fionobj * const obj, const int32_t fd)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool fionpoll_setflags(struct fionobj * const obj)
 {
     bool ret = false;
     struct pollfd *pfd = NULL;
     uint32_t i;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) &&
-                         (vector_getsize(&obj->fds) > 0)) == true)
+    if (UTILDEBUG_VERIFY((obj != NULL) && (vector_getsize(&obj->fds) > 0)))
     {
         for (i = 0; i < vector_getsize(&obj->fds); i++)
         {
@@ -192,17 +175,13 @@ bool fionpoll_setflags(struct fionobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool fionpoll_poll(struct fionobj * const obj)
 {
     bool ret = false;
     int32_t err;
     uint32_t i;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) &&
-                         (vector_getsize(&obj->fds) > 0)) == true)
+    if (UTILDEBUG_VERIFY((obj != NULL) && (vector_getsize(&obj->fds) > 0)))
     {
         obj->revents = 0;
         err = poll((struct pollfd *)vector_getval(&obj->fds, 0),
@@ -236,16 +215,12 @@ bool fionpoll_poll(struct fionobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 uint32_t fionpoll_getevents(struct fionobj * const obj, const uint32_t pos)
 {
     uint32_t ret = 0;
     struct pollfd *pfd = NULL;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) &&
-                         (pos < vector_getsize(&obj->fds))) == true)
+    if (UTILDEBUG_VERIFY((obj != NULL) && (pos < vector_getsize(&obj->fds))))
     {
         pfd = (struct pollfd *)vector_getval(&obj->fds, pos);
 
