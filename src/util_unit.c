@@ -233,9 +233,6 @@ static uint64_t utilunit_getsecsprefix(const char * const prefix)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int64_t utilunit_getbitrate(const char * const bitrate)
 {
     int64_t ret = -1;
@@ -261,9 +258,6 @@ int64_t utilunit_getbitrate(const char * const bitrate)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 uint64_t utilunit_getbytes(const char * const bytes)
 {
     uint64_t ret = 0;
@@ -289,9 +283,6 @@ uint64_t utilunit_getbytes(const char * const bytes)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 uint64_t utilunit_getsecs(const char * const secs,
                           const enum unit_prefix_time units)
 {
@@ -324,9 +315,9 @@ uint64_t utilunit_getsecs(const char * const secs,
         ufraction = (units % 1000 == 0 ? true : false);
         sfraction = (scale % 1000 == 0 ? true : false);
 
-        if (sfraction == true)
+        if (sfraction)
         {
-            if (ufraction == true)
+            if (ufraction)
             {
                 ret *= units;
                 ret /= scale;
@@ -339,7 +330,7 @@ uint64_t utilunit_getsecs(const char * const secs,
         }
         else
         {
-            if (ufraction == true)
+            if (ufraction)
             {
                 ret *= scale;
                 ret *= units;
@@ -401,9 +392,6 @@ static char utilunit_getprefixsymbol(const uint64_t prefix)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 void utilunit_getdecformat(const uint64_t base,
                            const uint8_t precision,
                            const uint64_t integer,
