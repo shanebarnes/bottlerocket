@@ -11,15 +11,12 @@
 #include "mutex_obj.h"
 #include "util_debug.h"
 
-/**
- * @see See header file for interface comments.
- */
 bool mutexobj_create(struct mutexobj * const mtx)
 {
     bool ret = false;
     int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY(mtx != NULL) == true)
+    if (UTILDEBUG_VERIFY(mtx != NULL))
     {
         err = pthread_mutex_init(&mtx->obj, NULL);
 
@@ -39,15 +36,12 @@ bool mutexobj_create(struct mutexobj * const mtx)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool mutexobj_destroy(struct mutexobj * const mtx)
 {
     bool ret = false;
     int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY(mtx != NULL) == true)
+    if (UTILDEBUG_VERIFY(mtx != NULL))
     {
         err = pthread_mutex_destroy(&mtx->obj);
 
@@ -67,15 +61,12 @@ bool mutexobj_destroy(struct mutexobj * const mtx)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool mutexobj_lock(struct mutexobj * const mtx)
 {
     bool ret = false;
     int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY(mtx != NULL) == true)
+    if (UTILDEBUG_VERIFY(mtx != NULL))
     {
         err = pthread_mutex_lock(&mtx->obj);
 
@@ -95,14 +86,11 @@ bool mutexobj_lock(struct mutexobj * const mtx)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool mutexobj_trylock(struct mutexobj * const mtx)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(mtx != NULL) == true)
+    if (UTILDEBUG_VERIFY(mtx != NULL))
     {
         if (pthread_mutex_trylock(&mtx->obj) == 0)
         {
@@ -113,15 +101,12 @@ bool mutexobj_trylock(struct mutexobj * const mtx)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool mutexobj_unlock(struct mutexobj * const mtx)
 {
     bool ret = false;
     int32_t err = 0;
 
-    if (UTILDEBUG_VERIFY(mtx != NULL) == true)
+    if (UTILDEBUG_VERIFY(mtx != NULL))
     {
         err = pthread_mutex_unlock(&mtx->obj);
 
