@@ -27,9 +27,6 @@
 static struct threadpool pool;
 static struct args_obj *opts = NULL;
 
-/**
- * @see See header file for interface comments.
- */
 static void *modechat_thread(void * const arg)
 {
     bool exit = false;
@@ -56,7 +53,7 @@ static void *modechat_thread(void * const arg)
     server.conf.type = opts->type;
     server.conf.model = SOCKOBJ_MODEL_SERVER;
 
-    if (UTILDEBUG_VERIFY(tpool != NULL) == false)
+    if (!UTILDEBUG_VERIFY(tpool != NULL))
     {
         // Do nothing.
     }
@@ -75,9 +72,8 @@ static void *modechat_thread(void * const arg)
         UTILMEM_FREE(recvbuf);
         recvbuf = NULL;
     }
-    else if (fionpoll_create(&fion) == false)
+    else if (!fionpoll_create(&fion))
     {
-        // Do nothing.
         UTILMEM_FREE(recvbuf);
         UTILMEM_FREE(sendbuf);
     }
@@ -103,7 +99,7 @@ static void *modechat_thread(void * const arg)
             exit = !sockmod_init(&server);
         }
 
-        while ((exit == false) && (threadpool_isrunning(tpool) == true))
+        while ((!exit) && (threadpool_isrunning(tpool)))
         {
             fion.ops.fion_poll(&fion);
 
@@ -119,7 +115,7 @@ static void *modechat_thread(void * const arg)
                 }
                 else
                 {
-                    if (server.ops.sock_accept(&server, &socket) == true)
+                    if (server.ops.sock_accept(&server, &socket))
                     {
                         logger_printf(LOGGER_LEVEL_DEBUG,
                                       "%s: server accepted connection on %s\n",
@@ -169,8 +165,7 @@ static void *modechat_thread(void * const arg)
 
                 if (recvbytes > 0)
                 {
-                    if ((opts->arch == SOCKOBJ_MODEL_SERVER) &&
-                        (opts->echo == true))
+                    if ((opts->arch == SOCKOBJ_MODEL_SERVER) && (opts->echo))
                     {
                         // @todo Fix for partial-send case.
                         socket.ops.sock_send(&socket, recvbuf, recvbytes);
@@ -223,14 +218,11 @@ static void *modechat_thread(void * const arg)
     return NULL;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool modechat_init(struct args_obj * const args)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(args != NULL) == true)
+    if (UTILDEBUG_VERIFY(args != NULL))
     {
         opts = args;
         ret = true;
@@ -239,24 +231,21 @@ bool modechat_init(struct args_obj * const args)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool modechat_start(void)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(opts != NULL) == false)
+    if (!UTILDEBUG_VERIFY(opts != NULL))
     {
         // Do nothing.
     }
-    else if (threadpool_create(&pool, opts->threads) == false)
+    else if (!threadpool_create(&pool, opts->threads))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to create chat threads\n",
                       __FUNCTION__);
     }
-    else if (threadpool_start(&pool) == false)
+    else if (!threadpool_start(&pool))
     {
         threadpool_destroy(&pool);
         logger_printf(LOGGER_LEVEL_ERROR,
@@ -272,20 +261,17 @@ bool modechat_start(void)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool modechat_stop(void)
 {
     bool ret = false;
 
-    if (threadpool_stop(&pool) == false)
+    if (!threadpool_stop(&pool))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to stop chat threads\n",
                       __FUNCTION__);
     }
-    else if (threadpool_destroy(&pool) == false)
+    else if (!threadpool_destroy(&pool))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to destroy chat threads\n",
@@ -299,9 +285,6 @@ bool modechat_stop(void)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool modechat_cancel(void)
 {
     return threadpool_wake(&pool);
