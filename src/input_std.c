@@ -9,28 +9,20 @@
 
 #include "input_std.h"
 #include "logger.h"
+#include "util_debug.h"
 
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
-/**
- * @see See header file for interface comments.
- */
 int32_t inputstd_recv(void * const buf,
                       const uint32_t len,
                       const int32_t timeoutms)
 {
     int32_t retval = -1;
 
-    if ((buf == NULL) || (len == 0) || (timeoutms != 0))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((buf != NULL) && (len > 0) && (timeoutms == 0)))
     {
         if (fgets((char*)buf, len, stdin) == NULL)
         {
