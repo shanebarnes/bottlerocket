@@ -9,27 +9,19 @@
 
 #include "form_obj.h"
 #include "logger.h"
+#include "util_debug.h"
 #include "util_string.h"
 
 static char spinner [] = {'|', '/', '-', '\\'};
 
-/**
- * @see See header file for interface comments.
- */
 int32_t formobj_idle(struct formobj * const obj)
 {
     int32_t retval = -1;
 
-    if ((obj == NULL) ||
-        (obj->sock == NULL) ||
-        (obj->dstbuf == NULL) ||
-        (obj->dstlen <= 0))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (obj->sock != NULL) &&
+                         (obj->dstbuf != NULL) &&
+                         (obj->dstlen > 0)))
     {
         retval = utilstring_concat(obj->dstbuf,
                                    obj->dstlen,
@@ -47,20 +39,11 @@ int32_t formobj_idle(struct formobj * const obj)
     return retval;
 }
 
-/**
- * @see See header file for interface comments.
- */
 char formobj_spin(struct formobj * const obj)
 {
     char retval = '\0';
 
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
         obj->spincount = (obj->spincount + 1) % sizeof(spinner);
         retval = spinner[obj->spincount];
