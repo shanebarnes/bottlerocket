@@ -17,9 +17,6 @@ const uint32_t utilmath_tab64[64] =
     56, 45, 25, 31, 35, 16,  9, 12, 44, 24, 15,  8, 23,  7,  6,  5
 };
 
-/**
- * @see See header file for interface comments.
- */
 uint32_t utilmath_log2(const uint64_t val)
 {
     uint32_t ret = 0;
