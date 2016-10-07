@@ -18,8 +18,9 @@
 enum args_mode
 {
     ARGS_MODE_NULL = 0x00,
-    ARGS_MODE_PERF = 0x01,
-    ARGS_MODE_CHAT = 0x02
+    ARGS_MODE_CHAT = 0x01,
+    ARGS_MODE_PERF = 0x02,
+    ARGS_MODE_REPT = 0x04
 };
 
 struct args_opts

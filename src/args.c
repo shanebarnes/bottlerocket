@@ -37,26 +37,27 @@ enum argsopt_flag
     ARGS_FLAG_NULL       = 0x000000,
     ARGS_FLAG_CHAT       = 0x000001,
     ARGS_FLAG_PERF       = 0x000002,
-    ARGS_FLAG_IPV4       = 0x000004,
-    ARGS_FLAG_IPV6       = 0x000008,
-    ARGS_FLAG_AFFINITY   = 0x000010,
-    ARGS_FLAG_BIND       = 0x000020,
-    ARGS_FLAG_BANDWIDTH  = 0x000040,
-    ARGS_FLAG_CLIENT     = 0x000080,
-    ARGS_FLAG_ECHO       = 0x000100,
-    ARGS_FLAG_INTERVAL   = 0x000200,
-    ARGS_FLAG_LEN        = 0x000400,
-    ARGS_FLAG_OPTNODELAY = 0x000800,
-    ARGS_FLAG_NUM        = 0x001000,
-    ARGS_FLAG_PARALLEL   = 0x002000,
-    ARGS_FLAG_PORT       = 0x004000,
-    ARGS_FLAG_BACKLOG    = 0x008000,
-    ARGS_FLAG_SERVER     = 0x010000,
-    ARGS_FLAG_THREADS    = 0x020000,
-    ARGS_FLAG_TIME       = 0x040000,
-    ARGS_FLAG_UDP        = 0x080000,
-    ARGS_FLAG_HELP       = 0x100000,
-    ARGS_FLAG_VERSION    = 0x200000
+    ARGS_FLAG_REPT       = 0x000004,
+    ARGS_FLAG_IPV4       = 0x000008,
+    ARGS_FLAG_IPV6       = 0x000010,
+    ARGS_FLAG_AFFINITY   = 0x000020,
+    ARGS_FLAG_BIND       = 0x000040,
+    ARGS_FLAG_BANDWIDTH  = 0x000080,
+    ARGS_FLAG_CLIENT     = 0x000100,
+    ARGS_FLAG_ECHO       = 0x000200,
+    ARGS_FLAG_INTERVAL   = 0x000400,
+    ARGS_FLAG_LEN        = 0x000800,
+    ARGS_FLAG_OPTNODELAY = 0x001000,
+    ARGS_FLAG_NUM        = 0x002000,
+    ARGS_FLAG_PARALLEL   = 0x004000,
+    ARGS_FLAG_PORT       = 0x008000,
+    ARGS_FLAG_BACKLOG    = 0x010000,
+    ARGS_FLAG_SERVER     = 0x020000,
+    ARGS_FLAG_THREADS    = 0x040000,
+    ARGS_FLAG_TIME       = 0x080000,
+    ARGS_FLAG_UDP        = 0x100000,
+    ARGS_FLAG_HELP       = 0x200000,
+    ARGS_FLAG_VERSION    = 0x400000
 };
 
 struct argsopt
@@ -357,7 +358,7 @@ static struct argsopt options[] =
         NULL,
         val_optional,
         arg_optional,
-        ARGS_FLAG_PERF,
+        ARGS_FLAG_PERF | ARGS_FLAG_REPT,
         arg_noobjptr,
         NULL,
         NULL
@@ -371,7 +372,21 @@ static struct argsopt options[] =
         NULL,
         val_optional,
         arg_optional,
-        ARGS_FLAG_CHAT,
+        ARGS_FLAG_CHAT | ARGS_FLAG_REPT,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        "rept",
+        3,
+        "enable repeater mode",
+        "disabled",
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_CHAT | ARGS_FLAG_PERF,
         arg_noobjptr,
         NULL,
         NULL
@@ -937,6 +952,17 @@ static bool args_validate(const char c,
             if (pos == 1)
             {
                 args->mode = ARGS_MODE_PERF;
+            }
+            else
+            {
+                args_usage(stdout);
+                ret = false;
+            }
+            break;
+        case 3:
+            if (pos == 1)
+            {
+                args->mode = ARGS_MODE_REPT;
             }
             else
             {
