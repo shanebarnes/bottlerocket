@@ -12,6 +12,7 @@
 #include "mode_chat.h"
 #include "mode_obj.h"
 #include "mode_perf.h"
+#include "mode_rept.h"
 #include "output_if_instance.h"
 #include "output_if_std.h"
 #include "system_types.h"
@@ -80,7 +81,7 @@ void signal_handler(int signum)
  */
 int32_t main(int argc, char **argv)
 {
-    int32_t retval = EXIT_SUCCESS;
+    int32_t ret = EXIT_SUCCESS;
     struct output_if_ops output_if;
     struct args_obj args;
 
@@ -103,31 +104,48 @@ int32_t main(int argc, char **argv)
 
     if (args_parse(argc, argv, &args) == false)
     {
-        retval = EXIT_FAILURE;
+        ret = EXIT_FAILURE;
     }
     else
     {
-        if (args.mode == ARGS_MODE_CHAT)
+        switch (args.mode)
         {
-            mode.ops.mode_init = modechat_init;
-            mode.ops.mode_start = modechat_start;
-            mode.ops.mode_stop = modechat_stop;
-            mode.ops.mode_cancel = modechat_cancel;
-        }
-        else if (args.mode == ARGS_MODE_PERF)
-        {
-            mode.ops.mode_init = modeperf_init;
-            mode.ops.mode_start = modeperf_start;
-            mode.ops.mode_stop = modeperf_stop;
-            mode.ops.mode_cancel = modeperf_cancel;
+            case ARGS_MODE_CHAT:
+                mode.ops.mode_init = modechat_init;
+                mode.ops.mode_start = modechat_start;
+                mode.ops.mode_stop = modechat_stop;
+                mode.ops.mode_cancel = modechat_cancel;
+                break;
+            case ARGS_MODE_PERF:
+                mode.ops.mode_init = modeperf_init;
+                mode.ops.mode_start = modeperf_start;
+                mode.ops.mode_stop = modeperf_stop;
+                mode.ops.mode_cancel = modeperf_cancel;
+                break;
+            case ARGS_MODE_REPT:
+                mode.ops.mode_init = moderept_init;
+                mode.ops.mode_start = moderept_start;
+                mode.ops.mode_stop = moderept_stop;
+                mode.ops.mode_cancel = moderept_cancel;
+                break;
+            default:
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: unsupported mode of operation (%u)\n",
+                              __FUNCTION__,
+                              args.mode);
+                ret = EXIT_FAILURE;
+                break;
         }
 
-        mode.ops.mode_init(&args);
-        mode.ops.mode_start();
-        mode.ops.mode_stop();
+        if (ret == EXIT_SUCCESS)
+        {
+            mode.ops.mode_init(&args);
+            mode.ops.mode_start();
+            mode.ops.mode_stop();
+        }
     }
 
     logger_destroy();
 
-    return retval;
+    return ret;
 }
