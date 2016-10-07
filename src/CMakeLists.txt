@@ -9,8 +9,9 @@ set(BRLIB_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/input_std.c
     ${CMAKE_CURRENT_SOURCE_DIR}/logger.c
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_chat.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/mode_perf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/mutex_obj.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/mode_perf.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/mode_rept.c
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_std.c
     ${CMAKE_CURRENT_SOURCE_DIR}/rwlock_obj.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sock_con.c

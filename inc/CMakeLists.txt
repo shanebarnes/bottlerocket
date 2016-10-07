@@ -13,6 +13,7 @@ set(BRLIB_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_chat.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_obj.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mode_perf.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/mode_rept.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mutex_obj.h
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/output_if_std.h
