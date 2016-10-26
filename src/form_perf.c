@@ -56,7 +56,7 @@ int32_t formperf_head(struct formobj * const obj)
         retval = utilstring_concat(obj->dstbuf,
                                    obj->dstlen,
                                    "rwin: %sB, swin: %sB\n"
-                                   "%6s %21s   %-21s %17s %27s %25s %11s %17s\n",
+                                   "%9s %21s   %-21s %17s %27s %25s %11s %17s\n",
                                    recvwin,
                                    sendwin,
                                    "Con ID",
@@ -212,7 +212,7 @@ int32_t formperf_body(struct formobj * const obj)
 
             retval = utilstring_concat(obj->dstbuf,
                                        obj->dstlen,
-                                       "[%4u] "
+                                       "[%2u:%-4u] "
                                        "%21s > %-21s "
                                        "%3u%% "
                                        "[%.*s%.*s] "
@@ -222,7 +222,8 @@ int32_t formperf_body(struct formobj * const obj)
                                        "%9sB | "
                                        "%9s | "
                                        "%02u:%02u:%02u:%02u.%03u\r",
-                                       obj->sock->id,
+                                       obj->sock->tid,
+                                       obj->sock->sid,
                                        client,
                                        server,
                                        progress,
