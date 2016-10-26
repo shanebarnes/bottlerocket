@@ -62,16 +62,13 @@ static int32_t sockudp_getmaxmsgsize(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockudp_create(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(obj != NULL) == true)
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
-        if (sockobj_create(obj) == true)
+        if (sockobj_create(obj))
         {
             obj->ops.sock_create   = sockudp_create;
             obj->ops.sock_destroy  = sockudp_destroy;
@@ -96,15 +93,11 @@ bool sockudp_create(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockudp_destroy(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) &&
-                         (obj->conf.type == SOCK_DGRAM)) == true)
+    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->conf.type == SOCK_DGRAM)))
     {
         if (obj->state & SOCKOBJ_STATE_LISTEN)
         {
@@ -119,32 +112,28 @@ bool sockudp_destroy(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
 {
     bool ret = false;
 
     // @todo SO_REUSEPORT could be used on kernels that support its use.
 
-    if (UTILDEBUG_VERIFY((obj != NULL) &&
-                         (obj->conf.type == SOCK_DGRAM)) == false)
+    if (!UTILDEBUG_VERIFY((obj != NULL) && (obj->conf.type == SOCK_DGRAM)))
     {
         // Do nothing.
     }
-    else if (sockcon_create(&con) == false)
+    else if (!sockcon_create(&con))
     {
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: failed to create listener\n",
                       __FUNCTION__);
     }
-    else if (sockcon_listen(&con, obj, backlog) == true)
+    else if (sockcon_listen(&con, obj, backlog))
     {
         logger_printf(LOGGER_LEVEL_INFO,
                       "%s: socket %u listening with a backlog of %d\n",
                       __FUNCTION__,
-                      obj->id,
+                      obj->sid,
                       backlog);
         obj->state |= SOCKOBJ_STATE_LISTEN;
         sockobj_getaddrself(obj);
@@ -168,9 +157,6 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockudp_accept(struct sockobj * const listener,
                     struct sockobj * const obj)
 {
@@ -182,7 +168,7 @@ bool sockudp_accept(struct sockobj * const listener,
 
     if (UTILDEBUG_VERIFY((listener != NULL) &&
                          (listener->conf.type == SOCK_DGRAM) &&
-                         (obj != NULL)) == true)
+                         (obj != NULL)))
     {
         // @todo If timeout is -1 (blocking), then the poll should occur in a
         //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
@@ -192,21 +178,21 @@ bool sockudp_accept(struct sockobj * const listener,
         {
             ts = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
-            if (sockudp_create(obj) == false)
+            if (!sockudp_create(obj))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u accept initialization failed\n",
                               __FUNCTION__,
-                              obj->id);
+                              obj->sid);
             }
             else if (((obj->fd = fd) != fd) ||
-                     (obj->event.ops.fion_insertfd(&obj->event, fd) == false) ||
-                     (obj->event.ops.fion_setflags(&obj->event) == false))
+                     (!obj->event.ops.fion_insertfd(&obj->event, fd)) ||
+                     (!obj->event.ops.fion_setflags(&obj->event)))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u fd clone failed\n",
                               __FUNCTION__,
-                              obj->id);
+                              obj->sid);
             }
             else if (memcpy(&obj->conf,
                             &listener->conf,
@@ -215,14 +201,14 @@ bool sockudp_accept(struct sockobj * const listener,
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u configuration clone failed\n",
                               __FUNCTION__,
-                              obj->id);
+                              obj->sid);
             }
-            //else if (sockobj_getaddrself(listener) == false) // this requires that a datagram has been sent (zero payload handshaking?)
+            //else if (!sockobj_getaddrself(listener)) // this requires that a datagram has been sent (zero payload handshaking?)
             //{
             //    logger_printf(LOGGER_LEVEL_ERROR,
             //                  "%s: socket %u self information is unavailable\n",
             //                  __FUNCTION__,
-            //                  obj->id);
+            //                  obj->sid);
             //}
             else
             {
@@ -232,7 +218,7 @@ bool sockudp_accept(struct sockobj * const listener,
 
                 logger_printf(LOGGER_LEVEL_TRACE,
                               "%s: new socket %u accepted on %s from %s\n",
-                              obj->id,
+                              obj->sid,
                               obj->addrself.sockaddrstr,
                               obj->addrpeer.sockaddrstr);
 
@@ -265,16 +251,13 @@ bool sockudp_accept(struct sockobj * const listener,
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockudp_connect(struct sockobj * const obj)
 {
     bool ret = false;
 
     if (UTILDEBUG_VERIFY((obj != NULL) &&
                          (obj->conf.type == SOCK_DGRAM) &&
-                         (obj->state == SOCKOBJ_STATE_OPEN)) == true)
+                         (obj->state == SOCKOBJ_STATE_OPEN)))
     {
         if (obj->info.startusec == 0)
         {
@@ -291,7 +274,7 @@ bool sockudp_connect(struct sockobj * const obj)
         // socket family set AF_UNSPEC.
         if (connect(obj->fd,
                     (struct sockaddr*)&obj->addrpeer.sockaddr,
-                    obj->addrpeer.socklen) == 0)
+                    obj->addrpeer.addrlen) == 0)
         {
             obj->state |= SOCKOBJ_STATE_CONNECT;
 
@@ -309,7 +292,7 @@ bool sockudp_connect(struct sockobj * const obj)
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: socket %u connect error (%d)\n",
                           __FUNCTION__,
-                          obj->id,
+                          obj->sid,
                           errno);
         }
     }
@@ -317,9 +300,6 @@ bool sockudp_connect(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t sockudp_recv(struct sockobj * const obj,
                      void * const buf,
                      const uint32_t len)
@@ -329,7 +309,7 @@ int32_t sockudp_recv(struct sockobj * const obj,
     socklen_t  socklen = 0;
     uint16_t  *port    = NULL;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) && (buf != NULL)) == true)
+    if (UTILDEBUG_VERIFY((obj != NULL) && (buf != NULL)))
     {
         if (obj->state & SOCKOBJ_STATE_CONNECT)
         {
@@ -368,19 +348,19 @@ int32_t sockudp_recv(struct sockobj * const obj,
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %u received %d bytes from %s:%u\n",
                           __FUNCTION__,
-                          obj->id,
+                          obj->sid,
                           ret,
                           obj->addrpeer.ipaddr,
                           obj->addrpeer.ipport);
         }
         else if (ret < 0)
         {
-            if (sockobj_iserrfatal(errno) == true)
+            if (sockobj_iserrfatal(errno))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               errno);
                 ret = -1;
             }
@@ -389,14 +369,14 @@ int32_t sockudp_recv(struct sockobj * const obj,
                 logger_printf(LOGGER_LEVEL_TRACE,
                               "%s: socket %u non-fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               errno);
                 ret = 0;
             }
 
             if (ret == 0)
             {
-                if (obj->event.ops.fion_poll(&obj->event) == false)
+                if (!obj->event.ops.fion_poll(&obj->event))
                 {
                     ret = -1;
                 }
@@ -416,9 +396,6 @@ int32_t sockudp_recv(struct sockobj * const obj,
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t sockudp_send(struct sockobj * const obj,
                      void * const buf,
                      const uint32_t len)
@@ -429,7 +406,7 @@ int32_t sockudp_send(struct sockobj * const obj,
     flags |= MSG_NOSIGNAL;
 #endif
 
-    if (UTILDEBUG_VERIFY((obj != NULL) && (buf != NULL)) == true)
+    if (UTILDEBUG_VERIFY((obj != NULL) && (buf != NULL)))
     {
         if (obj->state & SOCKOBJ_STATE_CONNECT)
         {
@@ -454,7 +431,7 @@ int32_t sockudp_send(struct sockobj * const obj,
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %u sent %d bytes\n",
                           __FUNCTION__,
-                          obj->id,
+                          obj->sid,
                           ret);
         }
         else
@@ -469,12 +446,12 @@ int32_t sockudp_send(struct sockobj * const obj,
                               sockudp_getmaxmsgsize(obj));
                 ret = -1;
             }
-            else if (sockobj_iserrfatal(errno) == true)
+            else if (sockobj_iserrfatal(errno))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               errno);
                 ret = -1;
             }
@@ -483,14 +460,14 @@ int32_t sockudp_send(struct sockobj * const obj,
                 logger_printf(LOGGER_LEVEL_TRACE,
                               "%s: socket %u non-fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               errno);
                 ret = 0;
             }
 
             if (ret == 0)
             {
-                if (obj->event.ops.fion_poll(&obj->event) == false)
+                if (!obj->event.ops.fion_poll(&obj->event))
                 {
                     ret = -1;
                 }
@@ -510,7 +487,7 @@ int32_t sockudp_send(struct sockobj * const obj,
                         logger_printf(LOGGER_LEVEL_TRACE,
                                       "%s: socket %u received %d bytes\n",
                                       __FUNCTION__,
-                                      obj->id,
+                                      obj->sid,
                                       ret);
                     }
                     else
@@ -525,14 +502,11 @@ int32_t sockudp_send(struct sockobj * const obj,
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockudp_shutdown(struct sockobj * const obj, const int32_t how)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(obj != NULL) == true)
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
         switch (how)
         {
