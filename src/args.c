@@ -7,6 +7,7 @@
  *            This project is released under the MIT license.
  */
 
+#include "arg_obj.h"
 #include "args.h"
 #include "logger.h"
 #include "util_debug.h"
@@ -14,344 +15,82 @@
 #include "util_math.h"
 #include "util_string.h"
 #include "util_sysctl.h"
-#include "util_unit.h"
 #include "version.h"
 
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
+#define ARG_ACTIVE   true
+#define ARG_INACTIVE false
 #define arg_noobjptr NULL
 #define arg_optional true
 #define arg_required false
 #define val_optional true
 #define val_required false
 
+struct argsmap
+{
+    uint64_t  keys;
+    char     *key[64];
+    char     *vals[64];
+    bool      val[64];
+};
+
+enum argsobj_flag
+{
+    ARGS_FLAG_NULL       = 0LL,
+    ARGS_FLAG_CHAT       = 1LL << ('0' - '0' +  1),
+    ARGS_FLAG_PERF       = 1LL << ('1' - '0' +  1),
+    ARGS_FLAG_REPT       = 1LL << ('2' - '0' +  1),
+    ARGS_FLAG_IPV4       = 1LL << ('4' - '0' +  1),
+    ARGS_FLAG_IPV6       = 1LL << ('6' - '0' +  1),
+    ARGS_FLAG_AFFINITY   = 1LL << ('A' - 'A' + 11),
+    ARGS_FLAG_BIND       = 1LL << ('B' - 'A' + 11),
+    ARGS_FLAG_BANDWIDTH  = 1LL << ('b' - 'a' + 37),
+    ARGS_FLAG_CLIENT     = 1LL << ('c' - 'a' + 37),
+    ARGS_FLAG_ECHO       = 1LL << ('e' - 'a' + 37),
+    ARGS_FLAG_INTERVAL   = 1LL << ('i' - 'a' + 37),
+    ARGS_FLAG_LEN        = 1LL << ('l' - 'a' + 37),
+    ARGS_FLAG_OPTNODELAY = 1LL << ('N' - 'A' + 11),
+    ARGS_FLAG_NUM        = 1LL << ('n' - 'a' + 37),
+    ARGS_FLAG_PARALLEL   = 1LL << ('P' - 'A' + 11),
+    ARGS_FLAG_PORT       = 1LL << ('p' - 'a' + 37),
+    ARGS_FLAG_BACKLOG    = 1LL << ('q' - 'a' + 37),
+    ARGS_FLAG_SERVER     = 1LL << ('s' - 'a' + 37),
+    ARGS_FLAG_THREADS    = 1LL << ('T' - 'A' + 11),
+    ARGS_FLAG_TIME       = 1LL << ('t' - 'a' + 37),
+    ARGS_FLAG_UDP        = 1LL << ('u' - 'a' + 37),
+    ARGS_FLAG_HELP       = 1LL << ('h' - 'a' + 37),
+    ARGS_FLAG_VERSION    = 1LL << ('v' - 'a' + 37)
+};
+
 static char        str_somaxconn[16];
 static char        str_nproconln[16];
 static const char *prefix_skey = "-";
 static const char *prefix_lkey = "--";
 
-enum argsopt_flag
-{
-    ARGS_FLAG_NULL       = 0x000000,
-    ARGS_FLAG_CHAT       = 0x000001,
-    ARGS_FLAG_PERF       = 0x000002,
-    ARGS_FLAG_REPT       = 0x000004,
-    ARGS_FLAG_IPV4       = 0x000008,
-    ARGS_FLAG_IPV6       = 0x000010,
-    ARGS_FLAG_AFFINITY   = 0x000020,
-    ARGS_FLAG_BIND       = 0x000040,
-    ARGS_FLAG_BANDWIDTH  = 0x000080,
-    ARGS_FLAG_CLIENT     = 0x000100,
-    ARGS_FLAG_ECHO       = 0x000200,
-    ARGS_FLAG_INTERVAL   = 0x000400,
-    ARGS_FLAG_LEN        = 0x000800,
-    ARGS_FLAG_OPTNODELAY = 0x001000,
-    ARGS_FLAG_NUM        = 0x002000,
-    ARGS_FLAG_PARALLEL   = 0x004000,
-    ARGS_FLAG_PORT       = 0x008000,
-    ARGS_FLAG_BACKLOG    = 0x010000,
-    ARGS_FLAG_SERVER     = 0x020000,
-    ARGS_FLAG_THREADS    = 0x040000,
-    ARGS_FLAG_TIME       = 0x080000,
-    ARGS_FLAG_UDP        = 0x100000,
-    ARGS_FLAG_HELP       = 0x200000,
-    ARGS_FLAG_VERSION    = 0x400000
-};
-
-struct argsopt
-{
-    const char      *lname;  // Attribute long name (e.g., --argument)
-    const char       sname;  // Attribute short name (e.g., -a)
-    const char      *desc;   // Description
-    const char      *dval;   // Default value
-    const char      *minval; // Minimum value
-    const char      *maxval; // Maximum value
-    const bool       oval;   // Optional value
-    const bool       oarg;   // Optional attribute
-    const uint64_t   cflags; // Conflict flags (i.e., incompatible options)
-    struct args_obj *args;  // Pointer to current argument values.
-                            // Option copy function pointer
-    bool            (*copy)(const struct argsopt * const opt,
-                            const char * const src,
-                            void * const dst);
-    void            *dest;   // Copy destination.
-};
-
-/**
- * @see
- */
-static bool args_copyipaddr(const struct argsopt * const opt,
-                            const char * const src,
-                            void * const dst)
-{
-    bool ret = false;
-
-    if (UTILDEBUG_VERIFY((opt != NULL) &&
-                         (opt->args != NULL) &&
-                         (src != NULL) &&
-                         (dst != NULL)) == true)
-    {
-        if ((opt->minval != NULL) && (false))
-        {
-            // Do nothing.
-        }
-        else if ((opt->maxval != NULL) && (false))
-        {
-            // Do nothing.
-        }
-        else
-        {
-            ret = utilinet_getaddrfromhost(src,
-                                           opt->args->family,
-                                           dst,
-                                           INET6_ADDRSTRLEN);
-        }
-    }
-
-    return ret;
-}
-
-/**
- * @see
- */
-static bool args_copyuint16(const struct argsopt * const opt,
-                            const char * const src,
-                            void * const dst)
-{
-    bool ret = false;
-    uint32_t max, min, val;
-
-    if (UTILDEBUG_VERIFY((opt != NULL) &&
-                         (src != NULL) &&
-                         (dst != NULL)) == true)
-    {
-        if ((utilstring_parse(src, "%u", &val) == 1))
-        {
-            if ((opt->minval != NULL) &&
-                ((utilstring_parse(opt->minval, "%u", &min) != 1) ||
-                 (val < min)))
-            {
-                // Do nothing.
-            }
-            else if ((opt->maxval != NULL) &&
-                     ((utilstring_parse(opt->maxval, "%u", &max) != 1) ||
-                     (val > max)))
-            {
-                // Do nothing.
-            }
-            else
-            {
-                *(uint16_t*)dst = (uint16_t)val;
-                ret = true;
-            }
-        }
-    }
-
-    return ret;
-}
-
-/**
- * @see
- */
-static bool args_copyint32(const struct argsopt * const opt,
-                           const char * const src,
-                           void * const dst)
-{
-    bool ret = false;
-    int32_t max, min, val;
-
-    if (UTILDEBUG_VERIFY((opt != NULL) &&
-                         (src != NULL) &&
-                         (dst != NULL)) == true)
-    {
-        if ((utilstring_parse(src, "%d", &val) == 1))
-        {
-            if ((opt->minval != NULL) &&
-                ((utilstring_parse(opt->minval, "%d", &min) != 1) ||
-                 (val < min)))
-            {
-                // Do nothing.
-            }
-            else if ((opt->maxval != NULL) &&
-                     ((utilstring_parse(opt->maxval, "%d", &max) != 1) ||
-                     (val > max)))
-            {
-                // Do nothing.
-            }
-            else
-            {
-                *(int32_t*)dst = val;
-                ret = true;
-            }
-        }
-    }
-
-    return ret;
-}
-
-/**
- * @see
- */
-static bool args_copyuint32(const struct argsopt * const opt,
-                            const char * const src,
-                            void * const dst)
-{
-    bool ret = false;
-    uint32_t max, min, val;
-
-    if (UTILDEBUG_VERIFY((opt != NULL) &&
-                         (src != NULL) &&
-                         (dst != NULL)) == true)
-    {
-        if ((utilstring_parse(src, "%u", &val) == 1))
-        {
-            if ((opt->minval != NULL) &&
-                ((utilstring_parse(opt->minval, "%u", &min) != 1) ||
-                 (val < min)))
-            {
-                // Do nothing.
-            }
-            else if ((opt->maxval != NULL) &&
-                     ((utilstring_parse(opt->maxval, "%u", &max) != 1) ||
-                     (val > max)))
-            {
-                // Do nothing.
-            }
-            else
-            {
-                *(uint32_t*)dst = val;
-                ret = true;
-            }
-        }
-    }
-
-    return ret;
-}
-
-/**
- * @see
- */
-static bool args_copyrateunit(const struct argsopt * const opt,
-                              const char * const src,
-                              void  * const dst)
-{
-    bool ret = false;
-    int64_t max, min, val;
-
-    if (UTILDEBUG_VERIFY((opt != NULL) &&
-                         (src != NULL) &&
-                         (dst != NULL)) == true)
-    {
-        if ((val = utilunit_getbitrate(src)) >= 0)
-        {
-            if ((opt->minval != NULL) &&
-                (((min = utilunit_getbitrate(opt->minval)) < 0) ||
-                 (val < min)))
-            {
-                // Do nothing.
-            }
-            else if ((opt->maxval != NULL) &&
-                     (((max = utilunit_getbitrate(opt->maxval)) < 0) ||
-                      (val > max)))
-            {
-                // Do nothing.
-            }
-            else
-            {
-                *(uint64_t*)dst = (uint64_t)val;
-                ret = true;
-            }
-        }
-    }
-
-    return ret;
-}
-
-/**
- * @see
- */
-static bool args_copybyteunit(const struct argsopt * const opt,
-                              const char * const src,
-                              void * const dst)
-{
-    bool ret = false;
-    uint64_t max, min, val;
-
-    if (UTILDEBUG_VERIFY((opt != NULL) &&
-                         (src != NULL) &&
-                         (dst != NULL)) == true)
-    {
-        if ((val = utilunit_getbytes(src)) > 0)
-        {
-            if ((opt->minval != NULL) &&
-                (((min = utilunit_getbytes(opt->minval)) == 0) ||
-                 (val < min)))
-            {
-                // Do nothing.
-            }
-            else if ((opt->maxval != NULL) &&
-                    (((max = utilunit_getbytes(opt->maxval)) == 0) ||
-                     (val > max)))
-            {
-                // Do nothing.
-            }
-            else
-            {
-                *(uint64_t*)dst = val;
-                ret = true;
-            }
-        }
-    }
-
-    return ret;
-}
-
-/**
- * @see
- */
-static bool args_copytimeunit(const struct argsopt * const opt,
-                              const char * const src,
-                              void * const dst)
-{
-    bool ret = false;
-    uint64_t max, min, val;
-
-    if (UTILDEBUG_VERIFY((opt != NULL) &&
-                         (src != NULL) &&
-                         (dst != NULL)) == true)
-    {
-        if ((val = utilunit_getsecs(src, UNIT_TIME_USEC)) > 0)
-        {
-            if ((opt->minval != NULL) &&
-                (((min = utilunit_getsecs(opt->minval, UNIT_TIME_USEC)) == 0) ||
-                 (val < min)))
-            {
-                // Do nothing.
-            }
-            else if ((opt->maxval != NULL) &&
-                    (((max = utilunit_getsecs(opt->maxval, UNIT_TIME_USEC)) == 0) ||
-                     (val > max)))
-            {
-                // Do nothing.
-            }
-            else
-            {
-                *(uint64_t*)dst = val;
-                ret = true;
-            }
-        }
-    }
-
-    return ret;
-}
-
-static struct argsopt options[] =
+static struct argobj options[] =
 {
     {
+        ARG_INACTIVE,
+        "",
+        '\0',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
         "chat",
-        1,
+        '0',
         "enable chat mode",
         "disabled",
         NULL,
@@ -364,8 +103,9 @@ static struct argsopt options[] =
         NULL
     },
     {
+        ARG_ACTIVE,
         "perf",
-        2,
+        '1',
         "enable performance benchmarking mode",
         "enabled",
         NULL,
@@ -378,8 +118,9 @@ static struct argsopt options[] =
         NULL
     },
     {
+        ARG_ACTIVE,
         "rept",
-        3,
+        '2',
         "enable repeater mode",
         "disabled",
         NULL,
@@ -392,6 +133,22 @@ static struct argsopt options[] =
         NULL
     },
     {
+        ARG_INACTIVE,
+        "",
+        '3',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
         "--ipv4",
         '4',
         "only use IPv4",
@@ -406,6 +163,22 @@ static struct argsopt options[] =
         NULL
     },
     {
+        ARG_INACTIVE,
+        "",
+        '5',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
         "--ipv6",
         '6',
         "only use IPv6",
@@ -420,6 +193,52 @@ static struct argsopt options[] =
         NULL
     },
     {
+        ARG_INACTIVE,
+        "",
+        '7',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        '8',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        '9',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
         "--affinity",
         'A',
         "set CPU affinity",
@@ -430,10 +249,11 @@ static struct argsopt options[] =
         arg_optional,
         ARGS_FLAG_NULL,
         arg_noobjptr,
-        args_copyuint16,
+        argobj_copyuint16,
         NULL
     },
     {
+        ARG_ACTIVE,
         "--bind",
         'B',
         "bind to a specific socket address",
@@ -444,80 +264,176 @@ static struct argsopt options[] =
         arg_optional,
         ARGS_FLAG_SERVER,
         arg_noobjptr,
-        args_copyuint16,
+        argobj_copyuint16,
         NULL
     },
     {
-        "--bandwidth",
-        'b',
-        "target bandwidth in bits per second",
-        "0bps",
-        "0bps",
-        "999Ebps",
-        val_required,
-        arg_optional,
-        ARGS_FLAG_NULL,
-        arg_noobjptr,
-        args_copyrateunit,
-        NULL
-    },
-    {
-        "--client",
-        'c',
-        "run as a client",
-        "127.0.0.1",
+        ARG_INACTIVE,
+        "",
+        'C',
         NULL,
         NULL,
-        val_optional,
-        arg_required,
-        ARGS_FLAG_SERVER,
-        arg_noobjptr,
-        args_copyipaddr,
-        NULL
-    },
-    {
-        "--echo",
-        'e',
-        "echo reception back to client",
-        "disabled",
         NULL,
         NULL,
         val_optional,
         arg_optional,
-        ARGS_FLAG_CLIENT,
+        ARGS_FLAG_NULL,
         arg_noobjptr,
         NULL,
         NULL
     },
     {
-        "--interval",
-        'i',
-        "time between periodic bandwidth reports",
-        "1s",
-        "100ms",
-        "1000y",
-        val_required,
+        ARG_INACTIVE,
+        "",
+        'D',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
         arg_optional,
         ARGS_FLAG_NULL,
         arg_noobjptr,
-        args_copytimeunit,
+        NULL,
         NULL
     },
     {
-        "--len",
-        'l',
-        "length of buffer to read or write",
-        "128kB",
-        "1",
-        "10MB",
-        val_required,
+        ARG_INACTIVE,
+        "",
+        'E',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
         arg_optional,
         ARGS_FLAG_NULL,
         arg_noobjptr,
-        args_copybyteunit,
+        NULL,
         NULL
     },
     {
+        ARG_INACTIVE,
+        "",
+        'F',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'G',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'H',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'I',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'J',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'K',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'L',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'M',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
         "--nodelay",
         'N',
         "set TCP no delay (disable Nagle's algorithm)",
@@ -532,20 +448,22 @@ static struct argsopt options[] =
         NULL
     },
     {
-        "--num",
-        'n',
-        "number of bytes to send or receive",
-        "1MB",
-        "1B",
-        "999EB",
-        val_required,
+        ARG_INACTIVE,
+        "",
+        'O',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
         arg_optional,
-        ARGS_FLAG_TIME,
+        ARGS_FLAG_NULL,
         arg_noobjptr,
-        args_copybyteunit,
+        NULL,
         NULL
     },
     {
+        ARG_ACTIVE,
         "--parallel",
         'P',
         "maximum number of concurrent connections",
@@ -556,52 +474,56 @@ static struct argsopt options[] =
         arg_optional,
         ARGS_FLAG_NULL,
         arg_noobjptr,
-        args_copyuint32,
+        argobj_copyuint32,
         NULL
     },
     {
-        "--port",
-        'p',
-        "server port to listen on or connect to",
-        "5001",
-        "0",
-        "65535",
-        val_required,
-        arg_optional,
-        ARGS_FLAG_NULL,
-        arg_noobjptr,
-        args_copyuint16,
-        NULL
-    },
-    {
-        "--backlog",
-        'q',
-        "client or server backlog queue length",
-        str_somaxconn,
-        "0",
-        str_somaxconn,
-        val_required,
-        arg_optional,
-        ARGS_FLAG_NULL,
-        arg_noobjptr,
-        args_copyint32,
-        NULL
-    },
-    {
-        "--server",
-        's',
-        "run as a server",
-        "0.0.0.0",
+        ARG_INACTIVE,
+        "",
+        'Q',
+        NULL,
+        NULL,
         NULL,
         NULL,
         val_optional,
-        arg_required,
-        ARGS_FLAG_CLIENT,
+        arg_optional,
+        ARGS_FLAG_NULL,
         arg_noobjptr,
-        args_copyipaddr,
+        NULL,
         NULL
     },
     {
+        ARG_INACTIVE,
+        "",
+        'R',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'S',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
         "--threads",
         'T',
         "number of threads to use",
@@ -612,38 +534,206 @@ static struct argsopt options[] =
         arg_optional,
         ARGS_FLAG_CHAT,
         arg_noobjptr,
-        args_copyuint32,
+        argobj_copyuint32,
         NULL
     },
     {
-        "--time",
-        't',
-        "maximum time duration to send data",
-        "0s",
-        "0s",
-        "1000y",
+        ARG_INACTIVE,
+        "",
+        'U',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'V',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'W',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'X',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'Y',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'Z',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'a',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
+        "--bandwidth",
+        'b',
+        "target bandwidth in bits per second",
+        "0bps",
+        "0bps",
+        "999Ebps",
         val_required,
         arg_optional,
-        ARGS_FLAG_NUM,
+        ARGS_FLAG_NULL,
         arg_noobjptr,
-        args_copytimeunit,
+        argobj_copyrateunit,
         NULL
     },
     {
-        "--udp",
-        'u',
-        "use UDP sockets instead of TCP sockets",
+        ARG_ACTIVE,
+        "--client",
+        'c',
+        "run as a client",
+        "127.0.0.1",
+        NULL,
+        NULL,
+        val_optional,
+        arg_required,
+        ARGS_FLAG_SERVER,
+        arg_noobjptr,
+        argobj_copyipaddr,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'd',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
+        "--echo",
+        'e',
+        "echo reception back to client",
         "disabled",
         NULL,
         NULL,
         val_optional,
         arg_optional,
-        ARGS_FLAG_OPTNODELAY,
+        ARGS_FLAG_CLIENT,
         arg_noobjptr,
         NULL,
         NULL
     },
     {
+        ARG_INACTIVE,
+        "",
+        'f',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'g',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
         "--help",
         'h',
         "print help information and quit",
@@ -658,9 +748,265 @@ static struct argsopt options[] =
         NULL
     },
     {
+        ARG_ACTIVE,
+        "--interval",
+        'i',
+        "time between periodic bandwidth reports",
+        "1s",
+        "100ms",
+        "1000y",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        argobj_copytimeunit,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'j',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'k',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
+        "--len",
+        'l',
+        "length of buffer to read or write",
+        "128kB",
+        "1",
+        "10MB",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        argobj_copybyteunit,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'm',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
+        "--num",
+        'n',
+        "number of bytes to send or receive",
+        "1MB",
+        "1B",
+        "999EB",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_TIME,
+        arg_noobjptr,
+        argobj_copybyteunit,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'o',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
+        "--port",
+        'p',
+        "server port to listen on or connect to",
+        "5001",
+        "0",
+        "65535",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        argobj_copyuint16,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
+        "--backlog",
+        'q',
+        "client or server backlog queue length",
+        str_somaxconn,
+        "0",
+        str_somaxconn,
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        argobj_copyint32,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'r',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
+        "--server",
+        's',
+        "run as a server",
+        "0.0.0.0",
+        NULL,
+        NULL,
+        val_optional,
+        arg_required,
+        ARGS_FLAG_CLIENT,
+        arg_noobjptr,
+        argobj_copyipaddr,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
+        "--time",
+        't',
+        "maximum time duration to send data",
+        "0s",
+        "0s",
+        "1000y",
+        val_required,
+        arg_optional,
+        ARGS_FLAG_NUM,
+        arg_noobjptr,
+        argobj_copytimeunit,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
+        "--udp",
+        'u',
+        "use UDP sockets instead of TCP sockets",
+        "disabled",
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_OPTNODELAY,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_ACTIVE,
         "--version",
         'v',
         "print version information and quit",
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'w',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'x',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'y',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        val_optional,
+        arg_optional,
+        ARGS_FLAG_NULL,
+        arg_noobjptr,
+        NULL,
+        NULL
+    },
+    {
+        ARG_INACTIVE,
+        "",
+        'z',
+        NULL,
         NULL,
         NULL,
         NULL,
@@ -686,16 +1032,19 @@ static void args_usage(FILE * const stream)
 
     fprintf(stream, "\nusage: bottlerocket [options]\n\n");
 
-    for (i = 0; i < sizeof(options) / sizeof(struct argsopt); i++)
+    for (i = 0; i < sizeof(options) / sizeof(struct argobj); i++)
     {
-        fprintf(stream,
-                "  %s%c%s %-11s %-50s %s\n",
-                options[i].sname >= '0' ? prefix_skey : " ",
-                options[i].sname >= '0' ? options[i].sname : ' ',
-                options[i].sname >= '0' ? "," : " ",
-                options[i].lname,
-                options[i].desc,
-                options[i].dval == NULL ? "" : options[i].dval);
+        if (options[i].status == ARG_ACTIVE)
+        {
+            fprintf(stream,
+                    "  %s%c%s %-11s %-50s %s\n",
+                    options[i].sname >= '4' ? prefix_skey : " ",
+                    options[i].sname >= '4' ? options[i].sname : ' ',
+                    options[i].sname >= '4' ? "," : " ",
+                    options[i].lname,
+                    options[i].desc,
+                    options[i].dval == NULL ? "" : options[i].dval);
+        }
     }
 
     fprintf(stream, "\n");
@@ -705,153 +1054,121 @@ static void args_usage(FILE * const stream)
  * @brief Get an argument (i.e., key-value pair) from an argument vector and map
  *        it to a bottlerocket argument element.
  *
- * @param[in]     argc An argument count.
- * @param[in]     argv An argument vector.
- * @param[in,out] argi A pointer to an argument vector index.
- * @param[in,out] mask A pointer to an options mask.
+ * @param[in]     argc  An argument count.
+ * @param[in]     argv  An argument vector.
+ * @param[in,out] argi  A pointer to an argument vector index.
+ * @param[in,out] flags A pointer to argument flags.
  *
- * @return A character representing the unique bottlerocket argument element (0
- *         on error).
+ * @return A flag representing the unique bottlerocket argument element
+ *         (ARGS_FLAG_NULL on error).
  */
-static char args_getarg(const int32_t argc,
+static bool args_getarg(const uint32_t argc,
                         char ** const argv,
-                        int32_t *argi,
-                        uint64_t *mask)
+                        struct argsmap * const map)
 {
-    char ret = 0, c;
+    bool ret = true;
+    uint64_t flag = ARGS_FLAG_NULL;
     char *name = NULL;
-    uint64_t flag;
-    uint32_t i;
+    uint32_t i, j;
+    char c;
 
-    if (UTILDEBUG_VERIFY((argv != NULL) &&
-                         (argi != NULL) &&
-                         (mask != NULL)) == true)
+    if (UTILDEBUG_VERIFY((argv != NULL) && (map != NULL)))
     {
-        for (i = 0; i < sizeof(options) / sizeof(struct argsopt); i++)
+        for (i = 1; ret && (i < argc); i++)
         {
-            if (utilstring_parse(argv[*argi], "-%c", &c) == 1)
+            flag = ARGS_FLAG_NULL;
+            name = NULL;
+
+            for (j = 0; j < sizeof(options) / sizeof(struct argobj); j++)
             {
-                // Short names are case-sensitive.
-                if (c == options[i].sname)
+                if (utilstring_parse(argv[i], "-%c", &c) == 1)
                 {
-                    ret = c;
-                    name = argv[*argi];
+                    // Short names are case-sensitive.
+                    if (c == options[j].sname)
+                    {
+                        flag = 1LL << j;
+                        name = argv[i];
+                        break;
+                    }
+                }
+
+                // Long names are not-case sensitive.
+                if (utilstring_compare(argv[i], options[j].lname, 0, true))
+                {
+                    flag = 1LL << j;
+                    name = argv[i];
                     break;
                 }
             }
 
-            // Long names are not-case sensitive.
-            if (utilstring_compare(argv[*argi],
-                                   options[i].lname,
-                                   0,
-                                   true) == true)
+            if (flag == ARGS_FLAG_NULL)
             {
-                ret = options[i].sname;
-                name = argv[*argi];
-                break;
+                fprintf(stderr, "\nunknown option '%s'\n", name);
+                ret = false;
             }
-        }
-
-        if (ret == 0)
-        {
-            fprintf(stderr, "\nunknown option '%s'\n", name);
-        }
-        else if (((flag = (1 << i)) == 0) ||
-                 (*mask & flag) ||
-                 ((*mask = *mask | flag) == 0))
-        {
-            fprintf(stderr, "\nduplicate option '%s'\n", name);
-            ret = 0;
-        }
-        else if ((options[i].cflags & *mask) != 0)
-        {
-             fprintf(stderr, "\nincompatible option '%s'\n", name);
-             ret = 0;
-        }
-        else if (options[i].dval == NULL)
-        {
-            // Do nothing.
-        }
-        else if (options[i].copy == NULL)
-        {
-            // Do nothing.
-        }
-        // If an argument attribute name was found, then check the next array
-        // index for the argument attribute value if a value is expected (i.e.,
-        // default value is not null).
-        else if ((*argi + 1) < argc)
-        {
-            // The argument attribute value cannot start with either a short- or
-            // long-key prefix.
-            if ((utilstring_compare(argv[*argi+1],
-                                    prefix_skey,
-                                    strlen(prefix_skey), true) == false) &&
-                (utilstring_compare(argv[*argi+1],
-                                    prefix_lkey,
-                                    strlen(prefix_lkey), true) == false))
+            else if ((map->keys & flag) || ((map->keys = map->keys | flag) == 0))
             {
-                (*argi)++;
-
-                if (options[i].copy(&options[i],
-                                    argv[*argi],
-                                    options[i].dest) == false)
+                fprintf(stderr, "\nduplicate option '%s'\n", name);
+                ret = false;
+            }
+            else if ((options[j].cflags & map->keys) != 0)
+            {
+                 fprintf(stderr, "\nincompatible option '%s'\n", name);
+                 ret = false;
+            }
+            else if (options[j].dval == NULL)
+            {
+                // Do nothing.
+            }
+            else if (options[j].copy == NULL)
+            {
+                // Do nothing.
+            }
+            // If an argument attribute name was found, then check the next
+            // array index for the argument attribute value if a value is
+            // expected (i.e., default value is not null).
+            else if ((i + 1) < argc)
+            {
+                // The argument attribute value cannot start with either a
+                // short- or long-key prefix.
+                if ((!utilstring_compare(argv[i+1],
+                                         prefix_skey,
+                                         strlen(prefix_skey), true)) &&
+                    (!utilstring_compare(argv[i+1],
+                                         prefix_lkey,
+                                         strlen(prefix_lkey), true)))
                 {
-                    fprintf(stderr,
-                            "\ninvalid option '%s %s' (limits: [%s, %s])\n",
-                            name,
-                            argv[*argi],
-                            options[i].minval,
-                            options[i].maxval);
-                    ret = 0;
+                    map->key[j] = name;
+                    map->vals[j] = argv[i+1];
+                    i++;
+                }
+                else
+                {
+                    if (options[j].oval == val_required)
+                    {
+                        fprintf(stderr,
+                                "\nmissing value for option '%s' (limits: [%s, %s])\n",
+                                name,
+                                options[j].minval,
+                                options[j].maxval);
+                        ret = false;
+                    }
+
+                    map->key[j] = name;
+                    map->vals[j] = NULL;
                 }
             }
             else
             {
-                if (options[i].oval == val_required)
+                if (options[j].oval == val_required)
                 {
                     fprintf(stderr,
                             "\nmissing value for option '%s' (limits: [%s, %s])\n",
-                            name,
-                            options[i].minval,
-                            options[i].maxval);
-                    ret = 0;
+                            argv[i],
+                            options[j].minval,
+                            options[j].maxval);
+                    ret = false;
                 }
-                else if (options[i].copy(&options[i],
-                                         options[i].dval,
-                                         options[i].dest) == false)
-                {
-                    fprintf(stderr,
-                            "\ninvalid option '%s %s' (limits: [%s, %s])\n",
-                            name,
-                            options[i].dval,
-                            options[i].minval,
-                            options[i].maxval);
-                    ret = 0;
-                }
-            }
-        }
-        else
-        {
-            if (options[i].oval == val_required)
-            {
-                fprintf(stderr,
-                        "\nmissing value for option '%s' (limits: [%s, %s])\n",
-                        argv[*argi],
-                        options[i].minval,
-                        options[i].maxval);
-                ret = 0;
-            }
-            else if (options[i].copy(&options[i],
-                                     options[i].dval,
-                                     options[i].dest) == false)
-            {
-                fprintf(stderr,
-                        "\ninvalid option '%s %s' (limits: [%s, %s])\n",
-                        argv[*argi],
-                        options[i].dval,
-                        options[i].minval,
-                        options[i].maxval);
-                ret = 0;
             }
         }
     }
@@ -902,7 +1219,7 @@ static void args_init(struct args_obj * const args)
     {
         options[i].args = args;
 
-        if (options[i].dest != NULL)
+        if ((options[i].status == ARG_ACTIVE) && (options[i].dest != NULL))
         {
             if (options[i].copy != NULL)
             {
@@ -921,186 +1238,179 @@ static void args_init(struct args_obj * const args)
     options[utilmath_log2(ARGS_FLAG_TIME)].minval = "1us";
 }
 
-static bool args_validate(const char c,
-                          const uint32_t pos,
-                          const uint64_t flags,
-                          struct args_obj * const args)
+static bool args_setarg(struct argobj * const arg, char * const val)
 {
     bool ret = true;
-    struct argsopt *opt = NULL;
 
-    logger_printf(LOGGER_LEVEL_DEBUG,
-                  "%s: validating argument (pos = %u, val=%c)\n",
-                  __FUNCTION__,
-                  pos,
-                  (!isalnum((int32_t)c) ? '0' + c : c));
-
-    switch (c)
+    if ((val == NULL) || (arg->copy == NULL))
     {
-        case 1:
-            if (pos == 1)
-            {
-                args->mode = ARGS_MODE_CHAT;
-            }
-            else
-            {
-                args_usage(stdout);
-                ret = false;
-            }
-            break;
-        case 2:
-            if (pos == 1)
-            {
-                args->mode = ARGS_MODE_PERF;
-            }
-            else
-            {
-                args_usage(stdout);
-                ret = false;
-            }
-            break;
-        case 3:
-            if (pos == 1)
-            {
-                args->mode = ARGS_MODE_REPT;
-            }
-            else
-            {
-                args_usage(stdout);
-                ret = false;
-            }
-            break;
-        case '4':
-// if ip address flag already set and AF_INET != args->family, then we have a problem!
-            args->family = AF_INET;
-            utilinet_getaddrfromhost(args->ipaddr,
-                                     args->family,
-                                     args->ipaddr,
-                                     sizeof(args->ipaddr));
-            break;
-        case '6':
-            args->family = AF_INET6;
-            utilinet_getaddrfromhost(args->ipaddr,
-                                     args->family,
-                                     args->ipaddr,
-                                     sizeof(args->ipaddr));
-            break;
-        case 'A':
-            break;
-        case 'B':
-            break;
-        case 'b':
-            break;
-        case 'c':
-            args->arch = SOCKOBJ_MODEL_CLIENT;
-            break;
-        case 'e':
-            args->echo = true;
-            break;
-        case 'l':
-            break;
-        case 'N':
-            args->opts.nodelay = true;
-            break;
-        case 'n':
-            break;
-        case 's':
-            args->arch = SOCKOBJ_MODEL_SERVER;
-            if ((flags & ARGS_FLAG_NUM) == 0)
-            {
-                args->datalimitbyte = 0;
-            }
-            if ((flags & ARGS_FLAG_PARALLEL) == 0)
-            {
-                args->maxcon = 0;
-            }
-            break;
-        case 'P':
-            if ((flags & ARGS_FLAG_BACKLOG) == 0)
-            {
-                args->backlog = args->maxcon;
-            }
-            break;
-        case 'p':
-            break;
-        case 'q':
-            break;
-        case 'T':
-            break;
-        case 't':
-            if ((flags & ARGS_FLAG_NUM) == 0)
-            {
-                args->datalimitbyte = 0;
-            }
-            break;
-        case 'u':
-            args->type = SOCK_DGRAM;
-            if ((flags & ARGS_FLAG_BANDWIDTH) == 0)
-            {
-                // @todo server should accept at any rate by default.
-                opt = &options[utilmath_log2(ARGS_FLAG_BANDWIDTH)];
-                opt->copy(opt, "1Mbps", opt->dest);
-            }
-            if ((flags & ARGS_FLAG_LEN) == 0)
-            {
-                // @todo what about default mtu?
-                opt = &options[utilmath_log2(ARGS_FLAG_LEN)];
-                opt->copy(opt, "1kB", opt->dest);
-            }
-            break;
-        case 'h':
-            args_usage(stdout);
-            ret = false;
-            break;
-        case 'v':
-            fprintf(stdout,
-                    "bottlerocket version %u.%u.%u (%s)\n",
-                    version_major(),
-                    version_minor(),
-                    version_patch(),
-                    version_date());
-            ret = false;
-            break;
-        default:
-            args_usage(stdout);
-            ret = false;
-            break;
+        // Do nothing.
+    }
+    else if (!arg->copy(arg, val, arg->dest))
+    {
+        fprintf(stderr,
+                "\ninvalid option '%s %s' (limits: [%s, %s])\n",
+                arg->lname,
+                val,
+                arg->minval,
+                arg->maxval);
+        ret = false;
     }
 
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
+static bool args_validate(struct argsmap * const map,
+                          struct args_obj * const args)
+{
+    bool ret = (map->keys == ARGS_FLAG_NULL ? false : true);
+    struct argobj *opt = NULL;
+    uint32_t i;
+    uint64_t key;
+
+    for (i = 0; ret && (i < 64); i++)
+    {
+        key = 1LL << i;
+
+        if (map->keys & key)
+        {
+            switch (key)
+            {
+                case ARGS_FLAG_CHAT:
+                    args->mode = ARGS_MODE_CHAT;
+                    break;
+                case ARGS_FLAG_PERF:
+                    args->mode = ARGS_MODE_PERF;
+                    break;
+                case ARGS_FLAG_REPT:
+                    args->mode = ARGS_MODE_REPT;
+                    break;
+                case ARGS_FLAG_IPV4:
+                    // if ip address flag already set and AF_INET != args->family, then we have a problem!
+                    args->family = AF_INET;
+                    utilinet_getaddrfromhost(args->ipaddr,
+                                             args->family,
+                                             args->ipaddr,
+                                             sizeof(args->ipaddr));
+                    break;
+                case ARGS_FLAG_IPV6:
+                    args->family = AF_INET6;
+                    utilinet_getaddrfromhost(args->ipaddr,
+                                             args->family,
+                                             args->ipaddr,
+                                             sizeof(args->ipaddr));
+                    break;
+                case ARGS_FLAG_AFFINITY:
+                    break;
+                case ARGS_FLAG_BIND:
+                    break;
+                case ARGS_FLAG_BANDWIDTH:
+                    break;
+                case ARGS_FLAG_CLIENT:
+                    args->arch = SOCKOBJ_MODEL_CLIENT;
+                    break;
+                case ARGS_FLAG_ECHO:
+                    args->echo = true;
+                    break;
+                case ARGS_FLAG_LEN:
+                    break;
+                case ARGS_FLAG_OPTNODELAY:
+                    args->opts.nodelay = true;
+                    break;
+                case ARGS_FLAG_NUM:
+                    break;
+                case ARGS_FLAG_SERVER:
+                    args->arch = SOCKOBJ_MODEL_SERVER;
+                    if ((map->keys & ARGS_FLAG_BANDWIDTH) == 0)
+                    {
+                        opt = &options[utilmath_log2(ARGS_FLAG_BANDWIDTH)];
+                        opt->copy(opt, "0bps", opt->dest);
+                    }
+                    if ((map->keys & ARGS_FLAG_NUM) == 0)
+                    {
+                        args->datalimitbyte = 0;
+                    }
+                    if ((map->keys & ARGS_FLAG_PARALLEL) == 0)
+                    {
+                        args->maxcon = 0;
+                    }
+                    break;
+                case ARGS_FLAG_PARALLEL:
+                    if ((map->keys & ARGS_FLAG_BACKLOG) == 0)
+                    {
+                        args->backlog = args->maxcon;
+                    }
+                    break;
+                case ARGS_FLAG_PORT:
+                    break;
+                case ARGS_FLAG_BACKLOG:
+                    break;
+                case ARGS_FLAG_THREADS:
+                    break;
+                case ARGS_FLAG_TIME:
+                    if ((map->keys & ARGS_FLAG_NUM) == 0)
+                    {
+                        args->datalimitbyte = 0;
+                    }
+                    break;
+                case ARGS_FLAG_UDP:
+                    args->type = SOCK_DGRAM;
+                    if ((map->keys & ARGS_FLAG_BANDWIDTH) == 0)
+                    {
+                        opt = &options[utilmath_log2(ARGS_FLAG_BANDWIDTH)];
+                        opt->copy(opt, "1Mbps", opt->dest);
+                    }
+                    if ((map->keys & ARGS_FLAG_LEN) == 0)
+                    {
+                        // @todo what about default mtu?
+                        opt = &options[utilmath_log2(ARGS_FLAG_LEN)];
+                        opt->copy(opt, "1kB", opt->dest);
+                    }
+                    break;
+                case ARGS_FLAG_HELP:
+                    args_usage(stdout);
+                    ret = false;
+                    break;
+                case ARGS_FLAG_VERSION:
+                    fprintf(stdout,
+                            "bottlerocket version %u.%u.%u (%s)\n",
+                            version_major(),
+                            version_minor(),
+                            version_patch(),
+                            version_date());
+                    ret = false;
+                    break;
+                default:
+                    args_usage(stdout);
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+            {
+                ret = args_setarg(&options[i], map->vals[i]);
+            }
+        }
+    }
+
+    return ret;
+}
+
 bool args_parse(const int32_t argc,
                 char ** const argv,
                 struct args_obj * const args)
 {
     bool ret = false;
-    uint64_t flags = 0;
-    int32_t i;
+    struct argsmap map;
 
-    if (UTILDEBUG_VERIFY((argv != NULL) && (args != NULL)) == true)
+    if (UTILDEBUG_VERIFY((argv != NULL) && (args != NULL)))
     {
-        if (argc > 1)
-        {
-            args_init(args);
-            ret = true;
+        memset(&map, 0, sizeof(map));
+        args_init(args);
 
-            // @todo Validate a second time in order to catch options with
-            //       unordered dependencies (i.e., bottlerocket -s ::1 -6)?
-            for (i = 1; (i < argc) && (ret == true); i++)
-            {
-                ret = args_validate(args_getarg(argc, argv, &i, &flags),
-                                    i,
-                                    flags,
-                                    args);
-            }
-        }
-        else
+        if ((args_getarg(argc, argv, &map)) && (args_validate(&map, args)))
         {
-            args_usage(stdout);
+            ret = true;
         }
     }
 

@@ -50,14 +50,15 @@ struct args_obj
 };
 
 /**
- * @brief Parse a one-dimensional argument vector into a bottlerocket argument
+ * @brief Parse and map command-line arguments into a bottlerocket argument
  *        structure.
  *
- * @param[in]     argc The CLI argument count.
- * @param[in]     argv The CLI argument vector.
+ * @param[in]     argc The command-line argument count.
+ * @param[in]     argv The command-line argument vector.
  * @param[in,out] args A pointer to a bottlerocket arguments structure.
  *
- * @return True if an argument vector was successfully parsed.
+ * @return True if a command-line arguments  were successfully parsed and
+ *         mapped.
  */
 bool args_parse(const int32_t argc,
                 char ** const argv,
