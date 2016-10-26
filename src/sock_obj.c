@@ -61,16 +61,13 @@ static char *sockobj_getoptname(const uint32_t name)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockobj_getaddrpeer(struct sockobj * const obj)
 {
     bool ret = false;
     socklen_t socklen = 0;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) &&
-                         ((socklen = sizeof(obj->addrpeer.sockaddr)) > 0)) == false)
+    if (!UTILDEBUG_VERIFY((obj != NULL) &&
+                         ((socklen = sizeof(obj->addrpeer.sockaddr)) > 0)))
     {
         // Do nothing.
     }
@@ -81,7 +78,7 @@ bool sockobj_getaddrpeer(struct sockobj * const obj)
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: socket %u getpeername failed (%d)\n",
                       __FUNCTION__,
-                      obj->id,
+                      obj->sid,
                       errno);
     }
     else
@@ -92,16 +89,13 @@ bool sockobj_getaddrpeer(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockobj_getaddrself(struct sockobj * const obj)
 {
     bool ret = false;
     socklen_t socklen = 0;
 
-    if (UTILDEBUG_VERIFY((obj != NULL) &&
-                         ((socklen = sizeof(obj->addrself.sockaddr)) > 0)) == false)
+    if (!UTILDEBUG_VERIFY((obj != NULL) &&
+                         ((socklen = sizeof(obj->addrself.sockaddr)) > 0)))
     {
         // Do nothing.
     }
@@ -112,7 +106,7 @@ bool sockobj_getaddrself(struct sockobj * const obj)
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: socket %u getsockname failed (%d)\n",
                       __FUNCTION__,
-                      obj->id,
+                      obj->sid,
                       errno);
     }
     else
@@ -123,15 +117,12 @@ bool sockobj_getaddrself(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockobj_getaddrsock(struct sockobj_addr * const addr)
 {
     bool ret = false;
     uint16_t *port = NULL;
 
-    if (UTILDEBUG_VERIFY(addr != NULL) == false)
+    if (!UTILDEBUG_VERIFY(addr != NULL))
     {
         // Do nothing.
     }
@@ -167,9 +158,6 @@ bool sockobj_getaddrsock(struct sockobj_addr * const addr)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockobj_iserrfatal(const int32_t err)
 {
     bool ret = false;
@@ -201,18 +189,15 @@ bool sockobj_iserrfatal(const int32_t err)
     return ret;
 }
 
-/**
- * @see See sock_create() for interface comments.
- */
 bool sockobj_create(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(obj != NULL) == true)
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
         memset(obj, 0, sizeof(struct sockobj));
 
-        if (fionpoll_create(&obj->event) == false)
+        if (!fionpoll_create(&obj->event))
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: event allocation failed\n",
@@ -229,14 +214,11 @@ bool sockobj_create(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See sock_destroy() for interface comments.
- */
 bool sockobj_destroy(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(obj != NULL) == true)
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
         ret = obj->event.ops.fion_destroy(&obj->event);
 
@@ -258,9 +240,6 @@ bool sockobj_destroy(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockobj_open(struct sockobj * const obj)
 {
     bool             ret      = false;
@@ -269,7 +248,7 @@ bool sockobj_open(struct sockobj * const obj)
     socklen_t        optlen, optval;
     char             ipport[6];
 
-    if (UTILDEBUG_VERIFY(obj != NULL) == true)
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
         memset(&ahints, 0, sizeof(struct addrinfo));
         ahints.ai_family    = obj->conf.family;
@@ -299,26 +278,26 @@ bool sockobj_open(struct sockobj * const obj)
                               obj->conf.ipaddr,
                               utilinet_getaddrfromstorage(&obj->addrself.sockaddr));
                     *utilinet_getportfromstorage(&obj->addrself.sockaddr) = htons(obj->conf.ipport);
-                    obj->addrself.socklen = anext->ai_addrlen;
+                    obj->addrself.addrlen = anext->ai_addrlen;
 
                     obj->addrpeer.sockaddr.ss_family = anext->ai_family;
                     inet_pton(obj->addrpeer.sockaddr.ss_family,
                               obj->conf.ipaddr,
                               utilinet_getaddrfromstorage(&obj->addrpeer.sockaddr));
                     *utilinet_getportfromstorage(&obj->addrpeer.sockaddr) = htons(obj->conf.ipport);
-                    obj->addrpeer.socklen = anext->ai_addrlen;
+                    obj->addrpeer.addrlen = anext->ai_addrlen;
 
                     optlen = sizeof(obj->info.recv.winsize);
                     optval = 1;
                     obj->event.ops.fion_insertfd(&obj->event, obj->fd);
                     flags = fcntl(obj->fd, F_GETFL, 0);
 
-                    if (obj->event.ops.fion_setflags(&obj->event) == false)
+                    if (!obj->event.ops.fion_setflags(&obj->event))
                     {
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %u event creation failed\n",
                                       __FUNCTION__,
-                                      obj->id,
+                                      obj->sid,
                                       errno);
                         sockobj_close(obj);
                     }
@@ -327,7 +306,7 @@ bool sockobj_open(struct sockobj * const obj)
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %u O_NONBLOCK option failed (%d)\n",
                                       __FUNCTION__,
-                                      obj->id,
+                                      obj->sid,
                                       errno);
 
                     }
@@ -341,7 +320,7 @@ bool sockobj_open(struct sockobj * const obj)
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %u SO_REUSEADDR option failed (%d)\n",
                                       __FUNCTION__,
-                                      obj->id,
+                                      obj->sid,
                                       errno);
                         sockobj_close(obj);
                     }
@@ -355,7 +334,7 @@ bool sockobj_open(struct sockobj * const obj)
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %u SO_REUSEPORT option failed (%d)\n",
                                       __FUNCTION__,
-                                      obj->id,
+                                      obj->sid,
                                       errno);
                         sockobj_close(obj);
                     }
@@ -370,7 +349,7 @@ bool sockobj_open(struct sockobj * const obj)
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %u SO_NOSIGPIPE option failed (%d)\n",
                                       __FUNCTION__,
-                                      obj->id,
+                                      obj->sid,
                                       errno);
                         sockobj_close(obj);
                     }
@@ -384,7 +363,7 @@ bool sockobj_open(struct sockobj * const obj)
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %u SO_RCVBUF option failed (%d)\n",
                                       __FUNCTION__,
-                                      obj->id,
+                                      obj->sid,
                                       errno);
                         sockobj_close(obj);
                     }
@@ -397,7 +376,7 @@ bool sockobj_open(struct sockobj * const obj)
                         logger_printf(LOGGER_LEVEL_ERROR,
                                       "%s: socket %u SO_SNDBUF option failed (%d)\n",
                                       __FUNCTION__,
-                                      obj->id,
+                                      obj->sid,
                                       errno);
                         sockobj_close(obj);
                     }
@@ -426,21 +405,18 @@ bool sockobj_open(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockobj_close(struct sockobj * const obj)
 {
     int32_t ret = false;
 
-    if (UTILDEBUG_VERIFY(obj != NULL) == true)
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
         if (close(obj->fd) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: socket %u could not be closed (%d)\n",
                           __FUNCTION__,
-                          obj->id,
+                          obj->sid,
                           errno);
         }
         else
@@ -456,20 +432,17 @@ bool sockobj_close(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockobj_bind(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(obj != NULL) == false)
+    if (!UTILDEBUG_VERIFY(obj != NULL))
     {
         // Do nothing.
     }
     else if (bind(obj->fd,
                   (struct sockaddr*)&obj->addrself.sockaddr,
-                  obj->addrself.socklen) == 0)
+                  obj->addrself.addrlen) == 0)
     {
         sockobj_getaddrself(obj);
         obj->state |= SOCKOBJ_STATE_BIND;
@@ -480,16 +453,13 @@ bool sockobj_bind(struct sockobj * const obj)
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: socket %u bind failed (%d)\n",
                       __FUNCTION__,
-                      obj->id,
+                      obj->sid,
                       errno);
     }
 
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
 {
     bool ret = false;
@@ -499,7 +469,7 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
 
     if (UTILDEBUG_VERIFY((obj != NULL) &&
                          (opts != NULL) &&
-                         (vector_getsize(opts) > 0)) == true)
+                         (vector_getsize(opts) > 0)))
     {
         ret = true;
 
@@ -512,7 +482,7 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u option index %u is empty\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               i);
                 ret = false;
             }
@@ -529,7 +499,7 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %u '%s' option failed (%d)\n",
                                   __FUNCTION__,
-                                  obj->id,
+                                  obj->sid,
                                   sockobj_getoptname(opt->name),
                                   errno);
                     ret = false;
@@ -541,9 +511,6 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
 {
     bool ret = false;
@@ -553,7 +520,7 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
 
     if (UTILDEBUG_VERIFY((obj != NULL) &&
                          (opts != NULL) &&
-                         (vector_getsize(opts) > 0)) == true)
+                         (vector_getsize(opts) > 0)))
     {
         ret = true;
 
@@ -566,7 +533,7 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u option index %u is empty\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               i);
                 ret = false;
             }
@@ -583,7 +550,7 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %u '%s' option failed (%d)\n",
                                   __FUNCTION__,
-                                  obj->id,
+                                  obj->sid,
                                   sockobj_getoptname(opt->name),
                                   errno);
                     ret = false;
@@ -595,15 +562,12 @@ bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool sockobj_setstats(struct sockobj_flowstats * const stats, const int32_t len)
 {
     bool ret = false;
     uint64_t tsus = 0;
 
-    if (UTILDEBUG_VERIFY(stats != NULL) == true)
+    if (UTILDEBUG_VERIFY(stats != NULL))
     {
         if (stats->lasttsus == 0)
         {
@@ -629,7 +593,7 @@ bool sockobj_setstats(struct sockobj_flowstats * const stats, const int32_t len)
 
             stats->buflen.avg = stats->totalbytes / stats->passedcalls;
 
-            if (stats->lastcall == false)
+            if (!stats->lastcall)
             {
                 tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC,
                                           UNIT_TIME_USEC);
@@ -645,7 +609,7 @@ bool sockobj_setstats(struct sockobj_flowstats * const stats, const int32_t len)
             //       send.
             stats->failedcalls++;
 
-            if (stats->lastcall == true)
+            if (stats->lastcall)
             {
                 tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC,
                                           UNIT_TIME_USEC);

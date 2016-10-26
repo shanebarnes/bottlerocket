@@ -184,7 +184,7 @@ enum sockobj_state
 struct sockobj_addr
 {
     struct sockaddr_storage sockaddr;
-    socklen_t               socklen;
+    socklen_t               addrlen;
     char                    ipaddr[INET6_ADDRSTRLEN];
     uint16_t                ipport;
     char                    sockaddrstr[INET6_ADDRSTRLEN + 6]; // <addr>:<port>
@@ -242,7 +242,8 @@ struct sockobj
     struct fionobj       event;
     struct tokenbucket   tb;
     int32_t              fd;
-    uint32_t             id;
+    uint32_t             sid;
+    uint32_t             tid;
     struct sockobj_addr  addrself,
                          addrpeer;
     struct sockobj_conf  conf;
