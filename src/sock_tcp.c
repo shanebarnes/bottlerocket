@@ -9,6 +9,7 @@
 
 #include "logger.h"
 #include "sock_tcp.h"
+#include "util_debug.h"
 #include "util_date.h"
 #include "util_unit.h"
 
@@ -21,9 +22,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-/**
- * @see See header file for interface comments.
- */
 bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
 {
     bool ret = false;
@@ -40,13 +38,7 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
 #endif
     socklen_t optlen = sizeof(optval);
 
-    if ((fd < 0) || (info == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((fd >= 0) && (info != NULL)))
     {
         err = getsockopt(fd,
                          IPPROTO_TCP,
@@ -97,22 +89,13 @@ bool socktcp_getinfo(const int32_t fd, struct socktcp_info * const info)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool socktcp_create(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if (obj == NULL)
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        if (sockobj_create(obj) == true)
+        if (sockobj_create(obj))
         {
             obj->ops.sock_create   = socktcp_create;
             obj->ops.sock_destroy  = socktcp_destroy;
@@ -137,20 +120,11 @@ bool socktcp_create(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool socktcp_destroy(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if ((obj == NULL) || (obj->conf.type != SOCK_STREAM))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->conf.type == SOCK_STREAM)))
     {
         ret = sockobj_destroy(obj);
     }
@@ -158,18 +132,13 @@ bool socktcp_destroy(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
 {
     bool ret = false;
 
-    if ((obj == NULL) || (obj->conf.type != SOCK_STREAM))
+    if (!UTILDEBUG_VERIFY((obj != NULL) && (obj->conf.type == SOCK_STREAM)))
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
+        // Do nothing.
     }
     // Backlog check: SOMAXCONN
     else if (listen(obj->fd, backlog) == 0)
@@ -177,7 +146,7 @@ bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
         logger_printf(LOGGER_LEVEL_INFO,
                       "%s: socket %u listening with a backlog of %d\n",
                       __FUNCTION__,
-                      obj->id,
+                      obj->sid,
                       backlog);
         obj->state |= SOCKOBJ_STATE_LISTEN;
         sockobj_getaddrself(obj);
@@ -197,9 +166,6 @@ bool socktcp_listen(struct sockobj * const obj, const int32_t backlog)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
 {
     bool      ret        = false;
@@ -211,15 +177,9 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
 #endif
     uint64_t  ts         = 0;
 
-    if ((listener == NULL) ||
-        (obj == NULL) ||
-        (listener->conf.type != SOCK_STREAM))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((listener != NULL) &&
+        (obj != NULL) &&
+        (listener->conf.type == SOCK_STREAM)))
     {
         socklen = sizeof(listener->addrpeer.sockaddr);
 #if defined(__linux__)
@@ -229,7 +189,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
         //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
         //       for signaling shutdown events, etc.
 
-        if (listener->event.ops.fion_poll(&listener->event) == true)
+        if (listener->event.ops.fion_poll(&listener->event))
         {
             if (((listener->event.revents & FIONOBJ_REVENT_TIMEOUT) == 0) &&
                 ((listener->event.revents & FIONOBJ_REVENT_ERROR) == 0))
@@ -238,7 +198,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
             }
         }
 
-        if (sockaccept == true)
+        if (sockaccept)
         {
 #if defined(__linux__)
             if ((fd = accept4(listener->fd,
@@ -253,21 +213,21 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
             {
                 ts = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
-                if (socktcp_create(obj) == false)
+                if (!socktcp_create(obj))
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %u accept initialization failed\n",
                                   __FUNCTION__,
-                                  obj->id);
+                                  obj->sid);
                 }
                 else if (((obj->fd = fd) != fd) ||
-                         (obj->event.ops.fion_insertfd(&obj->event, fd) == false) ||
-                         (obj->event.ops.fion_setflags(&obj->event) == false))
+                         (!obj->event.ops.fion_insertfd(&obj->event, fd)) ||
+                         (!obj->event.ops.fion_setflags(&obj->event)))
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %u fd clone failed\n",
                                   __FUNCTION__,
-                                  obj->id);
+                                  obj->sid);
                 }
                 else if (memcpy(&obj->conf,
                                 &listener->conf,
@@ -276,28 +236,28 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %u configuration clone failed\n",
                                   __FUNCTION__,
-                                  obj->id);
+                                  obj->sid);
                 }
-                else if (sockobj_getaddrself(obj) == false)
+                else if (!sockobj_getaddrself(obj))
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %u self information is unavailable\n",
                                   __FUNCTION__,
-                                  obj->id);
+                                  obj->sid);
                 }
-                else if (sockobj_getaddrpeer(obj) == false)
+                else if (!sockobj_getaddrpeer(obj))
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: socket %u peer information is unavailable\n",
                                   __FUNCTION__,
-                                  obj->id);
+                                  obj->sid);
                 }
                 else
                 {
                     logger_printf(LOGGER_LEVEL_TRACE,
                                   "%s: new socket %u accepted on %s from %s\n",
                                   __FUNCTION__,
-                                  obj->id,
+                                  obj->sid,
                                   obj->addrself.sockaddrstr,
                                   obj->addrpeer.sockaddrstr);
 
@@ -312,7 +272,7 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u accept failed (%d)\n",
                               __FUNCTION__,
-                              listener->id,
+                              listener->sid,
                               errno);
             }
         }
@@ -321,20 +281,11 @@ bool socktcp_accept(struct sockobj * const listener, struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool socktcp_connect(struct sockobj * const obj)
 {
     bool ret = false;
 
-    if ((obj == NULL) || (obj->conf.type != SOCK_STREAM))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->conf.type == SOCK_STREAM)))
     {
         if (obj->info.startusec == 0)
         {
@@ -345,7 +296,7 @@ bool socktcp_connect(struct sockobj * const obj)
         if ((obj->state == SOCKOBJ_STATE_OPEN) &&
             (connect(obj->fd,
                      (struct sockaddr*)&obj->addrpeer.sockaddr,
-                     obj->addrpeer.socklen) == 0))
+                     obj->addrpeer.addrlen) == 0))
         {
             ret = true;
         }
@@ -356,7 +307,7 @@ bool socktcp_connect(struct sockobj * const obj)
                 logger_printf(LOGGER_LEVEL_DEBUG,
                               "%s: socket %u connect now in progress\n",
                               __FUNCTION__,
-                              obj->id);
+                              obj->sid);
 
                 obj->event.pevents = FIONOBJ_PEVENT_IN | FIONOBJ_PEVENT_OUT;
                 obj->event.ops.fion_setflags(&obj->event);
@@ -365,7 +316,7 @@ bool socktcp_connect(struct sockobj * const obj)
                 //       in a loop with a small timeout (e.g., 100 ms) or maybe
                 //       a self-pipe for signaling shutdown events, etc.
 
-                if (obj->event.ops.fion_poll(&obj->event) == true)
+                if (obj->event.ops.fion_poll(&obj->event))
                 {
                     if (((obj->event.revents & FIONOBJ_REVENT_ERROR) == 0) &&
                         (obj->event.revents & FIONOBJ_REVENT_OUTREADY))
@@ -382,7 +333,7 @@ bool socktcp_connect(struct sockobj * const obj)
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u connect fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               errno);
 
                 obj->ops.sock_close(obj);
@@ -396,19 +347,19 @@ bool socktcp_connect(struct sockobj * const obj)
                 logger_printf(LOGGER_LEVEL_DEBUG,
                               "%s: socket %u connect already in progress\n",
                               __FUNCTION__,
-                              obj->id);
+                              obj->sid);
             }
             else
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u connect error (%d)\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               errno);
             }
         }
 
-        if (ret == true)
+        if (ret)
         {
             obj->state |= SOCKOBJ_STATE_CONNECT;
 
@@ -420,9 +371,6 @@ bool socktcp_connect(struct sockobj * const obj)
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t socktcp_recv(struct sockobj * const obj,
                      void * const buf,
                      const uint32_t len)
@@ -430,13 +378,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
     int32_t ret   = -1;
     int32_t flags = MSG_DONTWAIT;
 
-    if ((obj == NULL) || (buf == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) && (buf != NULL)))
     {
         ret = recv(obj->fd, buf, len, flags);
         sockobj_setstats(&obj->info.recv, ret);
@@ -446,17 +388,17 @@ int32_t socktcp_recv(struct sockobj * const obj,
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %u received %d bytes\n",
                           __FUNCTION__,
-                          obj->id,
+                          obj->sid,
                           ret);
         }
         else
         {
-            if (sockobj_iserrfatal(errno) == true)
+            if (sockobj_iserrfatal(errno))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               errno);
                 ret = -1;
             }
@@ -465,14 +407,14 @@ int32_t socktcp_recv(struct sockobj * const obj,
                 logger_printf(LOGGER_LEVEL_TRACE,
                               "%s: socket %u non-fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               errno);
                 ret = 0;
             }
 
             if (ret == 0)
             {
-                if (obj->event.ops.fion_poll(&obj->event) == false)
+                if (!obj->event.ops.fion_poll(&obj->event))
                 {
                     ret = -1;
                 }
@@ -492,7 +434,7 @@ int32_t socktcp_recv(struct sockobj * const obj,
                         logger_printf(LOGGER_LEVEL_TRACE,
                                       "%s: socket %u received %d bytes\n",
                                       __FUNCTION__,
-                                      obj->id,
+                                      obj->sid,
                                       ret);
                     }
                     else
@@ -507,9 +449,6 @@ int32_t socktcp_recv(struct sockobj * const obj,
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t socktcp_send(struct sockobj * const obj,
                      void * const buf,
                      const uint32_t len)
@@ -521,13 +460,7 @@ int32_t socktcp_send(struct sockobj * const obj,
     flags |= MSG_NOSIGNAL;
 #endif
 
-    if ((obj == NULL) || (buf == NULL))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) && (buf != NULL)))
     {
         ret = send(obj->fd, buf, len, flags);
         sockobj_setstats(&obj->info.send, ret);
@@ -537,17 +470,17 @@ int32_t socktcp_send(struct sockobj * const obj,
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %u sent %d bytes\n",
                           __FUNCTION__,
-                          obj->id,
+                          obj->sid,
                           ret);
         }
         else
         {
-            if (sockobj_iserrfatal(errno) == true)
+            if (sockobj_iserrfatal(errno))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               errno);
                 ret = -1;
             }
@@ -556,14 +489,14 @@ int32_t socktcp_send(struct sockobj * const obj,
                 logger_printf(LOGGER_LEVEL_TRACE,
                               "%s: socket %u non-fatal error (%d)\n",
                               __FUNCTION__,
-                              obj->id,
+                              obj->sid,
                               errno);
                 ret = 0;
             }
 
             if (ret == 0)
             {
-                if (obj->event.ops.fion_poll(&obj->event) == false)
+                if (!obj->event.ops.fion_poll(&obj->event))
                 {
                     ret = -1;
                 }
@@ -578,27 +511,18 @@ int32_t socktcp_send(struct sockobj * const obj,
     return ret;
 }
 
-/**
- * @see See header file for interface comments.
- */
 bool socktcp_shutdown(struct sockobj * const obj, const int32_t how)
 {
     bool ret = false;
 
-    if (obj == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(obj != NULL))
     {
         if (shutdown(obj->fd, how) == -1)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to shutdown socket %u (%d)\n",
                           __FUNCTION__,
-                          obj->id,
+                          obj->sid,
                           errno);
         }
         else
