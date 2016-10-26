@@ -24,6 +24,7 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 
 static struct threadpool pool;
 static struct args_obj *opts = NULL;
@@ -48,6 +49,7 @@ static void modeperf_conf(struct sockobj * const obj, const int32_t timeoutms)
     obj->conf.family        = opts->family;
     obj->conf.type          = opts->type;
     obj->conf.model         = opts->arch;
+logger_printf(LOGGER_LEVEL_ERROR, "bandwidth limit = %u\n", opts->ratelimitbps);
 }
 
 /**
@@ -153,7 +155,7 @@ static void *modeperf_thread(void *arg)
     uint32_t formlen = 4096;
     uint8_t *recvbuf = NULL, *sendbuf = NULL;
     int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
-    uint32_t count = 0;
+    uint32_t count = 0, tid = 0;
 
     struct dlist_node *next = NULL, *node = NULL;
     struct sockobj_flowstats *stats = NULL;
@@ -203,6 +205,7 @@ static void *modeperf_thread(void *arg)
     else
     {
         exit = false;
+        tid = threadpool_getid(tpool);
         fion.timeoutms = 0;
         fion.pevents = FIONOBJ_PEVENT_IN;
         memset(&list, 0, sizeof(list));
@@ -219,6 +222,8 @@ static void *modeperf_thread(void *arg)
         {
             modeperf_conf(&server, 500);
             exit = !sockmod_init(&server);
+server.tid = tid;
+logger_printf(LOGGER_LEVEL_ERROR, "initialized server %u on tid %u\n", server.fd, server.tid);
         }
 
         while ((exit == false) && (threadpool_isrunning(tpool) == true))
@@ -265,14 +270,18 @@ static void *modeperf_thread(void *arg)
                         else
                         {
                             fion.ops.fion_insertfd(&fion, sock->fd);
-                            sock->id = ++count;
+                            sock->sid = ++count;
+                            sock->tid = tid;
                             form.sock = sock;
 
                             if (count == 1)
                             {
                                 group.info.startusec = sock->info.startusec;
-                                formbytes = form.ops.form_head(&form);
-                                output_if_std_send(form.dstbuf, formbytes);
+                                if (tid == 0)
+                                {
+                                    formbytes = form.ops.form_head(&form);
+                                    output_if_std_send(form.dstbuf, formbytes);
+                                }
                             }
                         }
                     }
@@ -286,7 +295,8 @@ static void *modeperf_thread(void *arg)
                                 (list.size <= opts->maxcon))
                             {
                                 fion.ops.fion_insertfd(&fion, sock->fd);
-                                sock->id = ++count;
+                                sock->sid = ++count;
+                                sock->tid = tid;
                                 logger_printf(LOGGER_LEVEL_INFO,
                                               "%s: server accepted connection on %s\n",
                                               __FUNCTION__,
@@ -296,8 +306,11 @@ static void *modeperf_thread(void *arg)
                                 if (list.size == 1)
                                 {
                                     group.info.startusec = sock->info.startusec;
-                                    formbytes = form.ops.form_head(&form);
-                                    output_if_std_send(form.dstbuf, formbytes);
+                                    if (tid == 0)
+                                    {
+                                        formbytes = form.ops.form_head(&form);
+                                        output_if_std_send(form.dstbuf, formbytes);
+                                    }
                                 }
                             }
                             else
@@ -327,13 +340,16 @@ static void *modeperf_thread(void *arg)
                             else if (list.size == 0)
                             {
                                 form.sock = &server;
-                                formbytes = formobj_idle(&form);
-                                output_if_std_send(form.dstbuf, formbytes);
-                                formbytes = utilstring_concat(form.dstbuf,
-                                                              form.dstlen,
-                                                              "%c",
-                                                              '\r');
-                                output_if_std_send(form.dstbuf, formbytes);
+                                if (tid == 0)
+                                {
+                                    formbytes = formobj_idle(&form);
+                                    output_if_std_send(form.dstbuf, formbytes);
+                                    formbytes = utilstring_concat(form.dstbuf,
+                                                                  form.dstlen,
+                                                                  "%c",
+                                                                  '\r');
+                                    output_if_std_send(form.dstbuf, formbytes);
+                                }
                             }
 
                             break;
@@ -516,7 +532,8 @@ static void *modeperf_thread(void *arg)
 
                     if (list.size == 0)
                     {
-                        group.id = count;
+                        group.sid = count;
+                        group.tid = tid;
                         form.sock = &group;
                         formbytes = form.ops.form_foot(&form);
                         output_if_std_send(form.dstbuf, formbytes);
@@ -539,7 +556,7 @@ static void *modeperf_thread(void *arg)
                 // @todo Replace with semaphore.
                 if (mindelayus > 100000)
                 {
-                    usleep(100000);
+                    //usleep(100000);
                     mindelayus -= 100000;
                 }
                 else
@@ -556,7 +573,7 @@ static void *modeperf_thread(void *arg)
                 fion.timeoutms = 0;
             }
         }
-
+logger_printf(LOGGER_LEVEL_ERROR, "%s: exiting tid %u\n", __FUNCTION__, tid);
         UTILMEM_FREE(formbuf);
         UTILMEM_FREE(recvbuf);
         UTILMEM_FREE(sendbuf);
