@@ -1,4 +1,5 @@
 set(BRLIB_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/arg_obj.c
     ${CMAKE_CURRENT_SOURCE_DIR}/args.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cv_obj.c
     ${CMAKE_CURRENT_SOURCE_DIR}/dlist.c
