@@ -140,17 +140,39 @@ bool sockudp_accept(struct sockobj * const listener, struct sockobj * const obj)
             //       active at all times to prevent the potential loss of new
             //       incoming "connections."
 
-            if (memcpy(obj, listener, sizeof(*obj)) == NULL)
+            if (!listener->ops.sock_create(obj))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %u fd clone failed\n",
+                              "%s: socket %u accept initialization failed\n",
+                              __FUNCTION__,
+                              obj->sid);
+            }
+            else if ((memcpy(&obj->info,
+                             &listener->info,
+                             sizeof(obj->info)) == NULL) ||
+                     (memcpy(&obj->addrself,
+                             &listener->addrself,
+                             sizeof(obj->addrself)) == NULL) ||
+                     (memcpy(&obj->addrpeer,
+                             &listener->addrpeer,
+                             sizeof(obj->addrpeer)) == NULL) ||
+                     ((obj->fd = listener->fd) != listener->fd) ||
+                     (!obj->event.ops.fion_insertfd(&obj->event, obj->fd)) ||
+                     (!obj->event.ops.fion_setflags(&obj->event)) ||
+                     ((obj->tid = listener->tid) != listener->tid) ||
+                     (memcpy(&obj->conf,
+                             &listener->conf,
+                             sizeof(obj->conf)) == NULL))
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %u configuration clone failed\n",
                               __FUNCTION__,
                               obj->sid);
             }
             else if (obj->ops.sock_recv(obj, &buffer, sizeof(buffer)) < 0)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %u accept initialization failed\n",
+                              "%s: socket %u fd clone failed\n",
                               __FUNCTION__,
                               obj->sid);
             }
@@ -328,6 +350,17 @@ int32_t sockudp_recv(struct sockobj * const obj,
                 else if (obj->event.revents & FIONOBJ_REVENT_ERROR)
                 {
                     ret = -1;
+                }
+                else
+                {
+                    // @todo This is a hack.
+                    uint64_t ts = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                                     UNIT_TIME_USEC);
+                    if (((ts - obj->info.recv.lasttsus) >= 5000000) &&
+                        ((ts - obj->info.send.lasttsus) >= 5000000))
+                    {
+                        ret = -1;
+                    }
                 }
             }
         }
