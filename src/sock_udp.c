@@ -8,7 +8,6 @@
  */
 
 #include "logger.h"
-#include "sock_con.h"
 #include "sock_udp.h"
 #include "util_date.h"
 #include "util_debug.h"
@@ -19,17 +18,11 @@
 #endif
 #include "util_unit.h"
 
+#include <arpa/inet.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-
-// temp
-#include <unistd.h>
-#include <arpa/inet.h>
-// temp
-
-static struct sockcon con = {.sock = NULL, .priv = NULL};
 
 /**
  * @brief Get the maximum UDP message size in bytes.
@@ -99,13 +92,6 @@ bool sockudp_destroy(struct sockobj * const obj)
 
     if (UTILDEBUG_VERIFY((obj != NULL) && (obj->conf.type == SOCK_DGRAM)))
     {
-        if (obj->state & SOCKOBJ_STATE_LISTEN)
-        {
-            sockcon_destroy(&con);
-            con.sock = NULL;
-            con.priv = NULL;
-        }
-
         ret = sockobj_destroy(obj);
     }
 
@@ -116,19 +102,7 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
 {
     bool ret = false;
 
-    // @todo SO_REUSEPORT could be used on kernels that support its use.
-
-    if (!UTILDEBUG_VERIFY((obj != NULL) && (obj->conf.type == SOCK_DGRAM)))
-    {
-        // Do nothing.
-    }
-    else if (!sockcon_create(&con))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to create listener\n",
-                      __FUNCTION__);
-    }
-    else if (sockcon_listen(&con, obj, backlog))
+    if (UTILDEBUG_VERIFY((obj != NULL) && (obj->conf.type == SOCK_DGRAM)))
     {
         logger_printf(LOGGER_LEVEL_INFO,
                       "%s: socket %u listening with a backlog of %d\n",
@@ -139,32 +113,15 @@ bool sockudp_listen(struct sockobj * const obj, const int32_t backlog)
         sockobj_getaddrself(obj);
         ret = true;
     }
-    else
-    {
-        sockcon_destroy(&con);
-        con.sock = NULL;
-        con.priv = NULL;
-
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: socket %u failed to listen on %s:%u (%d)\n",
-                      __FUNCTION__,
-                      obj->fd,
-                      obj->conf.ipaddr,
-                      obj->conf.ipport,
-                      errno);
-    }
 
     return ret;
 }
 
-bool sockudp_accept(struct sockobj * const listener,
-                    struct sockobj * const obj)
+bool sockudp_accept(struct sockobj * const listener, struct sockobj * const obj)
 {
-    bool     ret  = false;
-    int32_t  fd   = -1;
-    uint64_t ts   = 0;
-    socklen_t len = sizeof(struct sockaddr_storage);
-    struct sockaddr_storage addr;
+    bool     ret = false;
+    uint64_t ts  = 0;
+    uint8_t  buffer;
 
     if (UTILDEBUG_VERIFY((listener != NULL) &&
                          (listener->conf.type == SOCK_DGRAM) &&
@@ -174,47 +131,51 @@ bool sockudp_accept(struct sockobj * const listener,
         //       loop with a small timeout (e.g., 100 ms) or maybe a self-pipe
         //       for signaling shutdown events, etc.
 
-        if ((fd = sockcon_accept(&con, (struct sockaddr *)&(addr), &len)) > - 1)
+        if ((listener->event.ops.fion_poll(&listener->event)) &&
+            (listener->event.revents & FIONOBJ_REVENT_INREADY))
         {
             ts = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
 
-            if (!sockudp_create(obj))
-            {
-                logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %u accept initialization failed\n",
-                              __FUNCTION__,
-                              obj->sid);
-            }
-            else if (((obj->fd = fd) != fd) ||
-                     (!obj->event.ops.fion_insertfd(&obj->event, fd)) ||
-                     (!obj->event.ops.fion_setflags(&obj->event)))
+            // @todo If SO_REUSEPORT is enabled, then two listeners should be
+            //       active at all times to prevent the potential loss of new
+            //       incoming "connections."
+
+            if (memcpy(obj, listener, sizeof(*obj)) == NULL)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: socket %u fd clone failed\n",
                               __FUNCTION__,
                               obj->sid);
             }
-            else if (memcpy(&obj->conf,
-                            &listener->conf,
-                            sizeof(listener->conf)) == NULL)
+            else if (obj->ops.sock_recv(obj, &buffer, sizeof(buffer)) < 0)
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: socket %u configuration clone failed\n",
+                              "%s: socket %u accept initialization failed\n",
                               __FUNCTION__,
                               obj->sid);
             }
-            //else if (!sockobj_getaddrself(listener)) // this requires that a datagram has been sent (zero payload handshaking?)
-            //{
-            //    logger_printf(LOGGER_LEVEL_ERROR,
-            //                  "%s: socket %u self information is unavailable\n",
-            //                  __FUNCTION__,
-            //                  obj->sid);
-            //}
+            else if (!sockobj_getaddrsock(&obj->addrpeer))
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %u self information is unavailable\n",
+                              __FUNCTION__,
+                              obj->sid);
+            }
+            else if (connect(obj->fd,
+                             (struct sockaddr*)&obj->addrpeer.sockaddr,
+                             obj->addrpeer.addrlen) != 0)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: socket %u peer information is unavailable\n",
+                              __FUNCTION__,
+                              obj->sid);
+            }
             else
             {
-                memcpy(&obj->addrpeer.sockaddr, &addr, sizeof(obj->addrpeer.sockaddr));
-                sockobj_getaddrsock(&obj->addrpeer);
-                memcpy(&obj->addrself, &listener->addrself, sizeof(obj->addrself));
+                obj->state = SOCKOBJ_STATE_OPEN | SOCKOBJ_STATE_CONNECT;
+                obj->info.startusec = ts;
+                sockobj_getaddrself(obj);
+                tokenbucket_init(&obj->tb, obj->conf.ratelimitbps);
 
                 logger_printf(LOGGER_LEVEL_TRACE,
                               "%s: new socket %u accepted on %s from %s\n",
@@ -222,29 +183,13 @@ bool sockudp_accept(struct sockobj * const listener,
                               obj->addrself.sockaddrstr,
                               obj->addrpeer.sockaddrstr);
 
-                tokenbucket_init(&obj->tb, obj->conf.ratelimitbps);
-                obj->state = SOCKOBJ_STATE_OPEN | SOCKOBJ_STATE_CONNECT;
-                obj->info.startusec = ts;
-
-                // @todo Need to invoke sockobj_open() without creating a file
-                //       descriptor.
-                // @todo Listener and child sockets may need to have larger send
-                //       and/or receive buffers than the system defaults.
-                obj->info.recv.winsize = listener->info.recv.winsize;
-                setsockopt(obj->fd,
-                           SOL_SOCKET,
-                           SO_RCVBUF,
-                           &obj->info.recv.winsize,
-                           sizeof(obj->info.recv.winsize));
-                obj->info.send.winsize = listener->info.send.winsize;
-                setsockopt(obj->fd,
-                           SOL_SOCKET,
-                           SO_SNDBUF,
-                           &obj->info.send.winsize,
-                           sizeof(obj->info.send.winsize));
-
                 ret = true;
             }
+
+            vector_resize(&listener->event.fds, 0);
+            listener->ops.sock_open(listener);
+            listener->ops.sock_bind(listener);
+            listener->ops.sock_listen(listener, listener->conf.backlog);
         }
     }
 
