@@ -11,30 +11,22 @@
 #include "logger.h"
 #include "sock_tcp.h"
 #include "util_date.h"
+#include "util_debug.h"
 #include "util_ioctl.h"
 #include "util_string.h"
 #include "util_unit.h"
 
-/**
- * @see See header file for interface comments.
- */
 int32_t formperf_head(struct formobj * const obj)
 {
-    int32_t  retval  = -1;
+    int32_t retval = -1;
     char recvwin[16], sendwin[16];
     //uint16_t cols    = 0,
     //         rows    = 0;
 
-    if ((obj == NULL) ||
-        (obj->sock == NULL) ||
-        (obj->dstbuf == NULL) ||
-        (obj->dstlen <= 0))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (obj->sock != NULL) &&
+                         (obj->dstbuf != NULL) &&
+                         (obj->dstlen > 0)))
     {
         // @todo Format should be responsive based on the number of columns.
         //utilioctl_gettermsize(&rows, &cols);
@@ -74,12 +66,9 @@ int32_t formperf_head(struct formobj * const obj)
     return retval;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t formperf_body(struct formobj * const obj)
 {
-    int32_t  retval   = -1;
+    int32_t  retval = -1;
     uint64_t diffusec = 0, packets = 0;
     uint32_t progress = 0;
     struct util_date_diff diff;
@@ -92,16 +81,10 @@ int32_t formperf_body(struct formobj * const obj)
     // @todo redirect to udp- or tcp-specific function.
     // udp packets per second, jitter, etc.
     // tcp packets successful reads per second, jitter, etc.
-    if ((obj == NULL) ||
-        (obj->sock == NULL) ||
-        (obj->dstbuf == NULL) ||
-        (obj->dstlen <= 0))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (obj->sock != NULL) &&
+                         (obj->dstbuf != NULL) &&
+                         (obj->dstlen > 0)))
     {
         if ((obj->tsus >= obj->timeoutusec) &&
             (obj->tsus > obj->sock->info.startusec))
@@ -260,23 +243,14 @@ int32_t formperf_body(struct formobj * const obj)
     return retval;
 }
 
-/**
- * @see See header file for interface comments.
- */
 int32_t formperf_foot(struct formobj * const obj)
 {
     int32_t retval = -1;
 
-    if ((obj == NULL) ||
-        (obj->sock == NULL) ||
-        (obj->dstbuf == NULL) ||
-        (obj->dstlen <= 0))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (obj->sock != NULL) &&
+                         (obj->dstbuf != NULL) &&
+                         (obj->dstlen > 0)))
     {
         obj->timeoutusec = 0;
         retval = formperf_body(obj);
