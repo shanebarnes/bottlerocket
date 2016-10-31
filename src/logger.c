@@ -127,7 +127,7 @@ static char *logger_get_level_string(const enum logger_level level)
 void logger_printf(const enum logger_level level, const char *format, ...)
 {
     int32_t error = 0, len;
-    char msgbuf[128], outbuf[256], timebuf[32];
+    char msgbuf[256], outbuf[512], timebuf[32];
     va_list args;
     uint64_t sec = 0, nsec = 0;
     enum logger_level setlevel = LOGGER_LEVEL_OFF;
