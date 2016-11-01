@@ -9,8 +9,10 @@
 
 #include "cv_obj.h"
 #include "logger.h"
+#include "util_date.h"
 #include "util_debug.h"
 #include "util_mem.h"
+#include "util_unit.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -124,6 +126,40 @@ bool cvobj_wait(struct cvobj * const cv, struct mutexobj * const mtx)
     if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL) && (mtx != NULL)))
     {
         if ((err = pthread_cond_wait(&cv->priv->handle, &mtx->obj)) != 0)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to block on condition variable (%d)\n",
+                          __FUNCTION__,
+                          err);
+        }
+        else
+        {
+            ret = true;
+        }
+    }
+
+    return ret;
+}
+
+bool cvobj_timedwait(struct cvobj * const cv,
+                     struct mutexobj * const mtx,
+                     const uint32_t timeoutus)
+{
+    bool ret = false;
+    int32_t err = 0;
+    uint64_t tsus = 0;
+    struct timespec ts;
+
+    if (UTILDEBUG_VERIFY((cv != NULL) && (cv->priv != NULL) && (mtx != NULL)))
+    {
+        tsus = utildate_gettstime(DATE_CLOCK_REALTIME, UNIT_TIME_USEC);
+        tsus += timeoutus;
+        ts.tv_sec = tsus / UNIT_TIME_USEC;
+        ts.tv_nsec = (tsus - ts.tv_sec * UNIT_TIME_USEC) * 1000;
+
+        err = pthread_cond_timedwait(&cv->priv->handle, &mtx->obj, &ts);
+
+        if ((err != 0) && (err != ETIMEDOUT))
         {
             logger_printf(LOGGER_LEVEL_ERROR,
                           "%s: failed to block on condition variable (%d)\n",

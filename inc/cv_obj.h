@@ -66,4 +66,19 @@ bool cvobj_signalone(struct cvobj * const cv);
  */
 bool cvobj_wait(struct cvobj * const cv, struct mutexobj * const mtx);
 
+/**
+ * @brief Unlock a mutex and block on a condition variable object. The blocking
+ *        wait will not last longer than the amount of time specified by the
+ *        timeout.
+ *
+ * @param[in,out] cv        A pointer to a condition variable object.
+ * @param[in,out] mtx       A pointer to a mutex object.
+ * @param[in,out] timeoutus The maximum amount of time to wait in microseconds.
+ *
+ * @return True if a condition variable object waited on a condition.
+ */
+bool cvobj_timedwait(struct cvobj * const cv,
+                     struct mutexobj * const mtx,
+                     const uint32_t timeoutus);
+
 #endif // _CV_OBJ_H_
