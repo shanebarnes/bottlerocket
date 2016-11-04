@@ -38,7 +38,48 @@ struct threadpool_task
 {
     void (*func)();
     void *arg;
+    uint32_t id;
 };
+
+struct threadpool_thread
+{
+    struct threadobj handle;
+    uint32_t taskid;
+};
+
+/**
+ * @brief Set the thread pool task id of the calling thread.
+ *
+ * @param[in,out] pool   A pointer to a thread pool to create.
+ * @param[in]     taskid A task id to associated with the calling thread.
+ *
+ * @return True if a thread pool task id was associated with the calling thread.
+ */
+static bool threadpool_setid(struct threadpool * const pool,
+                             const uint32_t taskid)
+{
+    bool ret = false;
+    uint64_t threadid = threadobj_getcallerid();
+    struct threadpool_thread *thread = NULL;
+    uint32_t i;
+
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
+    {
+        for (i = 0; i < vector_getsize(&pool->priv->threads); i++)
+        {
+            thread = vector_getval(&pool->priv->threads, i);
+
+            if (threadid == threadobj_getthreadid(&thread->handle))
+            {
+                thread->taskid = taskid;
+                ret = true;
+                break;
+            }
+        }
+    }
+
+    return ret;
+}
 
 /**
  * @brief Thread pool task thread that waits to be signaled when a new task is
@@ -65,6 +106,7 @@ static void *threadpool_thread(void *arg)
             {
                 task.func = temp->func;
                 task.arg = temp->arg;
+                threadpool_setid(pool, temp->id);
                 vector_deletetail(&pool->priv->tasks);
 
                 pool->priv->busy++;
@@ -101,7 +143,7 @@ bool threadpool_create(struct threadpool * pool, const uint32_t size)
 {
     bool ret = false;
     uint32_t i = 0;
-    struct threadobj *thread = NULL;
+    struct threadpool_thread *thread = NULL;
 
     if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv == NULL) && (size > 0)))
     {
@@ -118,7 +160,7 @@ bool threadpool_create(struct threadpool * pool, const uint32_t size)
         }
         else if (!vector_create(&pool->priv->threads,
                                 size,
-                                sizeof(struct threadobj)))
+                                sizeof(struct threadpool_thread)))
         {
             threadpool_destroy(pool);
         }
@@ -147,14 +189,16 @@ bool threadpool_create(struct threadpool * pool, const uint32_t size)
                 thread = vector_getval(&pool->priv->threads, i);
                 memset(thread, 0, sizeof(*thread));
 
-                if (!threadobj_create(thread))
+                if (!threadobj_create(&thread->handle))
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: failed to create thread #%u\n",
                                   __FUNCTION__,
                                   i);
                 }
-                else if (!threadobj_init(thread, threadpool_thread, pool))
+                else if (!threadobj_init(&thread->handle,
+                                         threadpool_thread,
+                                         pool))
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
                                   "%s: failed to initialize thread #%u\n",
@@ -185,7 +229,7 @@ bool threadpool_destroy(struct threadpool * const pool)
 {
     bool ret = false;
     uint32_t i = 0;
-    struct threadobj *thread = NULL;
+    struct threadpool_thread *thread = NULL;
 
     if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
@@ -199,7 +243,7 @@ bool threadpool_destroy(struct threadpool * const pool)
         {
             thread = vector_getval(&pool->priv->threads, i);
 
-            if (!threadobj_destroy(thread))
+            if (!threadobj_destroy(&thread->handle))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: failed to destroy thread #%u\n",
@@ -221,7 +265,7 @@ bool threadpool_start(struct threadpool * const pool)
 {
     bool ret = false;
     uint32_t i = 0;
-    struct threadobj *thread = NULL;
+    struct threadpool_thread *thread = NULL;
 
     if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
@@ -242,7 +286,7 @@ bool threadpool_start(struct threadpool * const pool)
             mutexobj_unlock(&pool->priv->mtx);
 
             thread = vector_getval(&pool->priv->threads, i);
-            if (!threadobj_start(thread))
+            if (!threadobj_start(&thread->handle))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: failed to start thread #%u\n",
@@ -267,7 +311,7 @@ bool threadpool_stop(struct threadpool * const pool)
 {
     bool ret = false;
     uint32_t i = 0;
-    struct threadobj *thread = NULL;
+    struct threadpool_thread *thread = NULL;
 
     if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
@@ -280,7 +324,7 @@ bool threadpool_stop(struct threadpool * const pool)
         {
             thread = vector_getval(&pool->priv->threads, i);
 
-            if (!threadobj_stop(thread))
+            if (!threadobj_stop(&thread->handle))
             {
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: failed to stop thread #%u\n",
@@ -306,16 +350,16 @@ bool threadpool_stop(struct threadpool * const pool)
 
 bool threadpool_execute(struct threadpool * const pool,
                         void * const func,
-                        void * const arg)
+                        void * const arg,
+                        const uint32_t id)
 {
     bool ret = false;
-    struct threadpool_task task = {.func = func, .arg = arg};
+    struct threadpool_task task = {.func = func, .arg = arg, .id = id};
 
     if (UTILDEBUG_VERIFY((pool != NULL) &&
                          (pool->priv != NULL) &&
                          (func != NULL)))
     {
-        // Wait for all threads to complete startup.
         mutexobj_lock(&pool->priv->mtx);
         while (pool->priv->startup > 0)
         {
@@ -387,9 +431,9 @@ bool threadpool_wake(struct threadpool * const pool)
 uint32_t threadpool_getid(struct threadpool * const pool)
 {
     uint32_t ret = 0;
-    uint64_t tid = threadobj_getcallerid();
+    uint64_t threadid = threadobj_getcallerid();
+    struct threadpool_thread *thread = NULL;
     uint32_t i;
-    struct threadobj *thread = NULL;
 
     if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
     {
@@ -397,9 +441,9 @@ uint32_t threadpool_getid(struct threadpool * const pool)
         {
             thread = vector_getval(&pool->priv->threads, i);
 
-            if (tid == threadobj_getthreadid(thread))
+            if (threadid == threadobj_getthreadid(&thread->handle))
             {
-                ret = i;
+                ret = thread->taskid;
                 break;
             }
         }

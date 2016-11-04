@@ -23,7 +23,7 @@ struct threadpool
  * @brief Create a thread pool.
  *
  * @param[in,out] pool A pointer to a thread pool to create.
- * @param[in]     size The number of worker threads to create..
+ * @param[in]     size The number of worker threads to create.
  *
  * @return True if a thread pool was created.
  */
@@ -63,12 +63,14 @@ bool threadpool_stop(struct threadpool * const pool);
  * @param[in,out] pool A pointer to a thread pool.
  * @param[in]     func A pointer to a task function.
  * @param[in]     arg  A pointer to a task function argument.
+ * @param[in]     id   A task identifier.
  *
  * @return True if a task was executed in a thread pool worker thread.
  */
 bool threadpool_execute(struct threadpool * const pool,
                         void * const func,
-                        void * const arg);
+                        void * const arg,
+                        const uint32_t id);
 
 /**
  * @brief Wait (block) until a specified number of tasks are completed by a
@@ -92,11 +94,11 @@ bool threadpool_wait(struct threadpool * const pool, const uint32_t wait_count);
 bool threadpool_wake(struct threadpool * const pool);
 
 /**
- * @brief Get the thread pool id of the calling thread.
+ * @brief Get the thread pool task id of the calling thread.
  *
  * @param[in] pool A pointer to a thread pool.
  *
- * @return A thread pool id of the calling thread.
+ * @return A thread pool task id of the calling thread.
  */
 uint32_t threadpool_getid(struct threadpool * const pool);
 
