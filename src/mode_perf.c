@@ -625,7 +625,7 @@ bool modeperf_start(void)
     }
     else
     {
-        ret = threadpool_execute(&pool, modeperf_thread, &pool);
+        ret = threadpool_execute(&pool, modeperf_thread, &pool, 0);
         threadpool_wait(&pool, 1/*opts->threads*/);
     }
 
