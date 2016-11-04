@@ -254,7 +254,7 @@ bool modechat_start(void)
     }
     else
     {
-        ret = threadpool_execute(&pool, modechat_thread, &pool);
+        ret = threadpool_execute(&pool, modechat_thread, &pool, 0);
         threadpool_wait(&pool, 1/*opts->threads*/);
     }
 
