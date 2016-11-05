@@ -23,16 +23,18 @@ static const char * formdiv = "----------------------------------------"
                               "----------------------------------------"
                               "----------------------------------------";
 
-bool formchat_init(struct formobj * const obj)
+bool formchat_create(struct formobj * const obj, const int32_t bufsize)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(obj != NULL))
+    if (UTILDEBUG_VERIFY(formobj_create(obj, bufsize)))
     {
-        obj->ops.form_head = formchat_head;
-        obj->ops.form_body = formchat_body;
-        obj->ops.form_foot = formchat_foot;
-        obj->spincount     = 0;
+        obj->ops.form_create  = formchat_create;
+        obj->ops.form_destroy = formobj_destroy;
+        obj->ops.form_head    = formchat_head;
+        obj->ops.form_body    = formchat_body;
+        obj->ops.form_foot    = formchat_foot;
+        obj->spincount        = 0;
 
         ret = true;
     }
