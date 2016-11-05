@@ -10,9 +10,76 @@
 #include "form_obj.h"
 #include "logger.h"
 #include "util_debug.h"
+#include "util_mem.h"
 #include "util_string.h"
 
 static char spinner [] = {'|', '/', '-', '\\'};
+
+bool formobj_create(struct formobj * const obj, const int32_t bufsize)
+{
+    bool ret = false;
+
+    if (!UTILDEBUG_VERIFY((obj != NULL) &&
+                          (bufsize > 0) &&
+                          (obj->srcbuf == NULL) &&
+                          (obj->dstbuf == NULL)))
+    {
+        // Do nothing.
+    }
+    else if ((obj->srcbuf = UTILMEM_CALLOC(char,
+                                           sizeof(char),
+                                           bufsize)) == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: form source buffer allocation failed\n",
+                      __FUNCTION__);
+    }
+    else if ((obj->dstbuf = UTILMEM_CALLOC(char,
+                                           sizeof(char),
+                                           bufsize)) == NULL)
+    {
+        logger_printf(LOGGER_LEVEL_ERROR,
+                      "%s: form destination buffer allocation failed\n",
+                      __FUNCTION__);
+        UTILMEM_FREE(obj->srcbuf);
+        obj->srcbuf = NULL;
+    }
+    else
+    {
+        obj->srclen = obj->dstlen = bufsize;
+        ret = true;
+    }
+
+    return ret;
+}
+
+bool formobj_destroy(struct formobj * const obj)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((obj != NULL) &&
+                         (obj->srcbuf != NULL) &&
+                         (obj->dstbuf != NULL)))
+    {
+        UTILMEM_FREE(obj->srcbuf);
+        obj->srcbuf = NULL;
+        obj->srclen = 0;
+
+        UTILMEM_FREE(obj->dstbuf);
+        obj->dstbuf = NULL;
+        obj->dstlen = 0;
+
+        obj->ops.form_create  = NULL;
+        obj->ops.form_destroy = NULL;
+        obj->ops.form_head    = NULL;
+        obj->ops.form_body    = NULL;
+        obj->ops.form_foot    = NULL;
+
+        ret = true;
+    }
+
+    return ret;
+}
 
 int32_t formobj_idle(struct formobj * const obj)
 {
