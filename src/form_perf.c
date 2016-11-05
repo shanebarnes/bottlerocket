@@ -16,6 +16,25 @@
 #include "util_string.h"
 #include "util_unit.h"
 
+bool formperf_create(struct formobj * const obj, const int32_t bufsize)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY(formobj_create(obj, bufsize)))
+    {
+        obj->ops.form_create  = formperf_create;
+        obj->ops.form_destroy = formobj_destroy;
+        obj->ops.form_head    = formperf_head;
+        obj->ops.form_body    = formperf_body;
+        obj->ops.form_foot    = formperf_foot;
+        obj->spincount        = 0;
+
+        ret = true;
+    }
+
+    return ret;
+}
+
 int32_t formperf_head(struct formobj * const obj)
 {
     int32_t retval = -1;

@@ -14,6 +14,11 @@
 #include "system_types.h"
 
 /**
+ * @see form_create() for interface comments.
+ */
+bool formperf_create(struct formobj * const obj, const int32_t bufsize);
+
+/**
  * @see form_head() for interface comments.
  */
 int32_t formperf_head(struct formobj * const obj);
