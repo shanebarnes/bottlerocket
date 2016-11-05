@@ -34,7 +34,6 @@ static void *modechat_thread(void * const arg)
     struct sockobj server, socket;
     struct formobj form;
     struct fionobj fion;
-    char *recvbuf = NULL, *sendbuf = NULL;
     int32_t count = 0, timeoutms = 500;
     int32_t recvbytes = 0, formbytes = 0;
 
@@ -52,30 +51,19 @@ static void *modechat_thread(void * const arg)
     server.conf.family = opts->family;
     server.conf.type = opts->type;
     server.conf.model = SOCKOBJ_MODEL_SERVER;
+    memset(&form, 0, sizeof(form));
 
     if (!UTILDEBUG_VERIFY(tpool != NULL))
     {
         // Do nothing.
     }
-    else if ((recvbuf = UTILMEM_MALLOC(char, sizeof(char), opts->buflen)) == NULL)
+    else if (!formchat_create(&form, opts->buflen))
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: receive buffer allocation failed\n",
-                      __FUNCTION__);
-    }
-    else if ((sendbuf = UTILMEM_MALLOC(char, sizeof(char), opts->buflen)) == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: send buffer allocation failed\n",
-                      __FUNCTION__);
-
-        UTILMEM_FREE(recvbuf);
-        recvbuf = NULL;
+        // Do nothing.
     }
     else if (!fionpoll_create(&fion))
     {
-        UTILMEM_FREE(recvbuf);
-        UTILMEM_FREE(sendbuf);
+        form.ops.form_destroy(&form);
     }
     else
     {
@@ -83,12 +71,6 @@ static void *modechat_thread(void * const arg)
         fion.timeoutms = timeoutms;
         fion.pevents   = FIONOBJ_PEVENT_IN;
         fion.ops.fion_setflags(&fion); // ?? fix this
-
-        formchat_init(&form);
-        form.srcbuf = recvbuf;
-        form.srclen = opts->buflen;
-        form.dstbuf = sendbuf;
-        form.dstlen = opts->buflen;
 
         if (opts->arch == SOCKOBJ_MODEL_CLIENT)
         {
@@ -146,7 +128,7 @@ static void *modechat_thread(void * const arg)
                 // Flush input.
                 if (fion.ops.fion_getevents(&fion, 0) & FIONOBJ_REVENT_INREADY)
                 {
-                    inputstd_recv(recvbuf, opts->buflen, 0);
+                    inputstd_recv(form.srcbuf, opts->buflen, 0);
                 }
             }
             else
@@ -160,7 +142,7 @@ static void *modechat_thread(void * const arg)
                 }
 
                 recvbytes = socket.ops.sock_recv(&socket,
-                                                 recvbuf,
+                                                 form.srcbuf,
                                                  opts->buflen - 1);
 
                 if (recvbytes > 0)
@@ -168,11 +150,11 @@ static void *modechat_thread(void * const arg)
                     if ((opts->arch == SOCKOBJ_MODEL_SERVER) && (opts->echo))
                     {
                         // @todo Fix for partial-send case.
-                        socket.ops.sock_send(&socket, recvbuf, recvbytes);
+                        socket.ops.sock_send(&socket, form.srcbuf, recvbytes);
                     }
 
                     // Null-terminate the string.
-                    recvbuf[recvbytes] = '\0';
+                    ((char*)form.srcbuf)[recvbytes] = '\0';
                     recvbytes++;
 
                     form.srclen = recvbytes;
@@ -196,14 +178,16 @@ static void *modechat_thread(void * const arg)
 
                 if (fion.ops.fion_getevents(&fion, 0) & FIONOBJ_REVENT_INREADY)
                 {
-                    if ((recvbytes = inputstd_recv(recvbuf,
+                    if ((recvbytes = inputstd_recv(form.srcbuf,
                                                    opts->buflen,
                                                    0)) > 0)
                     {
                         if (count > 0)
                         {
                             // @todo Fix for partial-send case.
-                            socket.ops.sock_send(&socket, recvbuf, recvbytes);
+                            socket.ops.sock_send(&socket,
+                                                 form.srcbuf,
+                                                 recvbytes);
                         }
                     }
                 }
@@ -211,8 +195,7 @@ static void *modechat_thread(void * const arg)
         }
 
         fionpoll_destroy(&fion);
-        UTILMEM_FREE(recvbuf);
-        UTILMEM_FREE(sendbuf);
+        form.ops.form_destroy(&form);
     }
 
     return NULL;
