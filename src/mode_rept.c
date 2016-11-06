@@ -11,32 +11,70 @@
 #include "mode_rept.h"
 #include "util_debug.h"
 
-static struct args_obj *opts = NULL;
+struct modeobj_priv
+{
+    struct args_obj args;
+};
 
-bool moderept_init(struct args_obj * const args)
+bool moderept_create(struct modeobj * const mode,
+                     const struct args_obj * const args)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(args != NULL))
+    if (UTILDEBUG_VERIFY((mode != NULL) &&
+                         (mode->priv == NULL) &&
+                         (args != NULL)))
     {
-        opts = args;
-        ret = true;
+        // Do something.
     }
 
     return ret;
 }
 
-bool moderept_start(void)
+bool moderept_destroy(struct modeobj * const mode)
 {
-    return false;
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((mode != NULL) && (mode->priv != NULL)))
+    {
+        // Do something.
+    }
+
+    return ret;
 }
 
-bool moderept_stop(void)
+bool moderept_start(struct modeobj * const mode)
 {
-    return false;
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((mode != NULL) && (mode->priv != NULL)))
+    {
+        // Do something.
+    }
+
+    return ret;
 }
 
-bool moderept_cancel(void)
+bool moderept_stop(struct modeobj * const mode)
 {
-    return false;
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((mode != NULL) && (mode->priv != NULL)))
+    {
+        // Do something.
+    }
+
+    return ret;
+}
+
+bool moderept_cancel(struct modeobj * const mode)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((mode != NULL) && (mode->priv != NULL)))
+    {
+        // Do something.
+    }
+
+    return ret;
 }

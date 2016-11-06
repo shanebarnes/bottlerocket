@@ -11,26 +11,33 @@
 #define _MODE_REPT_H_
 
 #include "args.h"
+#include "mode_obj.h"
 #include "system_types.h"
 
 /**
- * @see modeobj_int() for interface comments.
+ * @see modeobj_create() for interface comments.
  */
-bool moderept_init(struct args_obj * const args);
+bool moderept_create(struct modeobj * const mode,
+                     const struct args_obj * const args);
+
+/**
+ * @see modeobj_destroy() for interface comments.
+ */
+bool moderept_destroy(struct modeobj * const mode);
 
 /**
  * @see modeobj_start() for interface comments.
  */
-bool moderept_start(void);
+bool moderept_start(struct modeobj * const mode);
 
 /**
  * @see modeobj_stop() for interface comments.
  */
-bool moderept_stop(void);
+bool moderept_stop(struct modeobj * const mode);
 
 /**
  * @see modeobj_cancel() for interface comments.
  */
-bool moderept_cancel(void);
+bool moderept_cancel(struct modeobj * const mode);
 
 #endif // _MODE_REPT_H_
