@@ -10,7 +10,6 @@
 #include "args.h"
 #include "logger.h"
 #include "mode_chat.h"
-#include "mode_obj.h"
 #include "mode_perf.h"
 #include "mode_rept.h"
 #include "output_if_instance.h"
@@ -66,7 +65,7 @@ void signal_handler(int signum)
 
     if (mode.ops.mode_cancel != NULL)
     {
-        mode.ops.mode_cancel();
+        mode.ops.mode_cancel(&mode);
     }
 }
 
@@ -111,22 +110,13 @@ int32_t main(int argc, char **argv)
         switch (args.mode)
         {
             case ARGS_MODE_CHAT:
-                mode.ops.mode_init = modechat_init;
-                mode.ops.mode_start = modechat_start;
-                mode.ops.mode_stop = modechat_stop;
-                mode.ops.mode_cancel = modechat_cancel;
+                modechat_create(&mode, &args);
                 break;
             case ARGS_MODE_PERF:
-                mode.ops.mode_init = modeperf_init;
-                mode.ops.mode_start = modeperf_start;
-                mode.ops.mode_stop = modeperf_stop;
-                mode.ops.mode_cancel = modeperf_cancel;
+                modeperf_create(&mode, &args);
                 break;
             case ARGS_MODE_REPT:
-                mode.ops.mode_init = moderept_init;
-                mode.ops.mode_start = moderept_start;
-                mode.ops.mode_stop = moderept_stop;
-                mode.ops.mode_cancel = moderept_cancel;
+                moderept_create(&mode, &args);
                 break;
             default:
                 logger_printf(LOGGER_LEVEL_ERROR,
@@ -139,9 +129,9 @@ int32_t main(int argc, char **argv)
 
         if (ret == EXIT_SUCCESS)
         {
-            mode.ops.mode_init(&args);
-            mode.ops.mode_start();
-            mode.ops.mode_stop();
+            mode.ops.mode_start(&mode);
+            mode.ops.mode_stop(&mode);
+            mode.ops.mode_destroy(&mode);
         }
     }
 
