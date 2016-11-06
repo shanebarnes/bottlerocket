@@ -24,40 +24,142 @@
 #include <string.h>
 #include <unistd.h>
 
-static struct threadpool pool;
-static struct args_obj *opts = NULL;
+struct modeobj_priv
+{
+    struct args_obj   args;
+    struct threadpool threadpool;
+};
 
-static void *modechat_thread(void * const arg)
+bool modechat_create(struct modeobj * const mode,
+                     const struct args_obj * const args)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((mode != NULL) &&
+                         (mode->priv == NULL) &&
+                         (args != NULL)))
+    {
+        if ((mode->priv = UTILMEM_CALLOC(struct modeobj_priv,
+                                         sizeof(struct modeobj_priv),
+                                         1)) == NULL)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to allocate memory\n",
+                          __FUNCTION__);
+        }
+        else if (memcpy(&mode->priv->args,
+                        args,
+                        sizeof(mode->priv->args)) == NULL)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to copy arguments\n",
+                          __FUNCTION__);
+        }
+        else if (!threadpool_create(&mode->priv->threadpool, args->threads))
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to create thread pool\n",
+                          __FUNCTION__);
+            UTILMEM_FREE(mode->priv);
+            mode->priv = NULL;
+        }
+        else
+        {
+            mode->ops.mode_create  = modechat_create;
+            mode->ops.mode_destroy = modechat_destroy;
+            mode->ops.mode_start   = modechat_start;
+            mode->ops.mode_stop    = modechat_stop;
+            mode->ops.mode_cancel  = modechat_cancel;
+
+            ret = true;
+        }
+    }
+
+    return ret;
+}
+
+bool modechat_destroy(struct modeobj * const mode)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((mode != NULL) && (mode->priv != NULL)))
+    {
+        mode->ops.mode_stop(mode);
+        threadpool_destroy(&mode->priv->threadpool);
+        UTILMEM_FREE(mode->priv);
+        mode->priv = NULL;
+        memset(&mode->ops, 0, sizeof(mode->ops));
+
+        ret = true;
+    }
+
+    return ret;
+}
+
+/**
+ * @brief Copy a mode object configuration to a socket object configuration.
+ *
+ * @param[in,out] sock      A pointer to a socket object.
+ * @param[in]     mode      A pointer to a mode object.
+ * @param[in]     timeoutms Socket timeout in milliseconds.
+ *
+ * @return True on a successful copy.
+ */
+static bool modechat_copy(struct sockobj * const sock,
+                          struct modeobj_priv * const mode,
+                          const int32_t timeoutms)
+{
+    bool ret = false;
+
+    if (UTILDEBUG_VERIFY((sock != NULL) && (mode != NULL)))
+    {
+        memcpy(sock->conf.ipaddr, mode->args.ipaddr, sizeof(sock->conf.ipaddr));
+        sock->conf.ipport        = mode->args.ipport;
+        sock->conf.backlog       = mode->args.backlog;
+        sock->conf.timeoutms     = timeoutms;
+        sock->conf.datalimitbyte = mode->args.datalimitbyte;
+        sock->conf.ratelimitbps  = mode->args.ratelimitbps;
+        sock->conf.timelimitusec = mode->args.timelimitusec;
+        sock->conf.family        = mode->args.family;
+        sock->conf.type          = mode->args.type;
+        sock->conf.model         = mode->args.arch;
+
+        ret = true;
+    }
+
+    return ret;
+}
+
+static void *modechat_workerthread(void * const arg)
 {
     bool exit = false;
-    struct threadpool *tpool = (struct threadpool*)arg;
+    struct modeobj_priv *mode = (struct modeobj_priv*)arg;
     struct sockobj server, socket;
     struct formobj form;
     struct fionobj fion;
     int32_t count = 0, timeoutms = 500;
     int32_t recvbytes = 0, formbytes = 0;
 
-    memcpy(socket.conf.ipaddr, opts->ipaddr, sizeof(socket.conf.ipaddr));
-    socket.conf.ipport = opts->ipport;
-    socket.conf.timeoutms = 0;
-    socket.conf.timelimitusec = opts->timelimitusec;
-    socket.conf.datalimitbyte = opts->datalimitbyte;
-    socket.conf.family = opts->family;
-    socket.conf.type = opts->type;
-    socket.conf.model = SOCKOBJ_MODEL_CLIENT;
-    memcpy(server.conf.ipaddr, opts->ipaddr, sizeof(server.conf.ipaddr));
-    server.conf.ipport = opts->ipport;
-    server.conf.timeoutms = 0;
-    server.conf.family = opts->family;
-    server.conf.type = opts->type;
-    server.conf.model = SOCKOBJ_MODEL_SERVER;
+    modechat_copy(&socket, mode, 0);
+    modechat_copy(&server, mode, 0);
+
+    //memcpy(socket.conf.ipaddr, mode->args.ipaddr, sizeof(socket.conf.ipaddr));
+    //socket.conf.ipport = mode->args.ipport;
+    //socket.conf.timeoutms = 0;
+    //socket.conf.timelimitusec = mode->args.timelimitusec;
+    //socket.conf.datalimitbyte = mode->args.datalimitbyte;
+    //socket.conf.family = opts->family;
+    //socket.conf.type = opts->type;
+    //socket.conf.model = SOCKOBJ_MODEL_CLIENT;
+    //memcpy(server.conf.ipaddr, opts->ipaddr, sizeof(server.conf.ipaddr));
+    //server.conf.ipport = opts->ipport;
+    //server.conf.timeoutms = 0;
+    //server.conf.family = opts->family;
+    //server.conf.type = opts->type;
+    //server.conf.model = SOCKOBJ_MODEL_SERVER;
     memset(&form, 0, sizeof(form));
 
-    if (!UTILDEBUG_VERIFY(tpool != NULL))
-    {
-        // Do nothing.
-    }
-    else if (!formchat_create(&form, opts->buflen))
+    if (!formchat_create(&form, mode->args.buflen))
     {
         // Do nothing.
     }
@@ -72,7 +174,7 @@ static void *modechat_thread(void * const arg)
         fion.pevents   = FIONOBJ_PEVENT_IN;
         fion.ops.fion_setflags(&fion); // ?? fix this
 
-        if (opts->arch == SOCKOBJ_MODEL_CLIENT)
+        if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
         {
             exit = !sockmod_init(&socket);
         }
@@ -81,13 +183,13 @@ static void *modechat_thread(void * const arg)
             exit = !sockmod_init(&server);
         }
 
-        while ((!exit) && (threadpool_isrunning(tpool)))
+        while ((!exit) && (threadpool_isrunning(&mode->threadpool)))
         {
             fion.ops.fion_poll(&fion);
 
             if (count <= 0)
             {
-                if (opts->arch == SOCKOBJ_MODEL_CLIENT)
+                if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
                 {
                     form.sock = &socket;
                     formbytes = form.ops.form_head(&form);
@@ -128,12 +230,12 @@ static void *modechat_thread(void * const arg)
                 // Flush input.
                 if (fion.ops.fion_getevents(&fion, 0) & FIONOBJ_REVENT_INREADY)
                 {
-                    inputstd_recv(form.srcbuf, opts->buflen, 0);
+                    inputstd_recv(form.srcbuf, mode->args.buflen, 0);
                 }
             }
             else
             {
-                if (opts->arch == SOCKOBJ_MODEL_CLIENT)
+                if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
                 {
                     if ((socket.state & SOCKOBJ_STATE_CONNECT) == 0)
                     {
@@ -143,11 +245,12 @@ static void *modechat_thread(void * const arg)
 
                 recvbytes = socket.ops.sock_recv(&socket,
                                                  form.srcbuf,
-                                                 opts->buflen - 1);
+                                                 mode->args.buflen - 1);
 
                 if (recvbytes > 0)
                 {
-                    if ((opts->arch == SOCKOBJ_MODEL_SERVER) && (opts->echo))
+                    if ((mode->args.arch == SOCKOBJ_MODEL_SERVER) &&
+                        (mode->args.echo))
                     {
                         // @todo Fix for partial-send case.
                         socket.ops.sock_send(&socket, form.srcbuf, recvbytes);
@@ -170,7 +273,7 @@ static void *modechat_thread(void * const arg)
                     formbytes = form.ops.form_foot(&form);
                     output_if_std_send(form.dstbuf, formbytes);
 
-                    if (opts->arch == SOCKOBJ_MODEL_CLIENT)
+                    if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
                     {
                         exit = true;
                     }
@@ -179,7 +282,7 @@ static void *modechat_thread(void * const arg)
                 if (fion.ops.fion_getevents(&fion, 0) & FIONOBJ_REVENT_INREADY)
                 {
                     if ((recvbytes = inputstd_recv(form.srcbuf,
-                                                   opts->buflen,
+                                                   mode->args.buflen,
                                                    0)) > 0)
                     {
                         if (count > 0)
@@ -201,74 +304,46 @@ static void *modechat_thread(void * const arg)
     return NULL;
 }
 
-bool modechat_init(struct args_obj * const args)
+bool modechat_start(struct modeobj * const mode)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY(args != NULL))
+    if (UTILDEBUG_VERIFY((mode != NULL) && (mode->priv != NULL)))
     {
-        opts = args;
-        ret = true;
+        threadpool_stop(&mode->priv->threadpool);
+        ret  = threadpool_start(&mode->priv->threadpool);
+        ret &= threadpool_execute(&mode->priv->threadpool,
+                                  modechat_workerthread,
+                                  mode->priv,
+                                  0);
+
+        threadpool_wait(&mode->priv->threadpool, 1/*mode->priv->args.threads*/);
     }
 
     return ret;
 }
 
-bool modechat_start(void)
+bool modechat_stop(struct modeobj * const mode)
 {
     bool ret = false;
 
-    if (!UTILDEBUG_VERIFY(opts != NULL))
+    if (UTILDEBUG_VERIFY((mode != NULL) && (mode->priv != NULL)))
     {
-        // Do nothing.
-    }
-    else if (!threadpool_create(&pool, opts->threads))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to create chat threads\n",
-                      __FUNCTION__);
-    }
-    else if (!threadpool_start(&pool))
-    {
-        threadpool_destroy(&pool);
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to start chat threads\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        ret = threadpool_execute(&pool, modechat_thread, &pool, 0);
-        threadpool_wait(&pool, 1/*opts->threads*/);
+        ret  = mode->ops.mode_cancel(mode);
+        ret &= threadpool_stop(&mode->priv->threadpool);
     }
 
     return ret;
 }
 
-bool modechat_stop(void)
+bool modechat_cancel(struct modeobj * const mode)
 {
     bool ret = false;
 
-    if (!threadpool_stop(&pool))
+    if (UTILDEBUG_VERIFY((mode != NULL) && (mode->priv != NULL)))
     {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to stop chat threads\n",
-                      __FUNCTION__);
-    }
-    else if (!threadpool_destroy(&pool))
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: failed to destroy chat threads\n",
-                      __FUNCTION__);
-    }
-    else
-    {
-        ret = true;
+        ret = threadpool_wake(&mode->priv->threadpool);
     }
 
     return ret;
-}
-
-bool modechat_cancel(void)
-{
-    return threadpool_wake(&pool);
 }
