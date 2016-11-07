@@ -244,13 +244,13 @@ int32_t formperf_body(struct formobj * const obj)
                                        diff.sec,
                                        diff.msec);
 
-            obj->timeoutusec += 1 * UNIT_TIME_USEC;
+            obj->timeoutusec += obj->intervalusec;
 
             // Correct timeout in the event that the new timeout has already
             // expired.
             if (obj->timeoutusec <= obj->tsus)
             {
-                obj->timeoutusec = obj->tsus + 1 * UNIT_TIME_USEC;
+                obj->timeoutusec = obj->tsus + obj->intervalusec;
             }
         }
         else
