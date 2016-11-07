@@ -112,6 +112,7 @@ struct formobj
     int32_t             srclen,
                         dstlen;
     uint16_t            spincount;
+    uint64_t            intervalusec;
     uint64_t            timeoutusec;
     uint64_t            tsus;
 };
