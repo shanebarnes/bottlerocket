@@ -37,7 +37,7 @@ struct args_obj
     char               ipaddr[INET6_ADDRSTRLEN];
     enum sockobj_model arch;
     bool               echo;
-    uint64_t           interval;
+    uint64_t           intervalusec;
     uint64_t           buflen;
     struct args_opts   opts;
     uint64_t           datalimitbyte;

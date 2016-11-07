@@ -1202,7 +1202,7 @@ static void args_init(struct args_obj * const args)
     options[utilmath_log2(ARGS_FLAG_CLIENT)].dest = &args->ipaddr;
     args->arch = SOCKOBJ_MODEL_CLIENT;
     args->echo = false;
-    options[utilmath_log2(ARGS_FLAG_INTERVAL)].dest = &args->interval;
+    options[utilmath_log2(ARGS_FLAG_INTERVAL)].dest = &args->intervalusec;
     options[utilmath_log2(ARGS_FLAG_LEN)].dest = &args->buflen;
     args->opts.nodelay = true;
     options[utilmath_log2(ARGS_FLAG_NUM)].dest = &args->datalimitbyte;
@@ -1286,7 +1286,6 @@ static bool args_validate(struct argsmap * const map,
                     args->mode = ARGS_MODE_REPT;
                     break;
                 case ARGS_FLAG_IPV4:
-                    // if ip address flag already set and AF_INET != args->family, then we have a problem!
                     args->family = AF_INET;
                     utilinet_getaddrfromhost(args->ipaddr,
                                              args->family,
@@ -1308,9 +1307,22 @@ static bool args_validate(struct argsmap * const map,
                     break;
                 case ARGS_FLAG_CLIENT:
                     args->arch = SOCKOBJ_MODEL_CLIENT;
+                    if ((map->keys & ARGS_FLAG_UDP) &&
+                        !(map->keys & ARGS_FLAG_BANDWIDTH))
+                    {
+                        opt = &options[utilmath_log2(ARGS_FLAG_BANDWIDTH)];
+                        opt->copy(opt, "1Mbps", opt->dest);
+                        map->keys |= ARGS_FLAG_BANDWIDTH;
+                    }
+                    if (map->keys & ARGS_FLAG_IPV6)
+                    {
+                        args->family = AF_INET6;
+                    }
                     break;
                 case ARGS_FLAG_ECHO:
                     args->echo = true;
+                    break;
+                case ARGS_FLAG_INTERVAL:
                     break;
                 case ARGS_FLAG_LEN:
                     break;
@@ -1321,11 +1333,6 @@ static bool args_validate(struct argsmap * const map,
                     break;
                 case ARGS_FLAG_SERVER:
                     args->arch = SOCKOBJ_MODEL_SERVER;
-                    if ((map->keys & ARGS_FLAG_BANDWIDTH) == 0)
-                    {
-                        opt = &options[utilmath_log2(ARGS_FLAG_BANDWIDTH)];
-                        opt->copy(opt, "0bps", opt->dest);
-                    }
                     if ((map->keys & ARGS_FLAG_NUM) == 0)
                     {
                         args->datalimitbyte = 0;
@@ -1355,11 +1362,6 @@ static bool args_validate(struct argsmap * const map,
                     break;
                 case ARGS_FLAG_UDP:
                     args->type = SOCK_DGRAM;
-                    if ((map->keys & ARGS_FLAG_BANDWIDTH) == 0)
-                    {
-                        opt = &options[utilmath_log2(ARGS_FLAG_BANDWIDTH)];
-                        opt->copy(opt, "1Mbps", opt->dest);
-                    }
                     if ((map->keys & ARGS_FLAG_LEN) == 0)
                     {
                         // @todo what about default mtu?
