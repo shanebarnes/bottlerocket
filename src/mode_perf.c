@@ -381,6 +381,7 @@ static void *modeperf_acceptthread(void *arg)
                     }
 
                     mutexobj_unlock(&mode->mtx);
+                    //cvobj_signalone(&mode->cv);
 
                     if (socks == 1)
                     {
@@ -497,6 +498,7 @@ static void *modeperf_connectthread(void *arg)
                     }
 
                     mutexobj_unlock(&mode->mtx);
+                    //cvobj_signalone(&mode->cv);
 
                     if (socks == 1)
                     {
@@ -590,6 +592,7 @@ static void *modeperf_workerthread(void *arg)
     else
     {
         exit = false;
+        form.intervalusec = mode->args.intervalusec;
         tid = threadpool_getid(&mode->threadpool);
         fion.timeoutms = 0;
         fion.pevents = FIONOBJ_PEVENT_IN;
