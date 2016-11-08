@@ -31,6 +31,7 @@
 
 struct modeobj_priv
 {
+    uint16_t           parts;
     struct args_obj    args;
     struct threadpool  threadpool;
     struct mutexobj    mtx;
@@ -39,6 +40,43 @@ struct modeobj_priv
     uint32_t           sock_count;
     uint32_t           total_socks;
 };
+
+/**
+ * @brief Destroy a fully or partially constructed mode object.
+ *
+ * @param[in,out] mode A pointer to a mode object.
+ *
+ * @return Void.
+ */
+static void modeperf_destroyparts(struct modeobj * const mode)
+{
+    switch (mode->priv->parts)
+    {
+        case 7:
+            memset(&mode->ops, 0, sizeof(mode->ops));
+        case 6:
+            threadpool_destroy(&mode->priv->threadpool);
+        case 5:
+            cvobj_destroy(&mode->priv->cv);
+        case 4:
+            mutexobj_destroy(&mode->priv->mtx);
+        case 3:
+            UTILMEM_FREE(mode->priv->sockq);
+        case 2:
+            memset(&mode->priv->args, 0, sizeof(mode->priv->args));
+        case 1:
+            UTILMEM_FREE(mode->priv);
+            mode->priv = NULL;
+        case 0:
+            break;
+        default:
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: invalid mode object part (%u)\n",
+                          __FUNCTION__,
+                          mode->priv->parts);
+            break;
+    }
+}
 
 bool modeperf_create(struct modeobj * const mode,
                      const struct args_obj * const args)
@@ -53,67 +91,56 @@ bool modeperf_create(struct modeobj * const mode,
                                          sizeof(struct modeobj_priv),
                                          1)) == NULL)
         {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to allocate memory\n",
-                          __FUNCTION__);
+            // Do nothing
         }
         else if (memcpy(&mode->priv->args,
                         args,
                         sizeof(mode->priv->args)) == NULL)
         {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to copy arguments\n",
-                          __FUNCTION__);
+            mode->priv->parts = 1;
         }
         else if ((mode->priv->sockq = UTILMEM_CALLOC(struct dlist,
                                                      sizeof(struct dlist),
                                                      args->threads)) == NULL)
         {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to create socket queue\n",
-                          __FUNCTION__);
-            UTILMEM_FREE(mode->priv);
-            mode->priv = NULL;
+            mode->priv->parts = 2;
         }
         else if (!mutexobj_create(&mode->priv->mtx))
         {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to create mutex\n",
-                          __FUNCTION__);
-            UTILMEM_FREE(mode->priv->sockq);
-            UTILMEM_FREE(mode->priv);
-            mode->priv = NULL;
+            mode->priv->parts = 3;
         }
         else if (!cvobj_create(&mode->priv->cv))
         {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to create condition variable\n",
-                          __FUNCTION__);
-            mutexobj_destroy(&mode->priv->mtx);
-            UTILMEM_FREE(mode->priv->sockq);
-            UTILMEM_FREE(mode->priv);
-            mode->priv = NULL;
+            mode->priv->parts = 4;
         }
         else if (!threadpool_create(&mode->priv->threadpool, args->threads + 1))
         {
-            logger_printf(LOGGER_LEVEL_ERROR,
-                          "%s: failed to create thread pool\n",
-                          __FUNCTION__);
-            cvobj_destroy(&mode->priv->cv);
-            mutexobj_destroy(&mode->priv->mtx);
-            UTILMEM_FREE(mode->priv->sockq);
-            UTILMEM_FREE(mode->priv);
-            mode->priv = NULL;
+            mode->priv->parts = 5;
         }
         else
         {
+            mode->priv->parts      = 6;
             mode->ops.mode_create  = modeperf_create;
             mode->ops.mode_destroy = modeperf_destroy;
             mode->ops.mode_start   = modeperf_start;
             mode->ops.mode_stop    = modeperf_stop;
             mode->ops.mode_cancel  = modeperf_cancel;
+            mode->priv->parts      = 7;
 
             ret = true;
+        }
+
+        if (!ret)
+        {
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to create mode object part %d\n",
+                          __FUNCTION__,
+                          mode->priv == NULL ? 1 : mode->priv->parts);
+
+            if (mode->priv != NULL)
+            {
+                modeperf_destroyparts(mode);
+            }
         }
     }
 
@@ -127,14 +154,7 @@ bool modeperf_destroy(struct modeobj * const mode)
     if (UTILDEBUG_VERIFY((mode != NULL) && (mode->priv != NULL)))
     {
         mode->ops.mode_stop(mode);
-        threadpool_destroy(&mode->priv->threadpool);
-        cvobj_destroy(&mode->priv->cv);
-        mutexobj_destroy(&mode->priv->mtx);
-        UTILMEM_FREE(mode->priv->sockq);
-        UTILMEM_FREE(mode->priv);
-        mode->priv = NULL;
-        memset(&mode->ops, 0, sizeof(mode->ops));
-
+        modeperf_destroyparts(mode);
         ret = true;
     }
 
@@ -142,14 +162,15 @@ bool modeperf_destroy(struct modeobj * const mode)
 }
 
 /**
- * @brief Set a socket configuration.
+ * @brief Copy a mode object configuration to a socket object configuration.
  *
- * @param[in,out] obj       A pointer to a socket object.
+ * @param[in,out] sock      A pointer to a socket object.
+ * @param[in]     mode      A pointer to a mode object.
  * @param[in]     timeoutms Socket timeout in milliseconds.
  *
  * @return Void.
  */
-static void modeperf_conf(struct modeobj_priv * const mode,
+static void modeperf_copy(struct modeobj_priv * const mode,
                           struct sockobj * const sock,
                           const int32_t timeoutms)
 {
@@ -166,8 +187,9 @@ static void modeperf_conf(struct modeobj_priv * const mode,
 }
 
 /**
- * @brief Call a socket's receive or send function.
+ * @brief Call a mode socket's receive or send function.
  *
+ * @param[in,out] mode   A pointer to a mode object.
  * @param[in]     call   A pointer to a socket object's receive or send
  *                       function.
  * @param[in,out] stats  Function-specific socket statistics.
@@ -250,6 +272,7 @@ static int32_t modeperf_call(struct modeobj_priv * const mode,
 /**
  * @brief Get a new socket from a socket queue.
  *
+ * @param[in,out] mode  A pointer to a mode object.
  * @param[in] qid       A socket queue id.
  * @param[in] timeoutms The maximum amount of time in milliseconds to wait for a
  *                      new socket.
@@ -321,7 +344,7 @@ static bool modeperf_retsock(struct modeobj_priv * const mode,
  * @brief A scheduler that accepts new sockets and inserts them into queue(s)
  *        based on a round-robin algorithm.
  *
- * @param[in,out] arg A pointer to a thread pool.
+ * @param[in,out] arg A pointer to a mode object.
  *
  * @return NULL.
  */
@@ -339,7 +362,7 @@ static void *modeperf_acceptthread(void *arg)
 
     if (UTILDEBUG_VERIFY(mode != NULL) && formperf_create(&form, 4096))
     {
-        modeperf_conf(mode, &server, 500);
+        modeperf_copy(mode, &server, 500);
         form.sock = &server;
         exit = !sockmod_init(&server);
         tid = threadpool_getid(&mode->threadpool);
@@ -422,7 +445,7 @@ static void *modeperf_acceptthread(void *arg)
  * @brief A scheduler that connects new sockets and inserts them into queue(s)
  *        based on a round-robin algorithm.
  *
- * @param[in,out] arg A pointer to a thread pool.
+ * @param[in,out] arg A pointer to a mode object.
  *
  * @return NULL.
  */
@@ -461,7 +484,7 @@ static void *modeperf_connectthread(void *arg)
             }
             else
             {
-                modeperf_conf(mode, sock, 0);
+                modeperf_copy(mode, sock, 0);
 
                 if (!sockmod_init(sock))
                 {
@@ -524,7 +547,7 @@ static void *modeperf_connectthread(void *arg)
 /**
  * @brief Perform a performance mode task.
  *
- * @param[in,out] arg A pointer to a thread pool.
+ * @param[in,out] arg A pointer to a mode object.
  *
  * @return NULL.
  */
