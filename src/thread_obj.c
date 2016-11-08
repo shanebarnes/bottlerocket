@@ -147,7 +147,8 @@ bool threadobj_stop(struct threadobj * const thread)
         thread->priv->shutdown = true;
         mutexobj_unlock(&thread->priv->mutex);
 
-        while (pthread_kill(thread->priv->handle, 0) == 0)
+        while ((thread->priv->handle != 0) &&
+               (pthread_kill(thread->priv->handle, 0) == 0))
         {
             threadobj_sleepusec(10 * 1000);
         }
