@@ -1343,10 +1343,6 @@ static bool args_validate(struct argsmap * const map,
                     }
                     break;
                 case ARGS_FLAG_PARALLEL:
-                    if ((map->keys & ARGS_FLAG_BACKLOG) == 0)
-                    {
-                        args->backlog = args->maxcon;
-                    }
                     break;
                 case ARGS_FLAG_PORT:
                     break;
