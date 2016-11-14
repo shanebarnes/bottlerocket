@@ -34,11 +34,11 @@ struct modeobj_priv
     uint16_t           parts;
     struct args_obj    args;
     struct threadpool  threadpool;
-    struct mutexobj    mtx;
-    struct cvobj       cv;
+    struct mutexobj   *mtxarr;
+    struct cvobj      *cvarr;
     struct dlist      *sockq;
-    uint32_t           sock_count;
-    uint32_t           total_socks;
+    uint32_t          *activesocks;
+    uint32_t          *closedsocks;
 };
 
 /**
@@ -50,16 +50,27 @@ struct modeobj_priv
  */
 static void modeperf_destroyparts(struct modeobj * const mode)
 {
+    uint32_t i;
+
     switch (mode->priv->parts)
     {
-        case 7:
+        case 9:
             memset(&mode->ops, 0, sizeof(mode->ops));
-        case 6:
+            for (i = 0; i < mode->priv->args.threads; i++)
+            {
+                cvobj_destroy(&mode->priv->cvarr[i]);
+                mutexobj_destroy(&mode->priv->mtxarr[i]);
+            }
+        case 8:
             threadpool_destroy(&mode->priv->threadpool);
+        case 7:
+            UTILMEM_FREE(mode->priv->closedsocks);
+        case 6:
+            UTILMEM_FREE(mode->priv->activesocks);
         case 5:
-            cvobj_destroy(&mode->priv->cv);
+            UTILMEM_FREE(mode->priv->cvarr);
         case 4:
-            mutexobj_destroy(&mode->priv->mtx);
+            UTILMEM_FREE(mode->priv->mtxarr);
         case 3:
             UTILMEM_FREE(mode->priv->sockq);
         case 2:
@@ -82,6 +93,7 @@ bool modeperf_create(struct modeobj * const mode,
                      const struct args_obj * const args)
 {
     bool ret = false;
+    uint32_t i;
 
     if (UTILDEBUG_VERIFY((mode != NULL) &&
                          (mode->priv == NULL) &&
@@ -105,27 +117,50 @@ bool modeperf_create(struct modeobj * const mode,
         {
             mode->priv->parts = 2;
         }
-        else if (!mutexobj_create(&mode->priv->mtx))
+        else if ((mode->priv->mtxarr = UTILMEM_CALLOC(struct mutexobj,
+                                                     sizeof(struct mutexobj),
+                                                     args->threads)) == NULL)
         {
             mode->priv->parts = 3;
         }
-        else if (!cvobj_create(&mode->priv->cv))
+        else if ((mode->priv->cvarr = UTILMEM_CALLOC(struct cvobj,
+                                                     sizeof(struct cvobj),
+                                                     args->threads)) == NULL)
         {
             mode->priv->parts = 4;
         }
-        else if (!threadpool_create(&mode->priv->threadpool, args->threads + 1))
+        else if ((mode->priv->activesocks = UTILMEM_CALLOC(uint32_t,
+                                                           sizeof(uint32_t),
+                                                           args->threads)) == NULL)
         {
             mode->priv->parts = 5;
         }
+        else if ((mode->priv->closedsocks = UTILMEM_CALLOC(uint32_t,
+                                                           sizeof(uint32_t),
+                                                           args->threads)) == NULL)
+        {
+            mode->priv->parts = 6;
+        }
+        else if (!threadpool_create(&mode->priv->threadpool, args->threads + 1))
+        {
+            mode->priv->parts = 7;
+        }
         else
         {
-            mode->priv->parts      = 6;
+            mode->priv->parts = 8;
+
+            for (i = 0; i < args->threads; i++)
+            {
+                mutexobj_create(&mode->priv->mtxarr[i]);
+                cvobj_create(&mode->priv->cvarr[i]);
+            }
+
             mode->ops.mode_create  = modeperf_create;
             mode->ops.mode_destroy = modeperf_destroy;
             mode->ops.mode_start   = modeperf_start;
             mode->ops.mode_stop    = modeperf_stop;
             mode->ops.mode_cancel  = modeperf_cancel;
-            mode->priv->parts      = 7;
+            mode->priv->parts      = 9;
 
             ret = true;
         }
@@ -238,7 +273,7 @@ static int32_t modeperf_call(struct modeobj_priv * const mode,
     }
     else
     {
-        if ((sock->event.ops.fion_poll(&sock->event) == false) ||
+        if ((!sock->event.ops.fion_poll(&sock->event)) ||
             (sock->event.ops.fion_getevents(&sock->event, 0) & FIONOBJ_REVENT_ERROR))
         {
             sock->ops.sock_close(sock);
@@ -291,48 +326,52 @@ static struct sockobj *modeperf_getsock(struct modeobj_priv * const mode,
                          (qid < mode->args.threads) &&
                          (shutdown != NULL)))
     {
-        mutexobj_lock(&mode->mtx);
+        *shutdown = false;
+
+        mutexobj_lock(&mode->mtxarr[qid]);
 
         if ((mode->sockq[qid].tail == NULL) && (timeoutms > 0))
         {
-            cvobj_timedwait(&mode->cv, &mode->mtx, timeoutms * 1000);
+            cvobj_timedwait(&mode->cvarr[qid],
+                            &mode->mtxarr[qid],
+                            timeoutms * 1000);
         }
 
         if ((mode->sockq[qid].tail != NULL) &&
             ((ret = mode->sockq[qid].tail->val) != NULL))
         {
             dlist_removetail(&mode->sockq[qid]);
+            mode->activesocks[qid]++;
         }
 
         if ((mode->args.arch == SOCKOBJ_MODEL_CLIENT) &&
-            (mode->total_socks == mode->args.maxcon) &&
-            (mode->sock_count == 0))
+            (mode->activesocks[qid] == 0) &&
+            (mode->closedsocks[qid] == mode->args.maxcon)) //??
         {
             *shutdown = true;
         }
-        else
-        {
-            *shutdown = false;
-        }
 
-        mutexobj_unlock(&mode->mtx);
+        mutexobj_unlock(&mode->mtxarr[qid]);
     }
 
     return ret;
 }
 
 static bool modeperf_retsock(struct modeobj_priv * const mode,
-                             struct sockobj * const sock)
+                             struct sockobj * const sock,
+                             uint32_t qid)
 {
     bool ret = false;
 
-    if (UTILDEBUG_VERIFY((mode != NULL) && (sock != NULL)))
+    if (UTILDEBUG_VERIFY((mode != NULL) &&
+                         (sock != NULL) &&
+                         (qid < mode->args.threads)))
     {
         UTILMEM_FREE(sock);
 
-        mutexobj_lock(&mode->mtx);
-        mode->sock_count--;
-        mutexobj_unlock(&mode->mtx);
+        mutexobj_lock(&mode->mtxarr[qid]);
+        mode->activesocks[qid]--;
+        mutexobj_unlock(&mode->mtxarr[qid]);
 
         ret = true;
     }
@@ -355,7 +394,7 @@ static void *modeperf_acceptthread(void *arg)
     struct formobj form;
     bool exit = true;
     int32_t formbytes = 0;
-    uint32_t qid = 0, tid = 0, socks = 0;
+    uint32_t acceptsocks = 0, activesocks = 0, i = 0, qid = 0, tid = 0;
 
     memset(&server, 0, sizeof(server));
     memset(&form, 0, sizeof(form));
@@ -371,7 +410,7 @@ static void *modeperf_acceptthread(void *arg)
                       "Accepting sockets on thread id %u\n",
                       tid);
 
-        while (!exit && threadpool_isrunning(&mode->threadpool))
+        while ((!exit) && (threadpool_isrunning(&mode->threadpool)))
         {
             if (sock == NULL)
             {
@@ -380,21 +419,39 @@ static void *modeperf_acceptthread(void *arg)
                                       1);
             }
 
-            if (server.ops.sock_accept(&server, sock))
+            if (sock == NULL)
+            {
+                logger_printf(LOGGER_LEVEL_ERROR,
+                              "%s: failed to allocate memory\n",
+                              __FUNCTION__);
+            }
+            else if (server.ops.sock_accept(&server, sock))
             {
                 if (sock != NULL)
                 {
-                    mutexobj_lock(&mode->mtx);
-
-                    if (dlist_inserttail(&mode->sockq[qid], sock))
+                    if ((mode->args.maxcon > 0) &&
+                        (acceptsocks == mode->args.maxcon))
+                    {
+                        logger_printf(LOGGER_LEVEL_INFO,
+                                      "%s: rejected socket on queue %u\n",
+                                      __FUNCTION__,
+                                      qid);
+                        sock->ops.sock_close(sock);
+                        sock->ops.sock_destroy(sock);
+                        continue;
+                    }
+                    else
                     {
                         logger_printf(LOGGER_LEVEL_INFO,
                                       "%s: accepted socket on queue %u\n",
                                       __FUNCTION__,
                                       qid);
-                        qid = (qid + 1 ) % mode->args.threads;
-                        mode->sock_count++;
-                        socks = mode->sock_count;
+                    }
+
+                    mutexobj_lock(&mode->mtxarr[qid]);
+
+                    if (dlist_inserttail(&mode->sockq[qid], sock))
+                    {
                         sock = NULL;
                     }
                     else
@@ -403,13 +460,21 @@ static void *modeperf_acceptthread(void *arg)
                         sock->ops.sock_destroy(sock);
                     }
 
-                    mutexobj_unlock(&mode->mtx);
-                    //cvobj_signalone(&mode->cv);
+                    mutexobj_unlock(&mode->mtxarr[qid]);
+                    // @todo Use semaphore instead since thread being signaled
+                    //       may not be blocking waiting for a signal.
+                    cvobj_signalone(&mode->cvarr[qid]);
 
-                    if (socks == 1)
+                    if (sock == NULL)
                     {
-                        formbytes = form.ops.form_head(&form);
-                        output_if_std_send(form.dstbuf, formbytes);
+                        acceptsocks++;
+                        qid = acceptsocks % mode->args.threads;
+
+                        if (acceptsocks == 1)
+                        {
+                            formbytes = form.ops.form_head(&form);
+                            output_if_std_send(form.dstbuf, formbytes);
+                        }
                     }
                 }
             }
@@ -419,20 +484,35 @@ static void *modeperf_acceptthread(void *arg)
                 server.ops.sock_destroy(&server);
                 exit = true;
             }
-
-            mutexobj_lock(&mode->mtx);
-            socks = mode->sock_count;
-            mutexobj_unlock(&mode->mtx);
-            if (socks == 0)
+            else
             {
-                formbytes = formobj_idle(&form);
-                output_if_std_send(form.dstbuf, formbytes);
-                formbytes = utilstring_concat(form.dstbuf,
-                                              form.dstlen,
-                                              "%c",
-                                              '\r');
-                output_if_std_send(form.dstbuf, formbytes);
+                activesocks = 0;
+
+                for (i = 0; i < mode->args.threads; i++)
+                {
+                    mutexobj_lock(&mode->mtxarr[i]);
+                    activesocks += mode->activesocks[i];
+                    mutexobj_unlock(&mode->mtxarr[i]);
+                }
+
+                if (activesocks == 0)
+                {
+                    formbytes = formobj_idle(&form);
+                    output_if_std_send(form.dstbuf, formbytes);
+                    formbytes = utilstring_concat(form.dstbuf,
+                                                  form.dstlen,
+                                                  "%c",
+                                                  '\r');
+                    output_if_std_send(form.dstbuf, formbytes);
+                    acceptsocks = 0;
+                }
             }
+        }
+
+        if (sock != NULL)
+        {
+            UTILMEM_FREE(sock);
+            sock = NULL;
         }
 
         form.ops.form_destroy(&form);
@@ -454,7 +534,7 @@ static void *modeperf_connectthread(void *arg)
     struct modeobj_priv *mode = (struct modeobj_priv*)arg;
     struct sockobj *sock = NULL;
     struct formobj form;
-    uint32_t i = 0, qid = 0, tid = 0, socks = 0;
+    uint32_t connectsocks = 0, i = 0, qid = 0, tid = 0;
     int32_t formbytes = 0;
 
     memset(&form, 0, sizeof(form));
@@ -467,7 +547,10 @@ static void *modeperf_connectthread(void *arg)
                       "Connecting sockets on thread id %u\n",
                       tid);
 
-        for (i = 0; (threadpool_isrunning(&mode->threadpool)) && (i < mode->args.maxcon); i++)
+        for (i = 0;
+             (threadpool_isrunning(&mode->threadpool)) &&
+             (i < mode->args.maxcon);
+             i++)
         {
             if (sock == NULL)
             {
@@ -488,14 +571,17 @@ static void *modeperf_connectthread(void *arg)
 
                 if (!sockmod_init(sock))
                 {
-                    break;
-                    //exit = true; ///only for multiple connections??
+                    break; // @todo Only for multiple connections?
                 }
                 else
                 {
                     sock->ops.sock_connect(sock);
+                    logger_printf(LOGGER_LEVEL_INFO,
+                                  "%s: connected socket on queue %u\n",
+                                  __FUNCTION__,
+                                  qid);
 
-                    mutexobj_lock(&mode->mtx);
+                    mutexobj_lock(&mode->mtxarr[qid]);
 
                     if (!dlist_inserttail(&mode->sockq[qid], sock))
                     {
@@ -508,25 +594,25 @@ static void *modeperf_connectthread(void *arg)
                     }
                     else
                     {
-                        logger_printf(LOGGER_LEVEL_INFO,
-                                      "%s: connected socket on queue %u\n",
-                                      __FUNCTION__,
-                                      qid);
-                        qid = (qid + 1 ) % mode->args.threads;
-                        mode->sock_count++;
-                        mode->total_socks++;
-                        socks++;
                         form.sock = sock;
                         sock = NULL;
                     }
 
-                    mutexobj_unlock(&mode->mtx);
-                    //cvobj_signalone(&mode->cv);
+                    mutexobj_unlock(&mode->mtxarr[qid]);
+                    // @todo Use semaphore instead since thread being signaled
+                    //       may not be blocking waiting for a signal.
+                    cvobj_signalone(&mode->cvarr[qid]);
 
-                    if (socks == 1)
+                    if (sock == NULL)
                     {
-                        formbytes = form.ops.form_head(&form);
-                        output_if_std_send(form.dstbuf, formbytes);
+                        connectsocks++;
+                        qid = connectsocks % mode->args.threads;
+
+                        if (connectsocks == 1)
+                        {
+                            formbytes = form.ops.form_head(&form);
+                            output_if_std_send(form.dstbuf, formbytes);
+                        }
                     }
                 }
             }
@@ -621,16 +707,19 @@ static void *modeperf_workerthread(void *arg)
         fion.pevents = FIONOBJ_PEVENT_IN;
         memset(&list, 0, sizeof(list));
 
-        while ((exit == false) && (threadpool_isrunning(&mode->threadpool) == true))
+        while ((!exit) && (threadpool_isrunning(&mode->threadpool)))
         {
             burst = count;
 
-            while ((exit == false) && ((count - burst) < burstlimit))
+            while ((!exit) && ((count - burst) < burstlimit))
             {
                 sock = NULL;
                 if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
                 {
-                    if ((sock = modeperf_getsock(mode, tid, list.size > 0 ? 0 : 500, &exit)) != NULL)
+                    if ((sock = modeperf_getsock(mode,
+                                                 tid,
+                                                 list.size > 0 ? 0 : 500,
+                                                 &exit)) != NULL)
                     {
                         dlist_inserttail(&list, sock);
                         fion.ops.fion_insertfd(&fion, sock->fd);
@@ -650,7 +739,10 @@ static void *modeperf_workerthread(void *arg)
                 }
                 else
                 {
-                    if ((sock = modeperf_getsock(mode, tid, list.size > 0 ? 0 : 500, &exit)) != NULL)
+                    if ((sock = modeperf_getsock(mode,
+                                                 tid,
+                                                 list.size > 0 ? 0 : 500,
+                                                 &exit)) != NULL)
                     {
                         dlist_inserttail(&list, sock);
                         if ((mode->args.maxcon == 0) ||
@@ -671,7 +763,7 @@ static void *modeperf_workerthread(void *arg)
                             // Refuse connection.
                             sock->ops.sock_close(sock);
                             sock->ops.sock_destroy(sock);
-                            modeperf_retsock(mode, list.tail->val);
+                            modeperf_retsock(mode, list.tail->val, tid);
                             dlist_removetail(&list);
                             sock = NULL;
                         }
@@ -846,7 +938,7 @@ static void *modeperf_workerthread(void *arg)
                                   stats->buflen.max);
 
                     next = node->next;
-                    modeperf_retsock(mode, node->val);
+                    modeperf_retsock(mode, node->val, tid);
                     dlist_remove(&list, node);
                     node = next;
                     fion.ops.fion_deletefd(&fion, sock->fd);
