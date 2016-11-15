@@ -47,21 +47,22 @@ enum argsobj_flag
     ARGS_FLAG_IPV6       = 1LL << ('6' - '0' +  1),
     ARGS_FLAG_AFFINITY   = 1LL << ('A' - 'A' + 11),
     ARGS_FLAG_BIND       = 1LL << ('B' - 'A' + 11),
+    ARGS_FLAG_OPTNODELAY = 1LL << ('N' - 'A' + 11),
+    ARGS_FLAG_PARALLEL   = 1LL << ('P' - 'A' + 11),
+    ARGS_FLAG_THREADS    = 1LL << ('T' - 'A' + 11),
+    ARGS_FLAG_VERBOSE    = 1LL << ('V' - 'A' + 11),
     ARGS_FLAG_BANDWIDTH  = 1LL << ('b' - 'a' + 37),
     ARGS_FLAG_CLIENT     = 1LL << ('c' - 'a' + 37),
     ARGS_FLAG_ECHO       = 1LL << ('e' - 'a' + 37),
+    ARGS_FLAG_HELP       = 1LL << ('h' - 'a' + 37),
     ARGS_FLAG_INTERVAL   = 1LL << ('i' - 'a' + 37),
     ARGS_FLAG_LEN        = 1LL << ('l' - 'a' + 37),
-    ARGS_FLAG_OPTNODELAY = 1LL << ('N' - 'A' + 11),
     ARGS_FLAG_NUM        = 1LL << ('n' - 'a' + 37),
-    ARGS_FLAG_PARALLEL   = 1LL << ('P' - 'A' + 11),
     ARGS_FLAG_PORT       = 1LL << ('p' - 'a' + 37),
     ARGS_FLAG_BACKLOG    = 1LL << ('q' - 'a' + 37),
     ARGS_FLAG_SERVER     = 1LL << ('s' - 'a' + 37),
-    ARGS_FLAG_THREADS    = 1LL << ('T' - 'A' + 11),
     ARGS_FLAG_TIME       = 1LL << ('t' - 'a' + 37),
     ARGS_FLAG_UDP        = 1LL << ('u' - 'a' + 37),
-    ARGS_FLAG_HELP       = 1LL << ('h' - 'a' + 37),
     ARGS_FLAG_VERSION    = 1LL << ('v' - 'a' + 37)
 };
 
@@ -553,18 +554,18 @@ static struct argobj options[] =
         NULL
     },
     {
-        ARG_INACTIVE,
-        "",
+        ARG_ACTIVE,
+        "--verbose",
         'V',
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        val_optional,
+        "print detailed log information",
+        "6",
+        "0",
+        "6",
+        val_required,
         arg_optional,
         ARGS_FLAG_NULL,
         arg_noobjptr,
-        NULL,
+        argobj_copyuint16,
         NULL
     },
     {
@@ -1074,6 +1075,12 @@ static bool args_getarg(const uint32_t argc,
 
     if (UTILDEBUG_VERIFY((argv != NULL) && (map != NULL)))
     {
+        if (argc < 2)
+        {
+            fprintf(stderr, "\nno options provided\n");
+            ret = false;
+        }
+
         for (i = 1; ret && (i < argc); i++)
         {
             flag = ARGS_FLAG_NULL;
@@ -1212,6 +1219,7 @@ static void args_init(struct args_obj * const args)
     options[utilmath_log2(ARGS_FLAG_SERVER)].dest = &args->ipaddr;
     options[utilmath_log2(ARGS_FLAG_THREADS)].dest = &args->threads;
     options[utilmath_log2(ARGS_FLAG_TIME)].dest = &args->timelimitusec;
+    options[utilmath_log2(ARGS_FLAG_VERBOSE)].dest = &args->loglevel;
     args->type = SOCK_STREAM;
 
     // Copy default options to arguments object.
@@ -1322,6 +1330,10 @@ static bool args_validate(struct argsmap * const map,
                 case ARGS_FLAG_ECHO:
                     args->echo = true;
                     break;
+                case ARGS_FLAG_HELP:
+                    args_usage(stdout);
+                    ret = false;
+                    break;
                 case ARGS_FLAG_INTERVAL:
                     break;
                 case ARGS_FLAG_LEN:
@@ -1365,9 +1377,7 @@ static bool args_validate(struct argsmap * const map,
                         opt->copy(opt, "1kB", opt->dest);
                     }
                     break;
-                case ARGS_FLAG_HELP:
-                    args_usage(stdout);
-                    ret = false;
+                case ARGS_FLAG_VERBOSE:
                     break;
                 case ARGS_FLAG_VERSION:
                     fprintf(stdout,
@@ -1406,9 +1416,13 @@ bool args_parse(const int32_t argc,
         memset(&map, 0, sizeof(map));
         args_init(args);
 
-        if ((args_getarg(argc, argv, &map)) && (args_validate(&map, args)))
+        if (args_getarg(argc, argv, &map))
         {
-            ret = true;
+            ret = args_validate(&map, args);
+        }
+        else
+        {
+            args_usage(stdout);
         }
     }
 

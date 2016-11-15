@@ -47,6 +47,7 @@ struct args_obj
     uint32_t           threads;
     uint64_t           timelimitusec;
     int32_t            type;
+    uint16_t           loglevel;
 };
 
 /**
