@@ -107,6 +107,8 @@ int32_t main(int argc, char **argv)
     }
     else
     {
+        logger_set_level(args.loglevel);
+
         switch (args.mode)
         {
             case ARGS_MODE_CHAT:
@@ -116,8 +118,8 @@ int32_t main(int argc, char **argv)
                 modeperf_create(&mode, &args);
                 break;
             case ARGS_MODE_REPT:
-                moderept_create(&mode, &args);
-                break;
+                //moderept_create(&mode, &args);
+                //break;
             default:
                 logger_printf(LOGGER_LEVEL_ERROR,
                               "%s: unsupported mode of operation (%u)\n",
