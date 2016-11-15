@@ -404,11 +404,19 @@ static void *modeperf_acceptthread(void *arg)
         modeperf_copy(mode, &server, 500);
         form.sock = &server;
         exit = !sockmod_init(&server);
-        tid = threadpool_getid(&mode->threadpool);
 
-        logger_printf(LOGGER_LEVEL_INFO,
-                      "Accepting sockets on thread id %u\n",
-                      tid);
+        if (exit)
+        {
+            // @todo Call modeperf_call() instead.
+            threadpool_wake(&mode->threadpool);
+        }
+        else
+        {
+            tid = threadpool_getid(&mode->threadpool);
+            logger_printf(LOGGER_LEVEL_INFO,
+                          "Accepting sockets on thread id %u\n",
+                          tid);
+        }
 
         while ((!exit) && (threadpool_isrunning(&mode->threadpool)))
         {
