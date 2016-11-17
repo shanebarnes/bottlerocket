@@ -10,6 +10,7 @@
 #include "form_perf.h"
 #include "logger.h"
 #include "sock_tcp.h"
+#include "util_cpu.h"
 #include "util_date.h"
 #include "util_debug.h"
 #include "util_ioctl.h"
@@ -67,7 +68,7 @@ int32_t formperf_head(struct formobj * const obj)
         retval = utilstring_concat(obj->dstbuf,
                                    obj->dstlen,
                                    "rwin: %sB, swin: %sB\n"
-                                   "%9s %21s   %-21s %17s %27s %25s %11s %17s\n",
+                                   "%9s %21s   %-21s %17s %27s %25s %11s %17s %3s\n",
                                    recvwin,
                                    sendwin,
                                    "Con ID",
@@ -79,7 +80,8 @@ int32_t formperf_head(struct formobj * const obj)
                                        "Bytes Sent" : "Bytes Received",
                                    obj->sock->conf.type == SOCK_STREAM ?
                                        "Segments" : "Datagrams",
-                                   "Elapsed Time");
+                                   "Elapsed Time",
+                                   "CPU");
     }
 
     return retval;
@@ -96,6 +98,7 @@ int32_t formperf_body(struct formobj * const obj)
     char strrecvrate[16], strsendrate[16];
     char strppi[16]; // packets per interval
     struct socktcp_info info;
+    struct utilcpu_info cpu;
 
     // @todo redirect to udp- or tcp-specific function.
     // udp packets per second, jitter, etc.
@@ -212,6 +215,8 @@ int32_t formperf_body(struct formobj * const obj)
                                   strsendrate,
                                   sizeof(strsendrate));
 
+            utilcpu_getinfo(&cpu);
+
             retval = utilstring_concat(obj->dstbuf,
                                        obj->dstlen,
                                        "[%2u:%-4u] "
@@ -223,7 +228,8 @@ int32_t formperf_body(struct formobj * const obj)
                                        "%9sB / "
                                        "%9sB | "
                                        "%9s | "
-                                       "%02u:%02u:%02u:%02u.%03u\r",
+                                       "%02u:%02u:%02u:%02u.%03u "
+                                       "%3u\r",
                                        obj->sock->tid,
                                        obj->sock->sid,
                                        client,
@@ -242,7 +248,8 @@ int32_t formperf_body(struct formobj * const obj)
                                        diff.hour,
                                        diff.min,
                                        diff.sec,
-                                       diff.msec);
+                                       diff.msec,
+                                       cpu.usage);
 
             obj->timeoutusec += obj->intervalusec;
 
