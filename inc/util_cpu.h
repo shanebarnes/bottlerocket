@@ -17,6 +17,7 @@
 struct utilcpu_info
 {
     int16_t        usage;
+    struct timeval realtime;
     struct timeval systime;
     struct timeval usrtime;
 };

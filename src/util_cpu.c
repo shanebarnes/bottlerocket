@@ -9,6 +9,7 @@
 
 #include "logger.h"
 #include "util_cpu.h"
+#include "util_unit.h"
 
 #include <errno.h>
 
@@ -21,9 +22,32 @@
     #include <sys/resource.h>
 #endif
 
+#if defined(__linux__)
 /**
- * @see See header file for interface comments.
+ * @brief Calculate CPU usage.
+ *
+ * @param[in] info A pointer to a CPU information struture.
+ *
+ * @return The calculated CPU usage as a percentage (-1 on error).
  */
+static uint16_t utilcpu_calcusage(struct utilcpu_info * const info)
+{
+    uint16_t ret = -1;
+    uint64_t realtimeusec = (uint64_t)(info->realtime.tv_sec) * UNIT_TIME_USEC +
+                            (uint64_t)(info->realtime.tv_usec);
+
+    if (realtimeusec > 0)
+    {
+        ret = ((uint64_t)(info->systime.tv_sec) * UNIT_TIME_USEC +
+               (uint64_t)(info->systime.tv_usec) +
+               (uint64_t)(info->usrtime.tv_sec) * UNIT_TIME_USEC +
+               (uint64_t)(info->usrtime.tv_usec)) * 100 / realtimeusec;
+    }
+
+    return ret;
+}
+#endif
+
 bool utilcpu_getinfo(struct utilcpu_info * const info)
 {
     bool ret = false;
@@ -84,11 +108,11 @@ bool utilcpu_getinfo(struct utilcpu_info * const info)
         }
         else
         {
-            info->usage           = -1;
             info->systime.tv_sec  = data.ru_stime.tv_sec;
             info->systime.tv_usec = data.ru_stime.tv_usec;
             info->usrtime.tv_sec  = data.ru_utime.tv_sec;
             info->usrtime.tv_usec = data.ru_utime.tv_usec;
+            info->usage           = utilcpu_calcusage(info);
             ret = true;
         }
 #endif
