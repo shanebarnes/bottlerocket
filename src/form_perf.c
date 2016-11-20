@@ -214,7 +214,10 @@ int32_t formperf_body(struct formobj * const obj)
                                   obj->sock->info.send.totalbytes * 8 * UNIT_TIME_USEC / diffusec,
                                   strsendrate,
                                   sizeof(strsendrate));
-
+#if defined(__linux__)
+            cpu.realtime.tv_sec = (uint32_t)(diffusec / UNIT_TIME_USEC);
+            cpu.realtime.tv_usec = (uint32_t)(diffusec - cpu.realtime.tv_sec * UNIT_TIME_USEC);
+#endif
             utilcpu_getinfo(&cpu);
 
             retval = utilstring_concat(obj->dstbuf,
