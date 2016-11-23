@@ -663,8 +663,6 @@ static void *modeperf_workerthread(void *arg)
     struct dlist_node *next = NULL, *node = NULL;
     struct sockobj_flowstats *stats = NULL;
     struct utilcpu_info info;
-    uint64_t activetimeus = 0;
-    uint64_t inactivetimeus = 1000;
     uint64_t delayus = 0, mindelayus = 0;
     uint64_t tsus = 0;
     uint32_t burstlimit = mode->args.backlog <= 0 ? SOMAXCONN : mode->args.backlog;
@@ -794,11 +792,6 @@ static void *modeperf_workerthread(void *arg)
                 tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
                 form.tsus = tsus;
 
-                if (activetimeus == 0)
-                {
-                    activetimeus = tsus;
-                }
-
                 if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
                 {
                     stats = &sock->info.send;
@@ -843,7 +836,7 @@ static void *modeperf_workerthread(void *arg)
                                     mindelayus = delayus;
                                 }
                             }
-                            else if (tsus - activetimeus > inactivetimeus)
+                            else
                             {
                                 fion.timeoutms++;
                                 fion.pevents = FIONOBJ_PEVENT_OUT;
@@ -853,7 +846,6 @@ static void *modeperf_workerthread(void *arg)
                         {
                             fion.timeoutms = 0;
                             fion.pevents = FIONOBJ_PEVENT_IN;
-                            activetimeus = tsus;
                         }
                     }
                 }
@@ -892,7 +884,7 @@ static void *modeperf_workerthread(void *arg)
                                     mindelayus = delayus;
                                 }
                             }
-                            else if (tsus - activetimeus > inactivetimeus)
+                            else
                             {
                                 fion.timeoutms++;
                             }
@@ -900,7 +892,6 @@ static void *modeperf_workerthread(void *arg)
                         else
                         {
                             fion.timeoutms = 0;
-                            activetimeus = tsus;
                         }
                     }
                 }
