@@ -528,7 +528,7 @@ static struct argobj options[] =
         "--threads",
         'T',
         "number of threads to use",
-        "1",
+        str_nproconln,
         "1",
         str_nproconln,
         val_required,
