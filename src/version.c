@@ -11,8 +11,8 @@
 
 static const uint16_t  major = 0;
 static const uint16_t  minor = 2;
-static const uint16_t  patch = 8;
-static const char     *date  = "Oct 29 2016 20:50:00";
+static const uint16_t  patch = 9;
+static const char     *date  = "Dec 03 2016 07:58:00";
 static const char     *build = __DATE__ " " __TIME__;
 
 uint64_t version_number(void)
