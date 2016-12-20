@@ -39,6 +39,7 @@ struct modeobj_priv
     struct dlist      *sockq;
     uint32_t          *activesocks;
     uint32_t          *closedsocks;
+    struct sockobj    *sockstats;
 };
 
 /**
@@ -54,15 +55,17 @@ static void modeperf_destroyparts(struct modeobj * const mode)
 
     switch (mode->priv->parts)
     {
-        case 9:
+        case 10:
             memset(&mode->ops, 0, sizeof(mode->ops));
             for (i = 0; i < mode->priv->args.threads; i++)
             {
                 cvobj_destroy(&mode->priv->cvarr[i]);
                 mutexobj_destroy(&mode->priv->mtxarr[i]);
             }
-        case 8:
+        case 9:
             threadpool_destroy(&mode->priv->threadpool);
+        case 8:
+            UTILMEM_FREE(mode->priv->sockstats);
         case 7:
             UTILMEM_FREE(mode->priv->closedsocks);
         case 6:
@@ -141,13 +144,19 @@ bool modeperf_create(struct modeobj * const mode,
         {
             mode->priv->parts = 6;
         }
-        else if (!threadpool_create(&mode->priv->threadpool, args->threads + 1))
+        else if ((mode->priv->sockstats = UTILMEM_CALLOC(struct sockobj,
+                                                         sizeof(struct sockobj),
+                                                         args->threads)) == NULL)
         {
             mode->priv->parts = 7;
         }
-        else
+        else if (!threadpool_create(&mode->priv->threadpool, args->threads + 1))
         {
             mode->priv->parts = 8;
+        }
+        else
+        {
+            mode->priv->parts = 9;
 
             for (i = 0; i < args->threads; i++)
             {
@@ -160,7 +169,7 @@ bool modeperf_create(struct modeobj * const mode,
             mode->ops.mode_start   = modeperf_start;
             mode->ops.mode_stop    = modeperf_stop;
             mode->ops.mode_cancel  = modeperf_cancel;
-            mode->priv->parts      = 9;
+            mode->priv->parts      = 10;
 
             ret = true;
         }
@@ -719,65 +728,38 @@ static void *modeperf_workerthread(void *arg)
 
             while ((!exit) && ((count - burst) < burstlimit))
             {
-                sock = NULL;
-                if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
+                if ((sock = modeperf_getsock(mode,
+                                             tid,
+                                             list.size > 0 ? 0 : 500,
+                                             &exit)) != NULL)
                 {
-                    if ((sock = modeperf_getsock(mode,
-                                                 tid,
-                                                 list.size > 0 ? 0 : 500,
-                                                 &exit)) != NULL)
+                    dlist_inserttail(&list, sock);
+                    if ((mode->args.maxcon == 0) ||
+                        (list.size <= mode->args.maxcon))
                     {
-                        dlist_inserttail(&list, sock);
                         fion.ops.fion_insertfd(&fion, sock->fd);
                         sock->sid = ++count;
                         sock->tid = tid;
-                        form.sock = &group;
+                        sock->event.timeoutms = 0;
 
-                        if (count == 1)
+                        if (list.size == 1)
                         {
                             group.info.startusec = sock->info.startusec;
                         }
                     }
                     else
                     {
-                        break;
+                        // Refuse connection.
+                        sock->ops.sock_close(sock);
+                        sock->ops.sock_destroy(sock);
+                        modeperf_retsock(mode, list.tail->val, tid);
+                        dlist_removetail(&list);
+                        sock = NULL;
                     }
                 }
                 else
                 {
-                    if ((sock = modeperf_getsock(mode,
-                                                 tid,
-                                                 list.size > 0 ? 0 : 500,
-                                                 &exit)) != NULL)
-                    {
-                        dlist_inserttail(&list, sock);
-                        if ((mode->args.maxcon == 0) ||
-                            (list.size <= mode->args.maxcon))
-                        {
-                            fion.ops.fion_insertfd(&fion, sock->fd);
-                            sock->sid = ++count;
-                            sock->tid = tid;
-                            sock->event.timeoutms = 0;
-
-                            if (list.size == 1)
-                            {
-                                group.info.startusec = sock->info.startusec;
-                            }
-                        }
-                        else
-                        {
-                            // Refuse connection.
-                            sock->ops.sock_close(sock);
-                            sock->ops.sock_destroy(sock);
-                            modeperf_retsock(mode, list.tail->val, tid);
-                            dlist_removetail(&list);
-                            sock = NULL;
-                        }
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    break;
                 }
             }
 
