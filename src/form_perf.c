@@ -68,7 +68,7 @@ int32_t formperf_head(struct formobj * const obj)
         retval = utilstring_concat(obj->dstbuf,
                                    obj->dstlen,
                                    "rwin: %sB, swin: %sB\n"
-                                   "%9s %21s   %-21s %17s %27s %25s %11s %17s %3s\n",
+                                   "%9s %21s   %-21s %12s %27s %23s %9s %15s %3s\n",
                                    recvwin,
                                    sendwin,
                                    "Con ID",
@@ -94,8 +94,10 @@ int32_t formperf_body(struct formobj * const obj)
     uint32_t progress = 0;
     struct util_date_diff diff;
     char *client = NULL, *server = NULL;
-    char strrecvbytes[16], strsendbytes[16];
-    char strrecvrate[16], strsendrate[16];
+    char recvbytes[16], sendbytes[16];
+    char snaprecvbytes[16], snapsendbytes[16];
+    char recvrate[16], sendrate[16];
+    char snaprecvrate[16], snapsendrate[16];
     char strppi[16]; // packets per interval
     struct socktcp_info info;
     struct utilcpu_info cpu;
@@ -197,23 +199,43 @@ int32_t formperf_body(struct formobj * const obj)
             utilunit_getdecformat(10,
                                   3,
                                   obj->sock->info.recv.totalbytes,
-                                  strrecvbytes,
-                                  sizeof(strrecvbytes));
+                                  recvbytes,
+                                  sizeof(recvbytes));
             utilunit_getdecformat(10,
                                   3,
                                   obj->sock->info.send.totalbytes,
-                                  strsendbytes,
-                                  sizeof(strsendbytes));
+                                  sendbytes,
+                                  sizeof(sendbytes));
+            utilunit_getdecformat(10,
+                                  3,
+                                  obj->sock->info.recv.totalbytes - obj->sock->info.snaprecv.totalbytes,
+                                  snaprecvbytes,
+                                  sizeof(snaprecvbytes));
+            utilunit_getdecformat(10,
+                                  3,
+                                  obj->sock->info.send.totalbytes - obj->sock->info.snapsend.totalbytes,
+                                  snapsendbytes,
+                                  sizeof(snapsendbytes));
             utilunit_getdecformat(10,
                                   3,
                                   obj->sock->info.recv.totalbytes * 8 * UNIT_TIME_USEC / diffusec,
-                                  strrecvrate,
-                                  sizeof(strrecvrate));
+                                  recvrate,
+                                  sizeof(recvrate));
             utilunit_getdecformat(10,
                                   3,
                                   obj->sock->info.send.totalbytes * 8 * UNIT_TIME_USEC / diffusec,
-                                  strsendrate,
-                                  sizeof(strsendrate));
+                                  sendrate,
+                                  sizeof(sendrate));
+            utilunit_getdecformat(10,
+                                  3,
+                                  (obj->sock->info.recv.totalbytes - obj->sock->info.snaprecv.totalbytes) * 8 * UNIT_TIME_USEC / obj->intervalusec,
+                                  snaprecvrate,
+                                  sizeof(snaprecvrate));
+            utilunit_getdecformat(10,
+                                  3,
+                                  (obj->sock->info.send.totalbytes - obj->sock->info.snapsend.totalbytes) * 8 * UNIT_TIME_USEC / obj->intervalusec,
+                                  snapsendrate,
+                                  sizeof(snapsendrate));
 #if defined(__linux__)
             cpu.realtime.tv_sec = (uint32_t)(diffusec / UNIT_TIME_USEC);
             cpu.realtime.tv_usec = (uint32_t)(diffusec - cpu.realtime.tv_sec * UNIT_TIME_USEC);
@@ -226,11 +248,11 @@ int32_t formperf_body(struct formobj * const obj)
                                        "%21s > %-21s "
                                        "%3u%% "
                                        "[%.*s%.*s] "
-                                       "%9sbps / "
-                                       "%9sbps | "
-                                       "%9sB / "
-                                       "%9sB | "
-                                       "%9s | "
+                                       "(%9sbps) "
+                                       "%9sbps "
+                                       "(%9sB) "
+                                       "%9sB "
+                                       "%9s "
                                        "%02u:%02u:%02u:%02u.%03u "
                                        "%3u\r",
                                        obj->sock->tid,
@@ -238,14 +260,14 @@ int32_t formperf_body(struct formobj * const obj)
                                        client,
                                        server,
                                        progress,
-                                       progress / 10,
-                                       "==========",
-                                       10 - progress / 10,
-                                       "          ",
-                                       strrecvrate,
-                                       strsendrate,
-                                       strrecvbytes,
-                                       strsendbytes,
+                                       progress / 20,
+                                       "=====",
+                                       5 - progress / 20,
+                                       "     ",
+                                       obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ? snapsendrate : snaprecvrate,
+                                       obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ? sendrate : recvrate,
+                                       obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ? snapsendbytes : snaprecvbytes,
+                                       obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ? sendbytes : recvbytes,
                                        strppi,
                                        diff.day + (diff.week * 7),
                                        diff.hour,
@@ -262,6 +284,9 @@ int32_t formperf_body(struct formobj * const obj)
             {
                 obj->timeoutusec = obj->tsus + obj->intervalusec;
             }
+
+            obj->sock->info.snaprecv.totalbytes = obj->sock->info.recv.totalbytes;
+            obj->sock->info.snapsend.totalbytes = obj->sock->info.send.totalbytes;
         }
         else
         {
