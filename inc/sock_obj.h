@@ -233,6 +233,8 @@ struct sockobj_info
     uint64_t                 stopusec;
     struct sockobj_flowstats recv;
     struct sockobj_flowstats send;
+    struct sockobj_flowstats snaprecv;
+    struct sockobj_flowstats snapsend;
 };
 
 struct sockobj
