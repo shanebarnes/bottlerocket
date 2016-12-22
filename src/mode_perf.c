@@ -39,6 +39,7 @@ struct modeobj_priv
     struct dlist      *sockq;
     uint32_t          *activesocks;
     uint32_t          *closedsocks;
+    uint32_t          *configsocks;
     struct sockobj    *sockstats;
 };
 
@@ -55,17 +56,19 @@ static void modeperf_destroyparts(struct modeobj * const mode)
 
     switch (mode->priv->parts)
     {
-        case 10:
+        case 11:
             memset(&mode->ops, 0, sizeof(mode->ops));
             for (i = 0; i < mode->priv->args.threads; i++)
             {
                 cvobj_destroy(&mode->priv->cvarr[i]);
                 mutexobj_destroy(&mode->priv->mtxarr[i]);
             }
-        case 9:
+        case 10:
             threadpool_destroy(&mode->priv->threadpool);
-        case 8:
+        case 9:
             UTILMEM_FREE(mode->priv->sockstats);
+        case 8:
+            UTILMEM_FREE(mode->priv->configsocks);
         case 7:
             UTILMEM_FREE(mode->priv->closedsocks);
         case 6:
@@ -144,19 +147,25 @@ bool modeperf_create(struct modeobj * const mode,
         {
             mode->priv->parts = 6;
         }
+        else if ((mode->priv->configsocks = UTILMEM_CALLOC(uint32_t,
+                                                           sizeof(uint32_t),
+                                                           args->threads)) == NULL)
+        {
+            mode->priv->parts = 7;
+        }
         else if ((mode->priv->sockstats = UTILMEM_CALLOC(struct sockobj,
                                                          sizeof(struct sockobj),
                                                          args->threads)) == NULL)
         {
-            mode->priv->parts = 7;
+            mode->priv->parts = 8;
         }
         else if (!threadpool_create(&mode->priv->threadpool, args->threads + 1))
         {
-            mode->priv->parts = 8;
+            mode->priv->parts = 9;
         }
         else
         {
-            mode->priv->parts = 9;
+            mode->priv->parts = 10;
 
             for (i = 0; i < args->threads; i++)
             {
@@ -169,7 +178,7 @@ bool modeperf_create(struct modeobj * const mode,
             mode->ops.mode_start   = modeperf_start;
             mode->ops.mode_stop    = modeperf_stop;
             mode->ops.mode_cancel  = modeperf_cancel;
-            mode->priv->parts      = 10;
+            mode->priv->parts      = 11;
 
             ret = true;
         }
@@ -355,7 +364,7 @@ static struct sockobj *modeperf_getsock(struct modeobj_priv * const mode,
 
         if ((mode->args.arch == SOCKOBJ_MODEL_CLIENT) &&
             (mode->activesocks[qid] == 0) &&
-            (mode->closedsocks[qid] == mode->args.maxcon)) //??
+            (mode->closedsocks[qid] == mode->configsocks[qid]))
         {
             *shutdown = true;
         }
@@ -622,6 +631,15 @@ static void *modeperf_connectthread(void *arg)
 
                     if (sock == NULL)
                     {
+                        if (connectsocks < mode->args.threads)
+                        {
+                            mode->configsocks[qid] = 1;
+                        }
+                        else
+                        {
+                            mode->configsocks[qid]++;
+                        }
+
                         connectsocks++;
                         qid = connectsocks % mode->args.threads;
 
@@ -642,6 +660,14 @@ static void *modeperf_connectthread(void *arg)
         }
 
         form.ops.form_destroy(&form);
+
+        for (i = 0; i < mode->args.threads; i++)
+        {
+            if (mode->configsocks[i] == 0xFFFFFFFF)
+            {
+                mode->configsocks[i] = 0;
+            }
+        }
     }
 
     return NULL;
@@ -768,7 +794,7 @@ static void *modeperf_workerthread(void *arg)
             while (node != NULL)
             {
                 sock = node->val;
-                form.sock = &group;
+                form.sock = sock;//&group;
 
                 // @todo Perform once per iteration?
                 tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
@@ -885,9 +911,9 @@ static void *modeperf_workerthread(void *arg)
                         group.info.stopusec = sock->info.stopusec;
                     }
 
-                    //form.sock = sock;
-                    //formbytes = form.ops.form_foot(&form);
-                    //output_if_std_send(form.dstbuf, formbytes);
+                    form.sock = sock;
+                    formbytes = form.ops.form_foot(&form);
+                    output_if_std_send(form.dstbuf, formbytes);
 
                     utilcpu_getinfo(&info);
                     logger_printf(LOGGER_LEVEL_DEBUG,
@@ -926,11 +952,12 @@ static void *modeperf_workerthread(void *arg)
 
                     if (list.size == 0)
                     {
+                        group.conf.model = mode->args.arch;
                         group.sid = count;
                         group.tid = tid;
                         form.sock = &group;
                         formbytes = form.ops.form_foot(&form);
-                        output_if_std_send(form.dstbuf, formbytes);
+                        //output_if_std_send(form.dstbuf, formbytes);
                         memset(&group, 0, sizeof(group));
 
                         if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
@@ -989,6 +1016,7 @@ bool modeperf_start(struct modeobj * const mode)
 
         for (i = 0; i < mode->priv->args.threads; i++)
         {
+            mode->priv->configsocks[i] = 0xFFFFFFFF;
             ret &= threadpool_execute(&mode->priv->threadpool,
                                       modeperf_workerthread,
                                       mode->priv,
