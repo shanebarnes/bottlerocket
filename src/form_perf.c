@@ -92,14 +92,13 @@ int32_t formperf_body(struct formobj * const obj)
     int32_t  retval = -1;
     uint64_t diffusec = 0, packets = 0;
     uint32_t progress = 0;
-    uint64_t recvratebps = 0, sendratebps = 0, snaprecvratebps = 0, snapsendratebps = 0;
-    char gain = '+';
+    uint64_t ratebps = 0, snapbps = 0;
+    char gain = ' ';
     struct util_date_diff diff;
     char *client = NULL, *server = NULL;
     char recvbytes[16], sendbytes[16];
     char snaprecvbytes[16], snapsendbytes[16];
-    char recvrate[16], sendrate[16];
-    char snaprecvrate[16], snapsendrate[16];
+    char rate[16], snap[16];
     char strppi[16]; // packets per interval
     struct socktcp_info info;
     struct utilcpu_info cpu;
@@ -123,8 +122,8 @@ int32_t formperf_body(struct formobj * const obj)
             if (obj->sock->conf.type == SOCK_DGRAM)
             {
                 packets = (obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ?
-                              obj->sock->info.send.passedcalls :
-                              obj->sock->info.recv.passedcalls);
+                              obj->sock->info.send.buflen.cnt :
+                              obj->sock->info.recv.buflen.cnt);
             }
             else
             {
@@ -161,11 +160,15 @@ int32_t formperf_body(struct formobj * const obj)
             {
                 client = obj->sock->addrself.sockaddrstr;
                 server = obj->sock->addrpeer.sockaddrstr;
+                ratebps = obj->sock->info.send.buflen.sum * 8 * UNIT_TIME_USEC / diffusec;
+                snapbps = (obj->sock->info.send.buflen.sum - obj->sock->info.snapsend.buflen.sum) * 8 * UNIT_TIME_USEC / obj->intervalusec;
             }
             else
             {
                 client = obj->sock->addrpeer.sockaddrstr;
                 server = obj->sock->addrself.sockaddrstr;
+                ratebps = obj->sock->info.recv.buflen.sum * 8 * UNIT_TIME_USEC / diffusec;
+                snapbps = (obj->sock->info.recv.buflen.sum - obj->sock->info.snaprecv.buflen.sum) * 8 * UNIT_TIME_USEC / obj->intervalusec;
             }
 
             if (obj->sock->conf.timelimitusec > 0)
@@ -177,12 +180,12 @@ int32_t formperf_body(struct formobj * const obj)
             {
                 if (obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT)
                 {
-                    progress = (uint32_t)(obj->sock->info.send.totalbytes * 100 /
+                    progress = (uint32_t)(obj->sock->info.send.buflen.sum * 100 /
                                           obj->sock->conf.datalimitbyte);
                 }
                 else
                 {
-                    progress = (uint32_t)(obj->sock->info.recv.totalbytes * 100 /
+                    progress = (uint32_t)(obj->sock->info.recv.buflen.sum * 100 /
                                           obj->sock->conf.datalimitbyte);
                 }
             }
@@ -198,60 +201,49 @@ int32_t formperf_body(struct formobj * const obj)
                 progress *= 10;
             }
 
-            recvratebps = obj->sock->info.recv.totalbytes * 8 * UNIT_TIME_USEC / diffusec;
-            sendratebps = obj->sock->info.send.totalbytes * 8 * UNIT_TIME_USEC / diffusec;
-            snaprecvratebps = (obj->sock->info.recv.totalbytes - obj->sock->info.snaprecv.totalbytes) * 8 * UNIT_TIME_USEC / obj->intervalusec;
-            snapsendratebps = (obj->sock->info.send.totalbytes - obj->sock->info.snapsend.totalbytes) * 8 * UNIT_TIME_USEC / obj->intervalusec;
-
-            if (obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT)
+            if (snapbps > ratebps)
             {
-                gain = (snapsendratebps > sendratebps ? '+' : '-');
+                gain = '+';
+            }
+            else if (snapbps < ratebps)
+            {
+                gain = '-';
             }
             else
             {
-                gain = (snaprecvratebps > recvratebps ? '+' : '-');
+                gain = '=';
             }
 
             utilunit_getdecformat(10,
                                   3,
-                                  obj->sock->info.recv.totalbytes,
+                                  obj->sock->info.recv.buflen.sum,
                                   recvbytes,
                                   sizeof(recvbytes));
             utilunit_getdecformat(10,
                                   3,
-                                  obj->sock->info.send.totalbytes,
+                                  obj->sock->info.send.buflen.sum,
                                   sendbytes,
                                   sizeof(sendbytes));
             utilunit_getdecformat(10,
                                   3,
-                                  obj->sock->info.recv.totalbytes - obj->sock->info.snaprecv.totalbytes,
+                                  obj->sock->info.recv.buflen.sum - obj->sock->info.snaprecv.buflen.sum,
                                   snaprecvbytes,
                                   sizeof(snaprecvbytes));
             utilunit_getdecformat(10,
                                   3,
-                                  obj->sock->info.send.totalbytes - obj->sock->info.snapsend.totalbytes,
+                                  obj->sock->info.send.buflen.sum - obj->sock->info.snapsend.buflen.sum,
                                   snapsendbytes,
                                   sizeof(snapsendbytes));
             utilunit_getdecformat(10,
                                   3,
-                                  recvratebps,
-                                  recvrate,
-                                  sizeof(recvrate));
+                                  ratebps,
+                                  rate,
+                                  sizeof(rate));
             utilunit_getdecformat(10,
                                   3,
-                                  sendratebps,
-                                  sendrate,
-                                  sizeof(sendrate));
-            utilunit_getdecformat(10,
-                                  3,
-                                  snaprecvratebps,
-                                  snaprecvrate,
-                                  sizeof(snaprecvrate));
-            utilunit_getdecformat(10,
-                                  3,
-                                  snapsendratebps,
-                                  snapsendrate,
-                                  sizeof(snapsendrate));
+                                  snapbps,
+                                  snap,
+                                  sizeof(snap));
 #if defined(__linux__)
             cpu.realtime.tv_sec = (uint32_t)(diffusec / UNIT_TIME_USEC);
             cpu.realtime.tv_usec = (uint32_t)(diffusec - cpu.realtime.tv_sec * UNIT_TIME_USEC);
@@ -280,8 +272,8 @@ int32_t formperf_body(struct formobj * const obj)
                                        "=====",
                                        5 - progress / 20,
                                        "     ",
-                                       obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ? snapsendrate : snaprecvrate,
-                                       obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ? sendrate : recvrate,
+                                       snap,
+                                       rate,
                                        gain,
                                        obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ? snapsendbytes : snaprecvbytes,
                                        obj->sock->conf.model == SOCKOBJ_MODEL_CLIENT ? sendbytes : recvbytes,
@@ -302,8 +294,8 @@ int32_t formperf_body(struct formobj * const obj)
                 obj->timeoutusec = obj->tsus + obj->intervalusec;
             }
 
-            obj->sock->info.snaprecv.totalbytes = obj->sock->info.recv.totalbytes;
-            obj->sock->info.snapsend.totalbytes = obj->sock->info.send.totalbytes;
+            obj->sock->info.snaprecv.buflen.sum = obj->sock->info.recv.buflen.sum;
+            obj->sock->info.snapsend.buflen.sum = obj->sock->info.send.buflen.sum;
         }
         else
         {
