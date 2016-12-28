@@ -215,16 +215,9 @@ struct sockobj_conf
 
 struct sockobj_flowstats
 {
-    int32_t              winsize;     // socket window size
-    bool                 lastcall;    // true/false for successful/failed socket function call
-    uint64_t             lasttsus;    // last socket timestamp
-    uint64_t             passedtsus;  // total successful socket function call time
-    uint64_t             failedtsus;  // total failed socket function call time
-    uint64_t             passedcalls; // successful socket function call count
-    uint64_t             failedcalls; // failed socket function call count
+    int32_t              winsize; // socket window size
     struct utilstats_qty rttms;
-    struct utilstats_qty buflen;      // buffer size passed to/from socket function
-    uint64_t             totalbytes;  // total bytes passed to/from socket funcion
+    struct utilstats_qty buflen;  // buffer size passed to/from socket function
 };
 
 struct sockobj_info
@@ -322,15 +315,5 @@ bool sockobj_getopts(struct sockobj * const obj, struct vector * const opts);
  * @see sock_setopts() for interface comments.
  */
 bool sockobj_setopts(struct sockobj * const obj, struct vector * const opts);
-
-/**
- * @brief Update a flow stats structure.
- *
- * @param[in,out] stats A pointer to a flow stats structure to update.
- * @param[in]     len   The length of buffer passed to/from a socket function.
- *
- * @return True if a flow stats structure was updated.
- */
-bool sockobj_setstats(struct sockobj_flowstats * const stats, const int32_t len);
 
 #endif // _SOCK_OBJ_H_
