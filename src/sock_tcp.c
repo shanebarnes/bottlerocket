@@ -381,10 +381,10 @@ int32_t socktcp_recv(struct sockobj * const obj,
     if (UTILDEBUG_VERIFY((obj != NULL) && (buf != NULL)))
     {
         ret = recv(obj->fd, buf, len, flags);
-        sockobj_setstats(&obj->info.recv, ret);
 
         if (ret > 0)
         {
+            utilstats_add(&obj->info.recv.buflen, ret);
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %u received %d bytes\n",
                           __FUNCTION__,
@@ -425,12 +425,12 @@ int32_t socktcp_recv(struct sockobj * const obj,
                 else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
                 {
                     ret = recv(obj->fd, buf, len, flags);
-                    sockobj_setstats(&obj->info.recv, ret);
 
                     // Remote peer is closed if input is ready but no bytes are
                     // received (EOF).
                     if (ret > 0)
                     {
+                        utilstats_add(&obj->info.recv.buflen, ret);
                         logger_printf(LOGGER_LEVEL_TRACE,
                                       "%s: socket %u received %d bytes\n",
                                       __FUNCTION__,
@@ -463,10 +463,10 @@ int32_t socktcp_send(struct sockobj * const obj,
     if (UTILDEBUG_VERIFY((obj != NULL) && (buf != NULL)))
     {
         ret = send(obj->fd, buf, len, flags);
-        sockobj_setstats(&obj->info.send, ret);
 
         if (ret > 0)
         {
+            utilstats_add(&obj->info.send.buflen, ret);
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %u sent %d bytes\n",
                           __FUNCTION__,
