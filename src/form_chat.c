@@ -194,8 +194,8 @@ int32_t formchat_foot(struct formobj * const obj)
         utilioctl_gettermsize(&rows, &cols);
 
         durationusec = obj->sock->info.stopusec - obj->sock->info.startusec;
-        recvratebps  = obj->sock->info.recv.totalbytes * 8 * UNIT_TIME_USEC / durationusec;
-        sendratebps  = obj->sock->info.send.totalbytes * 8 * UNIT_TIME_USEC / durationusec;
+        recvratebps  = obj->sock->info.recv.buflen.sum * 8 * UNIT_TIME_USEC / durationusec;
+        sendratebps  = obj->sock->info.send.buflen.sum * 8 * UNIT_TIME_USEC / durationusec;
 
         utildate_gettvtime(DATE_CLOCK_REALTIME, &sec, &nsec);
         utildate_gettsformat(sec,
@@ -206,12 +206,12 @@ int32_t formchat_foot(struct formobj * const obj)
 
         utilunit_getdecformat(10,
                               3,
-                              obj->sock->info.recv.totalbytes,
+                              obj->sock->info.recv.buflen.sum,
                               strrecvbytes,
                               sizeof(strrecvbytes));
         utilunit_getdecformat(10,
                               3,
-                              obj->sock->info.send.totalbytes,
+                              obj->sock->info.send.buflen.sum,
                               strsendbytes,
                               sizeof(strsendbytes));
         utilunit_getdecformat(10,
