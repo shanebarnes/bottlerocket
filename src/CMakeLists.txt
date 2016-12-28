@@ -29,6 +29,7 @@ set(BRLIB_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/util_ioctl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_inet.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_math.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/util_stats.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_string.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_sysctl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/util_unit.c
