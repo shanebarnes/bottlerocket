@@ -293,10 +293,10 @@ int32_t sockudp_recv(struct sockobj * const obj,
                            &socklen);
         }
 
-        sockobj_setstats(&obj->info.recv, ret);
-
         if (ret > 0)
         {
+            utilstats_add(&obj->info.recv.buflen, ret);
+
             if ((obj->state & SOCKOBJ_STATE_CONNECT) == 0)
             {
                 inet_ntop(obj->conf.family,
@@ -354,10 +354,10 @@ int32_t sockudp_recv(struct sockobj * const obj,
                 else
                 {
                     // @todo This is a hack.
-                    uint64_t ts = utildate_gettstime(DATE_CLOCK_MONOTONIC,
-                                                     UNIT_TIME_USEC);
-                    if (((ts - obj->info.recv.lasttsus) >= 5000000) &&
-                        ((ts - obj->info.send.lasttsus) >= 5000000))
+                    uint64_t tvus = utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                                       UNIT_TIME_USEC);
+                    if (((tvus - obj->info.recv.buflen.tvn) >= 5000000) &&
+                        ((tvus - obj->info.send.buflen.tvn) >= 5000000))
                     {
                         ret = -1;
                     }
@@ -402,10 +402,9 @@ int32_t sockudp_send(struct sockobj * const obj,
                          sizeof(obj->addrpeer.sockaddr));
         }
 
-        sockobj_setstats(&obj->info.send, ret);
-
         if (ret > 0)
         {
+            utilstats_add(&obj->info.send.buflen, ret);
             logger_printf(LOGGER_LEVEL_TRACE,
                           "%s: socket %u sent %d bytes\n",
                           __FUNCTION__,
@@ -456,12 +455,12 @@ int32_t sockudp_send(struct sockobj * const obj,
                 else if (obj->event.revents & FIONOBJ_REVENT_INREADY)
                 {
                     ret = recv(obj->fd, buf, len, flags);
-                    sockobj_setstats(&obj->info.recv, ret);
 
                     // Remote peer is closed if input is ready but no bytes are
                     // received (EOF).
                     if (ret > 0)
                     {
+                        utilstats_add(&obj->info.recv.buflen, ret);
                         logger_printf(LOGGER_LEVEL_TRACE,
                                       "%s: socket %u received %d bytes\n",
                                       __FUNCTION__,
