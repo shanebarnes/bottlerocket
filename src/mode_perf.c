@@ -40,7 +40,8 @@ struct modeobj_priv
     uint32_t          *activesocks;
     uint32_t          *closedsocks;
     uint32_t          *configsocks;
-    struct sockobj    *sockstats;
+    struct sockobj    *workerstats;
+    struct formobj    *workerforms;
 };
 
 /**
@@ -56,17 +57,19 @@ static void modeperf_destroyparts(struct modeobj * const mode)
 
     switch (mode->priv->parts)
     {
-        case 11:
+        case 12:
             memset(&mode->ops, 0, sizeof(mode->ops));
             for (i = 0; i < mode->priv->args.threads; i++)
             {
                 cvobj_destroy(&mode->priv->cvarr[i]);
                 mutexobj_destroy(&mode->priv->mtxarr[i]);
             }
-        case 10:
+        case 11:
             threadpool_destroy(&mode->priv->threadpool);
+        case 10:
+            UTILMEM_FREE(mode->priv->workerforms);
         case 9:
-            UTILMEM_FREE(mode->priv->sockstats);
+            UTILMEM_FREE(mode->priv->workerstats);
         case 8:
             UTILMEM_FREE(mode->priv->configsocks);
         case 7:
@@ -153,19 +156,25 @@ bool modeperf_create(struct modeobj * const mode,
         {
             mode->priv->parts = 7;
         }
-        else if ((mode->priv->sockstats = UTILMEM_CALLOC(struct sockobj,
-                                                         sizeof(struct sockobj),
-                                                         args->threads)) == NULL)
+        else if ((mode->priv->workerstats = UTILMEM_CALLOC(struct sockobj,
+                                                           sizeof(struct sockobj),
+                                                           args->threads)) == NULL)
         {
             mode->priv->parts = 8;
         }
-        else if (!threadpool_create(&mode->priv->threadpool, args->threads + 1))
+        else if ((mode->priv->workerforms = UTILMEM_CALLOC(struct formobj,
+                                                           sizeof(struct formobj),
+                                                           args->threads)) == NULL)
         {
             mode->priv->parts = 9;
         }
-        else
+        else if (!threadpool_create(&mode->priv->threadpool, args->threads + 1))
         {
             mode->priv->parts = 10;
+        }
+        else
+        {
+            mode->priv->parts = 11;
 
             for (i = 0; i < args->threads; i++)
             {
@@ -178,7 +187,7 @@ bool modeperf_create(struct modeobj * const mode,
             mode->ops.mode_start   = modeperf_start;
             mode->ops.mode_stop    = modeperf_stop;
             mode->ops.mode_cancel  = modeperf_cancel;
-            mode->priv->parts      = 11;
+            mode->priv->parts      = 12;
 
             ret = true;
         }
@@ -268,9 +277,9 @@ static int32_t modeperf_call(struct modeobj_priv * const mode,
 
     if (mode->args.datalimitbyte > 0)
     {
-        if (stats->totalbytes < mode->args.datalimitbyte)
+        if ((uint64_t)stats->buflen.sum < mode->args.datalimitbyte)
         {
-            len = mode->args.datalimitbyte - stats->totalbytes;
+            len = mode->args.datalimitbyte - stats->buflen.sum;
 
             if (len > buflen)
             {
@@ -311,7 +320,7 @@ static int32_t modeperf_call(struct modeobj_priv * const mode,
         sock->ops.sock_destroy(sock);
     }
     else if ((mode->args.datalimitbyte > 0) &&
-             (stats->totalbytes >= mode->args.datalimitbyte))
+             ((uint64_t)stats->buflen.sum >= mode->args.datalimitbyte))
     {
         sock->ops.sock_close(sock);
         sock->ops.sock_destroy(sock);
@@ -409,18 +418,24 @@ static void *modeperf_acceptthread(void *arg)
 {
     struct modeobj_priv *mode = (struct modeobj_priv*)arg;
     struct sockobj server, *sock = NULL;
-    struct formobj form;
     bool exit = true;
     int32_t formbytes = 0;
     uint32_t acceptsocks = 0, activesocks = 0, i = 0, qid = 0, tid = 0;
 
     memset(&server, 0, sizeof(server));
-    memset(&form, 0, sizeof(form));
 
-    if (UTILDEBUG_VERIFY(mode != NULL) && formperf_create(&form, 4096))
+    if (UTILDEBUG_VERIFY(mode != NULL))
     {
+        for (i = 0; i < mode->args.threads; i++)
+        {
+            formperf_create(&mode->workerforms[i], 4096);
+            modeperf_copy(mode, &mode->workerstats[i], 0);
+            mode->workerforms[i].sock = &mode->workerstats[i];
+            mode->workerstats[i].tid = i;
+        }
+
         modeperf_copy(mode, &server, 500);
-        form.sock = &server;
+        mode->workerforms[0].sock = &server;
         exit = !sockmod_init(&server);
 
         if (exit)
@@ -498,8 +513,8 @@ static void *modeperf_acceptthread(void *arg)
 
                         if (acceptsocks == 1)
                         {
-                            formbytes = form.ops.form_head(&form);
-                            output_if_std_send(form.dstbuf, formbytes);
+                            formbytes = mode->workerforms[0].ops.form_head(&mode->workerforms[0]);
+                            output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
                         }
                     }
                 }
@@ -523,13 +538,13 @@ static void *modeperf_acceptthread(void *arg)
 
                 if (activesocks == 0)
                 {
-                    formbytes = formobj_idle(&form);
-                    output_if_std_send(form.dstbuf, formbytes);
-                    formbytes = utilstring_concat(form.dstbuf,
-                                                  form.dstlen,
+                    formbytes = formobj_idle(&mode->workerforms[0]);
+                    output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
+                    formbytes = utilstring_concat(mode->workerforms[0].dstbuf,
+                                                  mode->workerforms[0].dstlen,
                                                   "%c",
                                                   '\r');
-                    output_if_std_send(form.dstbuf, formbytes);
+                    output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
                     acceptsocks = 0;
                 }
             }
@@ -541,7 +556,10 @@ static void *modeperf_acceptthread(void *arg)
             sock = NULL;
         }
 
-        form.ops.form_destroy(&form);
+        for (i = 0; i < mode->args.threads; i++)
+        {
+            mode->workerforms[i].ops.form_destroy(&mode->workerforms[i]);
+        }
     }
 
     return NULL;
@@ -559,15 +577,20 @@ static void *modeperf_connectthread(void *arg)
 {
     struct modeobj_priv *mode = (struct modeobj_priv*)arg;
     struct sockobj *sock = NULL;
-    struct formobj form;
     uint32_t connectsocks = 0, i = 0, qid = 0, tid = 0;
     int32_t formbytes = 0;
 
-    memset(&form, 0, sizeof(form));
-
-    if (UTILDEBUG_VERIFY((mode != NULL) && formperf_create(&form, 4096)))
+    if (UTILDEBUG_VERIFY(mode != NULL))
     {
         tid = threadpool_getid(&mode->threadpool);
+
+        for (i = 0; i < mode->args.threads; i++)
+        {
+            formperf_create(&mode->workerforms[i], 4096);
+            modeperf_copy(mode, &mode->workerstats[i], 0);
+            mode->workerforms[i].sock = &mode->workerstats[i];
+            mode->workerstats[i].tid = i;
+        }
 
         logger_printf(LOGGER_LEVEL_INFO,
                       "Connecting sockets on thread id %u\n",
@@ -620,7 +643,24 @@ static void *modeperf_connectthread(void *arg)
                     }
                     else
                     {
-                        form.sock = sock;
+                        if (connectsocks < mode->args.threads)
+                        {
+                            mode->configsocks[qid] = 1;
+                        }
+                        else
+                        {
+                            mode->configsocks[qid]++;
+                        }
+
+                        utilstring_concat(mode->workerstats[qid].addrself.sockaddrstr,
+                                          sizeof(mode->workerstats[qid].addrself.sockaddrstr),
+                                          "%s:*",
+                                          sock->conf.ipaddr);
+                        utilstring_concat(mode->workerstats[qid].addrpeer.sockaddrstr,
+                                          sizeof(mode->workerstats[qid].addrpeer.sockaddrstr),
+                                          "%s:%u",
+                                          sock->conf.ipaddr, sock->conf.ipport);
+
                         sock = NULL;
                     }
 
@@ -631,22 +671,13 @@ static void *modeperf_connectthread(void *arg)
 
                     if (sock == NULL)
                     {
-                        if (connectsocks < mode->args.threads)
-                        {
-                            mode->configsocks[qid] = 1;
-                        }
-                        else
-                        {
-                            mode->configsocks[qid]++;
-                        }
-
                         connectsocks++;
                         qid = connectsocks % mode->args.threads;
 
                         if (connectsocks == 1)
                         {
-                            formbytes = form.ops.form_head(&form);
-                            output_if_std_send(form.dstbuf, formbytes);
+                            formbytes = mode->workerforms[0].ops.form_head(&mode->workerforms[0]);
+                            output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
                         }
                     }
                 }
@@ -659,14 +690,14 @@ static void *modeperf_connectthread(void *arg)
             sock = NULL;
         }
 
-        form.ops.form_destroy(&form);
-
         for (i = 0; i < mode->args.threads; i++)
         {
             if (mode->configsocks[i] == 0xFFFFFFFF)
             {
                 mode->configsocks[i] = 0;
             }
+
+            mode->workerforms[i].ops.form_destroy(&mode->workerforms[i]);
         }
     }
 
@@ -689,7 +720,7 @@ static void *modeperf_workerthread(void *arg)
     struct fionobj fion;
     struct modeobj_priv *mode = (struct modeobj_priv*)arg;
     struct dlist list;
-    struct sockobj group, *sock = NULL;
+    struct sockobj *sock = NULL;
     struct formobj form;
     uint8_t *recvbuf = NULL, *sendbuf = NULL;
     int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
@@ -704,7 +735,6 @@ static void *modeperf_workerthread(void *arg)
     uint32_t burst = 0;
     memset(&form, 0, sizeof(form));
     memset(&fion, 0, sizeof(fion));
-    memset(&group, 0, sizeof(group));
 
     if (!UTILDEBUG_VERIFY(mode != NULL))
     {
@@ -770,7 +800,7 @@ static void *modeperf_workerthread(void *arg)
 
                         if (list.size == 1)
                         {
-                            group.info.startusec = sock->info.startusec;
+                            mode->workerstats[tid].info.startusec = sock->info.startusec;
                         }
                     }
                     else
@@ -794,7 +824,7 @@ static void *modeperf_workerthread(void *arg)
             while (node != NULL)
             {
                 sock = node->val;
-                form.sock = sock;//&group;
+                form.sock = &mode->workerstats[tid];
 
                 // @todo Perform once per iteration?
                 tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
@@ -822,7 +852,7 @@ static void *modeperf_workerthread(void *arg)
 
                     if (sendbytes > 0)
                     {
-                        group.info.send.totalbytes += sendbytes;
+                        mode->workerstats[tid].info.send.buflen.sum += sendbytes;
                     }
 
                     if ((sock->state & SOCKOBJ_STATE_CLOSE) == 0)
@@ -871,7 +901,7 @@ static void *modeperf_workerthread(void *arg)
 
                     if (recvbytes > 0)
                     {
-                        group.info.recv.totalbytes += recvbytes;
+                        mode->workerstats[tid].info.recv.buflen.sum += recvbytes;
                     }
 
                     if ((sock->state & SOCKOBJ_STATE_CLOSE) == 0)
@@ -908,7 +938,7 @@ static void *modeperf_workerthread(void *arg)
                 {
                     if (list.size == 1)
                     {
-                        group.info.stopusec = sock->info.stopusec;
+                        mode->workerstats[tid].info.stopusec = sock->info.stopusec;
                     }
 
                     form.sock = sock;
@@ -926,16 +956,6 @@ static void *modeperf_workerthread(void *arg)
                                   info.systime.tv_sec,
                                   info.systime.tv_usec);
                     logger_printf(LOGGER_LEVEL_INFO,
-                                  "%s: calls pass/fail: %" PRIu64
-                                  " / %" PRIu64
-                                  "  time us pass/fail: %" PRIu64
-                                  " / %" PRIu64 "\n",
-                                  __FUNCTION__,
-                                  stats->passedcalls,
-                                  stats->failedcalls,
-                                  stats->passedtsus,
-                                  stats->failedtsus);
-                    logger_printf(LOGGER_LEVEL_INFO,
                                   "%s: buflen avg/min/max: %" PRIi64
                                   " / %" PRIi64
                                   " / %" PRIi64 "\n",
@@ -952,13 +972,15 @@ static void *modeperf_workerthread(void *arg)
 
                     if (list.size == 0)
                     {
-                        group.conf.model = mode->args.arch;
-                        group.sid = count;
-                        group.tid = tid;
-                        form.sock = &group;
+                        mode->workerstats[tid].conf.model = mode->args.arch;
+                        mode->workerstats[tid].sid = count;
+                        mode->workerstats[tid].tid = tid;
+                        form.sock = &mode->workerstats[tid];
                         formbytes = form.ops.form_foot(&form);
-                        //output_if_std_send(form.dstbuf, formbytes);
-                        memset(&group, 0, sizeof(group));
+                        output_if_std_send(form.dstbuf, formbytes);
+                        memset(&mode->workerstats[tid],
+                               0,
+                               sizeof(mode->workerstats[tid]));
 
                         if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
                         {
