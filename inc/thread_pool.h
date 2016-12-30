@@ -11,6 +11,7 @@
 #define _THREAD_POOL_H_
 
 #include "system_types.h"
+#include "thread_obj.h"
 
 struct threadpool_priv;
 
@@ -101,6 +102,15 @@ bool threadpool_wake(struct threadpool * const pool);
  * @return A thread pool task id of the calling thread.
  */
 uint32_t threadpool_getid(struct threadpool * const pool);
+
+/**
+ * @brief Get the thread pool thread handle of the calling thread.
+ *
+ * @param[in] pool A pointer to a thread pool.
+ *
+ * @return A pointer to a thread handle (null pointer on error).
+ */
+struct threadobj* threadpool_getthread(struct threadpool * const pool);
 
 /**
  * @brief Check if a thread pool is running.

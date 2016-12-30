@@ -10,7 +10,6 @@
 #include "logger.h"
 #include "cv_obj.h"
 #include "mutex_obj.h"
-#include "thread_obj.h"
 #include "thread_pool.h"
 #include "util_debug.h"
 #include "util_mem.h"
@@ -44,7 +43,7 @@ struct threadpool_task
 struct threadpool_thread
 {
     struct threadobj handle;
-    uint32_t taskid;
+    uint32_t         taskid;
 };
 
 /**
@@ -63,18 +62,15 @@ static bool threadpool_setid(struct threadpool * const pool,
     struct threadpool_thread *thread = NULL;
     uint32_t i;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
+    for (i = 0; i < vector_getsize(&pool->priv->threads); i++)
     {
-        for (i = 0; i < vector_getsize(&pool->priv->threads); i++)
-        {
-            thread = vector_getval(&pool->priv->threads, i);
+        thread = vector_getval(&pool->priv->threads, i);
 
-            if (threadid == threadobj_getthreadid(&thread->handle))
-            {
-                thread->taskid = taskid;
-                ret = true;
-                break;
-            }
+        if (threadid == threadobj_getthreadid(&thread->handle))
+        {
+            thread->taskid = taskid;
+            ret = true;
+            break;
         }
     }
 
@@ -87,54 +83,51 @@ static bool threadpool_setid(struct threadpool * const pool,
  *
  * @param[in,out] arg A pointer to a thread pool.
  */
-static void *threadpool_thread(void *arg)
+static void *threadpool_taskthread(void *arg)
 {
     struct threadpool *pool = (struct threadpool*)arg;
     struct threadpool_task task, *temp = NULL;
 
-    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
+    mutexobj_lock(&pool->priv->mtx);
+    pool->priv->startup--;
+
+    while (!pool->priv->shutdown)
     {
-        mutexobj_lock(&pool->priv->mtx);
-        pool->priv->startup--;
+        task.func = NULL;
 
-        while (!pool->priv->shutdown)
+        temp = vector_gettail(&pool->priv->tasks);
+        if (temp != NULL)
         {
-            task.func = NULL;
+            task.func = temp->func;
+            task.arg = temp->arg;
+            threadpool_setid(pool, temp->id);
+            vector_deletetail(&pool->priv->tasks);
 
-            temp = vector_gettail(&pool->priv->tasks);
-            if (temp != NULL)
+            pool->priv->busy++;
+            mutexobj_unlock(&pool->priv->mtx);
+            (*task.func)(task.arg);
+            mutexobj_lock(&pool->priv->mtx);
+            pool->priv->busy--;
+            pool->priv->complete++;
+
+            if ((pool->priv->wait > 0) &&
+                (pool->priv->complete >= pool->priv->wait))
             {
-                task.func = temp->func;
-                task.arg = temp->arg;
-                threadpool_setid(pool, temp->id);
-                vector_deletetail(&pool->priv->tasks);
-
-                pool->priv->busy++;
                 mutexobj_unlock(&pool->priv->mtx);
-                (*task.func)(task.arg);
+                cvobj_signalall(&pool->priv->cv_wait);
                 mutexobj_lock(&pool->priv->mtx);
-                pool->priv->busy--;
-                pool->priv->complete++;
-
-                if ((pool->priv->wait > 0) &&
-                    (pool->priv->complete >= pool->priv->wait))
-                {
-                    mutexobj_unlock(&pool->priv->mtx);
-                    cvobj_signalall(&pool->priv->cv_wait);
-                    mutexobj_lock(&pool->priv->mtx);
-                }
-            }
-
-            if ((!pool->priv->shutdown) &&
-                (vector_getsize(&pool->priv->tasks) == 0))
-            {
-                cvobj_wait(&pool->priv->cv_task, &pool->priv->mtx);
             }
         }
 
-        pool->priv->running--;
-        mutexobj_unlock(&pool->priv->mtx);
+        if ((!pool->priv->shutdown) &&
+            (vector_getsize(&pool->priv->tasks) == 0))
+        {
+            cvobj_wait(&pool->priv->cv_task, &pool->priv->mtx);
+        }
     }
+
+    pool->priv->running--;
+    mutexobj_unlock(&pool->priv->mtx);
 
     return NULL;
 }
@@ -197,7 +190,7 @@ bool threadpool_create(struct threadpool * pool, const uint32_t size)
                                   i);
                 }
                 else if (!threadobj_init(&thread->handle,
-                                         threadpool_thread,
+                                         threadpool_taskthread,
                                          pool))
                 {
                     logger_printf(LOGGER_LEVEL_ERROR,
@@ -444,6 +437,30 @@ uint32_t threadpool_getid(struct threadpool * const pool)
             if (threadid == threadobj_getthreadid(&thread->handle))
             {
                 ret = thread->taskid;
+                break;
+            }
+        }
+    }
+
+    return ret;
+}
+
+struct threadobj *threadpool_getthread(struct threadpool * const pool)
+{
+    struct threadobj *ret = NULL;
+    uint64_t threadid = threadobj_getcallerid();
+    struct threadpool_thread *thread = NULL;
+    uint32_t i;
+
+    if (UTILDEBUG_VERIFY((pool != NULL) && (pool->priv != NULL)))
+    {
+        for (i = 0; i < vector_getsize(&pool->priv->threads); i++)
+        {
+            thread = vector_getval(&pool->priv->threads, i);
+
+            if (threadid == threadobj_getthreadid(&thread->handle))
+            {
+                ret = &thread->handle;
                 break;
             }
         }
