@@ -168,7 +168,7 @@ bool modeperf_create(struct modeobj * const mode,
         {
             mode->priv->parts = 9;
         }
-        else if (!threadpool_create(&mode->priv->threadpool, args->threads + 1))
+        else if (!threadpool_create(&mode->priv->threadpool, args->threads + 2))
         {
             mode->priv->parts = 10;
         }
@@ -398,6 +398,7 @@ static bool modeperf_retsock(struct modeobj_priv * const mode,
 
         mutexobj_lock(&mode->mtxarr[qid]);
         mode->activesocks[qid]--;
+        mode->closedsocks[qid]++;
         mutexobj_unlock(&mode->mtxarr[qid]);
 
         ret = true;
@@ -414,153 +415,127 @@ static bool modeperf_retsock(struct modeobj_priv * const mode,
  *
  * @return NULL.
  */
-static void *modeperf_acceptthread(void *arg)
+static void *modeperf_acceptorthread(void *arg)
 {
     struct modeobj_priv *mode = (struct modeobj_priv*)arg;
+    struct threadobj *thread = threadpool_getthread(&mode->threadpool);
     struct sockobj server, *sock = NULL;
     bool exit = true;
-    int32_t formbytes = 0;
     uint32_t acceptsocks = 0, activesocks = 0, i = 0, qid = 0, tid = 0;
 
     memset(&server, 0, sizeof(server));
 
-    if (UTILDEBUG_VERIFY(mode != NULL))
+    modeperf_copy(mode, &server, 50);
+    exit = !sockmod_init(&server);
+
+    if (exit)
     {
-        for (i = 0; i < mode->args.threads; i++)
+        // @todo Call modeperf_call() instead.
+        threadpool_wake(&mode->threadpool);
+    }
+    else
+    {
+        tid = threadpool_getid(&mode->threadpool);
+        logger_printf(LOGGER_LEVEL_INFO,
+                      "Accepting sockets on thread id %u\n",
+                      tid);
+    }
+
+    while ((!exit) && (threadobj_isrunning(thread)))
+    {
+        if (sock == NULL)
         {
-            formperf_create(&mode->workerforms[i], 4096);
-            modeperf_copy(mode, &mode->workerstats[i], 0);
-            mode->workerforms[i].sock = &mode->workerstats[i];
-            mode->workerstats[i].tid = i;
+            sock = UTILMEM_CALLOC(struct sockobj,
+                                  sizeof(struct sockobj),
+                                  1);
         }
 
-        modeperf_copy(mode, &server, 500);
-        mode->workerforms[0].sock = &server;
-        exit = !sockmod_init(&server);
-
-        if (exit)
+        if (sock == NULL)
         {
-            // @todo Call modeperf_call() instead.
-            threadpool_wake(&mode->threadpool);
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to allocate memory\n",
+                          __FUNCTION__);
+        }
+        else if (server.ops.sock_accept(&server, sock))
+        {
+            if (sock != NULL)
+            {
+                if ((mode->args.maxcon > 0) &&
+                    (acceptsocks == mode->args.maxcon))
+                {
+                    logger_printf(LOGGER_LEVEL_INFO,
+                                  "%s: rejected socket on queue %u\n",
+                                  __FUNCTION__,
+                                  qid);
+                    sock->ops.sock_close(sock);
+                    sock->ops.sock_destroy(sock);
+                    continue;
+                }
+                else
+                {
+                    logger_printf(LOGGER_LEVEL_INFO,
+                                  "%s: accepted socket on queue %u\n",
+                                  __FUNCTION__,
+                                  qid);
+                }
+
+                mutexobj_lock(&mode->mtxarr[qid]);
+
+                if (dlist_inserttail(&mode->sockq[qid], sock))
+                {
+                    sock = NULL;
+                }
+                else
+                {
+                    sock->ops.sock_close(sock);
+                    sock->ops.sock_destroy(sock);
+                }
+
+                mutexobj_unlock(&mode->mtxarr[qid]);
+                // @todo Use semaphore instead since thread being signaled
+                //       may not be blocking waiting for a signal.
+                cvobj_signalone(&mode->cvarr[qid]);
+
+                if (sock == NULL)
+                {
+                    acceptsocks++;
+                    qid = acceptsocks % mode->args.threads;
+                }
+            }
+        }
+        else if (server.event.revents & FIONOBJ_REVENT_ERROR)
+        {
+            server.ops.sock_close(&server);
+            server.ops.sock_destroy(&server);
+            exit = true;
         }
         else
         {
-            tid = threadpool_getid(&mode->threadpool);
-            logger_printf(LOGGER_LEVEL_INFO,
-                          "Accepting sockets on thread id %u\n",
-                          tid);
-        }
+            activesocks = 0;
 
-        while ((!exit) && (threadpool_isrunning(&mode->threadpool)))
-        {
-            if (sock == NULL)
+            for (i = 0; i < mode->args.threads; i++)
             {
-                sock = UTILMEM_CALLOC(struct sockobj,
-                                      sizeof(struct sockobj),
-                                      1);
+                mutexobj_lock(&mode->mtxarr[i]);
+                activesocks += mode->activesocks[i];
+                mutexobj_unlock(&mode->mtxarr[i]);
             }
 
-            if (sock == NULL)
+            if (activesocks == 0)
             {
-                logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: failed to allocate memory\n",
-                              __FUNCTION__);
+                acceptsocks = 0;
             }
-            else if (server.ops.sock_accept(&server, sock))
-            {
-                if (sock != NULL)
-                {
-                    if ((mode->args.maxcon > 0) &&
-                        (acceptsocks == mode->args.maxcon))
-                    {
-                        logger_printf(LOGGER_LEVEL_INFO,
-                                      "%s: rejected socket on queue %u\n",
-                                      __FUNCTION__,
-                                      qid);
-                        sock->ops.sock_close(sock);
-                        sock->ops.sock_destroy(sock);
-                        continue;
-                    }
-                    else
-                    {
-                        logger_printf(LOGGER_LEVEL_INFO,
-                                      "%s: accepted socket on queue %u\n",
-                                      __FUNCTION__,
-                                      qid);
-                    }
-
-                    mutexobj_lock(&mode->mtxarr[qid]);
-
-                    if (dlist_inserttail(&mode->sockq[qid], sock))
-                    {
-                        sock = NULL;
-                    }
-                    else
-                    {
-                        sock->ops.sock_close(sock);
-                        sock->ops.sock_destroy(sock);
-                    }
-
-                    mutexobj_unlock(&mode->mtxarr[qid]);
-                    // @todo Use semaphore instead since thread being signaled
-                    //       may not be blocking waiting for a signal.
-                    cvobj_signalone(&mode->cvarr[qid]);
-
-                    if (sock == NULL)
-                    {
-                        acceptsocks++;
-                        qid = acceptsocks % mode->args.threads;
-
-                        if (acceptsocks == 1)
-                        {
-                            formbytes = mode->workerforms[0].ops.form_head(&mode->workerforms[0]);
-                            output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
-                        }
-                    }
-                }
-            }
-            else if (server.event.revents & FIONOBJ_REVENT_ERROR)
-            {
-                server.ops.sock_close(&server);
-                server.ops.sock_destroy(&server);
-                exit = true;
-            }
-            else
-            {
-                activesocks = 0;
-
-                for (i = 0; i < mode->args.threads; i++)
-                {
-                    mutexobj_lock(&mode->mtxarr[i]);
-                    activesocks += mode->activesocks[i];
-                    mutexobj_unlock(&mode->mtxarr[i]);
-                }
-
-                if (activesocks == 0)
-                {
-                    formbytes = formobj_idle(&mode->workerforms[0]);
-                    output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
-                    formbytes = utilstring_concat(mode->workerforms[0].dstbuf,
-                                                  mode->workerforms[0].dstlen,
-                                                  "%c",
-                                                  '\r');
-                    output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
-                    acceptsocks = 0;
-                }
-            }
-        }
-
-        if (sock != NULL)
-        {
-            UTILMEM_FREE(sock);
-            sock = NULL;
-        }
-
-        for (i = 0; i < mode->args.threads; i++)
-        {
-            mode->workerforms[i].ops.form_destroy(&mode->workerforms[i]);
         }
     }
+
+    if (sock != NULL)
+    {
+        UTILMEM_FREE(sock);
+        sock = NULL;
+    }
+
+    logger_printf(LOGGER_LEVEL_INFO,
+                  "Finished accepting sockets on thread id %u\n",
+                  tid);
 
     return NULL;
 }
@@ -573,133 +548,247 @@ static void *modeperf_acceptthread(void *arg)
  *
  * @return NULL.
  */
-static void *modeperf_connectthread(void *arg)
+static void *modeperf_connectorthread(void *arg)
 {
     struct modeobj_priv *mode = (struct modeobj_priv*)arg;
+    struct threadobj *thread = threadpool_getthread(&mode->threadpool);
     struct sockobj *sock = NULL;
     uint32_t connectsocks = 0, i = 0, qid = 0, tid = 0;
-    int32_t formbytes = 0;
 
-    if (UTILDEBUG_VERIFY(mode != NULL))
+    tid = threadpool_getid(&mode->threadpool);
+    logger_printf(LOGGER_LEVEL_INFO,
+                  "Connecting sockets on thread id %u\n",
+                  tid);
+
+    for (i = 0;
+         (threadobj_isrunning(thread)) &&
+         (i < mode->args.maxcon);
+         i++)
     {
-        tid = threadpool_getid(&mode->threadpool);
-
-        for (i = 0; i < mode->args.threads; i++)
+        if (sock == NULL)
         {
-            formperf_create(&mode->workerforms[i], 4096);
-            modeperf_copy(mode, &mode->workerstats[i], 0);
-            mode->workerforms[i].sock = &mode->workerstats[i];
-            mode->workerstats[i].tid = i;
+            sock = UTILMEM_CALLOC(struct sockobj,
+                                  sizeof(struct sockobj),
+                                  1);
         }
 
-        logger_printf(LOGGER_LEVEL_INFO,
-                      "Connecting sockets on thread id %u\n",
-                      tid);
-
-        for (i = 0;
-             (threadpool_isrunning(&mode->threadpool)) &&
-             (i < mode->args.maxcon);
-             i++)
+        if (sock == NULL)
         {
-            if (sock == NULL)
-            {
-                sock = UTILMEM_CALLOC(struct sockobj,
-                                      sizeof(struct sockobj),
-                                      1);
-            }
+            logger_printf(LOGGER_LEVEL_ERROR,
+                          "%s: failed to allocate memory\n",
+                          __FUNCTION__);
+        }
+        else
+        {
+            modeperf_copy(mode, sock, 0);
 
-            if (sock == NULL)
+            if (!sockmod_init(sock))
             {
-                logger_printf(LOGGER_LEVEL_ERROR,
-                              "%s: failed to allocate memory\n",
-                              __FUNCTION__);
+                break; // @todo Only for multiple connections?
             }
             else
             {
-                modeperf_copy(mode, sock, 0);
+                sock->ops.sock_connect(sock);
+                logger_printf(LOGGER_LEVEL_INFO,
+                              "%s: connected socket on queue %u\n",
+                              __FUNCTION__,
+                              qid);
 
-                if (!sockmod_init(sock))
+                mutexobj_lock(&mode->mtxarr[qid]);
+
+                if (!dlist_inserttail(&mode->sockq[qid], sock))
                 {
-                    break; // @todo Only for multiple connections?
+                    logger_printf(LOGGER_LEVEL_ERROR,
+                                  "%s: failed to store allocated memory\n",
+                                  __FUNCTION__);
+
+                    sock->ops.sock_close(sock);
+                    sock->ops.sock_destroy(sock);
                 }
                 else
                 {
-                    sock->ops.sock_connect(sock);
-                    logger_printf(LOGGER_LEVEL_INFO,
-                                  "%s: connected socket on queue %u\n",
-                                  __FUNCTION__,
-                                  qid);
-
-                    mutexobj_lock(&mode->mtxarr[qid]);
-
-                    if (!dlist_inserttail(&mode->sockq[qid], sock))
+                    if (connectsocks < mode->args.threads)
                     {
-                        logger_printf(LOGGER_LEVEL_ERROR,
-                                      "%s: failed to store allocated memory\n",
-                                      __FUNCTION__);
-
-                        sock->ops.sock_close(sock);
-                        sock->ops.sock_destroy(sock);
+                        mode->configsocks[qid] = 1;
                     }
                     else
                     {
-                        if (connectsocks < mode->args.threads)
-                        {
-                            mode->configsocks[qid] = 1;
-                        }
-                        else
-                        {
-                            mode->configsocks[qid]++;
-                        }
-
-                        utilstring_concat(mode->workerstats[qid].addrself.sockaddrstr,
-                                          sizeof(mode->workerstats[qid].addrself.sockaddrstr),
-                                          "%s:*",
-                                          sock->conf.ipaddr);
-                        utilstring_concat(mode->workerstats[qid].addrpeer.sockaddrstr,
-                                          sizeof(mode->workerstats[qid].addrpeer.sockaddrstr),
-                                          "%s:%u",
-                                          sock->conf.ipaddr, sock->conf.ipport);
-
-                        sock = NULL;
+                        mode->configsocks[qid]++;
                     }
 
-                    mutexobj_unlock(&mode->mtxarr[qid]);
-                    // @todo Use semaphore instead since thread being signaled
-                    //       may not be blocking waiting for a signal.
-                    cvobj_signalone(&mode->cvarr[qid]);
+                    utilstring_concat(mode->workerstats[qid].addrself.sockaddrstr,
+                                      sizeof(mode->workerstats[qid].addrself.sockaddrstr),
+                                      "%s:*",
+                                      sock->conf.ipaddr);
+                    utilstring_concat(mode->workerstats[qid].addrpeer.sockaddrstr,
+                                      sizeof(mode->workerstats[qid].addrpeer.sockaddrstr),
+                                      "%s:%u",
+                                      sock->conf.ipaddr, sock->conf.ipport);
 
-                    if (sock == NULL)
-                    {
-                        connectsocks++;
-                        qid = connectsocks % mode->args.threads;
+                    sock = NULL;
+                }
 
-                        if (connectsocks == 1)
-                        {
-                            formbytes = mode->workerforms[0].ops.form_head(&mode->workerforms[0]);
-                            output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
-                        }
-                    }
+                mutexobj_unlock(&mode->mtxarr[qid]);
+                // @todo Use semaphore instead since thread being signaled
+                //       may not be blocking waiting for a signal.
+                cvobj_signalone(&mode->cvarr[qid]);
+
+                if (sock == NULL)
+                {
+                    connectsocks++;
+                    qid = connectsocks % mode->args.threads;
                 }
             }
         }
+    }
 
-        if (sock != NULL)
+    if (sock != NULL)
+    {
+        UTILMEM_FREE(sock);
+        sock = NULL;
+    }
+
+    for (i = 0; i < mode->args.threads; i++)
+    {
+        if (mode->configsocks[i] == 0xFFFFFFFF)
         {
-            UTILMEM_FREE(sock);
-            sock = NULL;
+            mode->configsocks[i] = 0;
         }
+    }
+
+    logger_printf(LOGGER_LEVEL_INFO,
+                  "Finished connecting sockets on thread id %u\n",
+                  tid);
+
+    return NULL;
+}
+
+/**
+ * @brief A socket statistics reporter.
+ *
+ * @param[in,out] arg A pointer to a mode object.
+ *
+ * @return NULL.
+ */
+static void *modeperf_reporterthread(void *arg)
+{
+    struct modeobj_priv *mode = (struct modeobj_priv*)arg;
+    struct threadobj *thread = threadpool_getthread(&mode->threadpool);
+    bool exit = false, active = false;
+    uint32_t activesocks, configsocks, closedsocks, i;
+    int32_t formbytes;
+    uint64_t tvus;
+    // @todo Use a tree that contains total socket stats that can be broken down
+    //       by thread and by individual port numbers.
+    logger_printf(LOGGER_LEVEL_INFO,
+                  "Started reporting sockets on thread id %u\n",
+                  threadpool_getid(&mode->threadpool));
+
+    for (i = 0; i < mode->args.threads; i++)
+    {
+        formperf_create(&mode->workerforms[i], 4096);
+        modeperf_copy(mode, &mode->workerstats[i], 0);
+        mode->workerforms[i].sock = &mode->workerstats[i];
+        mode->workerforms[i].intervalusec = mode->args.intervalusec;
+        mode->workerstats[i].tid = i;
+    }
+
+    while (!exit && threadobj_isrunning(thread))
+    {
+        activesocks = 0;
+        closedsocks = 0;
+        configsocks = 0;
 
         for (i = 0; i < mode->args.threads; i++)
         {
-            if (mode->configsocks[i] == 0xFFFFFFFF)
-            {
-                mode->configsocks[i] = 0;
-            }
-
-            mode->workerforms[i].ops.form_destroy(&mode->workerforms[i]);
+            mutexobj_lock(&mode->mtxarr[i]);
+            activesocks += mode->activesocks[i];
+            closedsocks += mode->closedsocks[i];
+            configsocks += mode->configsocks[i];
+            mutexobj_unlock(&mode->mtxarr[i]);
         }
+
+        logger_printf(LOGGER_LEVEL_INFO,
+                      "%s: socket counts: active %u closed %u config %u\n",
+                      __FUNCTION__,
+                      activesocks,
+                      closedsocks,
+                      configsocks);
+
+        if ((!active) && (activesocks > 0))
+        {
+            mutexobj_lock(&mode->mtxarr[0]);
+            formbytes = mode->workerforms[0].ops.form_head(&mode->workerforms[0]);
+            output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
+            mutexobj_unlock(&mode->mtxarr[0]);
+        }
+        else if ((active) && (activesocks == 0))
+        {
+            for (i = 0; i < mode->args.threads; i++)
+            {
+                mutexobj_lock(&mode->mtxarr[i]);
+                formbytes = mode->workerforms[i].ops.form_foot(&mode->workerforms[i]);
+                output_if_std_send(mode->workerforms[i].dstbuf, formbytes);
+                memset(&mode->workerstats[i], 0, sizeof(mode->workerstats[i]));
+                mutexobj_unlock(&mode->mtxarr[i]);
+            }
+        }
+
+        active = (activesocks > 0);
+
+        if (active)
+        {
+            tvus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
+            for (i = 0; i < mode->args.threads; i++)
+            {
+                mutexobj_lock(&mode->mtxarr[i]);
+                if (mode->activesocks[i] > 0)
+                {
+                    mode->workerforms[i].tsus = tvus;
+                    formbytes = mode->workerforms[i].ops.form_body(&mode->workerforms[i]);
+                    output_if_std_send(mode->workerforms[i].dstbuf, formbytes);
+                }
+                mutexobj_unlock(&mode->mtxarr[i]);
+            }
+        }
+        else
+        {
+            switch (mode->args.arch)
+            {
+                case SOCKOBJ_MODEL_CLIENT:
+                    if ((activesocks == 0) && (closedsocks == configsocks))
+                    {
+                        exit = true;
+                    }
+                    break;
+                case SOCKOBJ_MODEL_SERVER:
+                    mutexobj_lock(&mode->mtxarr[0]);
+                    formbytes = formobj_idle(&mode->workerforms[0]);
+                    output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
+                    formbytes = utilstring_concat(mode->workerforms[0].dstbuf,
+                                                  mode->workerforms[0].dstlen,
+                                                  "%c",
+                                                  '\r');
+                    output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
+                    mutexobj_unlock(&mode->mtxarr[0]);
+                    break;
+                default:
+                    exit = true;
+                    break;
+            }
+        }
+
+        threadobj_sleepusec(10000);
     }
+
+    for (i = 0; i < mode->args.threads; i++)
+    {
+        mode->workerforms[i].ops.form_destroy(&mode->workerforms[i]);
+    }
+
+    logger_printf(LOGGER_LEVEL_INFO,
+                  "Finished reporting sockets on thread id %u\n",
+                  threadpool_getid(&mode->threadpool));
 
     return NULL;
 }
@@ -713,17 +802,14 @@ static void *modeperf_connectthread(void *arg)
  */
 static void *modeperf_workerthread(void *arg)
 {
-    bool exit = true;
-    // @todo Get the actual thread object from the thread pool so that all
-    //       threads are not trying to access the thread-safe
-    //       threadpool_isrunning() in the while loop.
-    struct fionobj fion;
     struct modeobj_priv *mode = (struct modeobj_priv*)arg;
+    struct threadobj *thread = threadpool_getthread(&mode->threadpool);
+    bool exit = true;
+    struct fionobj fion;
     struct dlist list;
     struct sockobj *sock = NULL;
-    struct formobj form;
     uint8_t *recvbuf = NULL, *sendbuf = NULL;
-    int32_t formbytes = 0, recvbytes = 0, sendbytes = 0;
+    int32_t recvbytes = 0, sendbytes = 0;
     uint32_t count = 0, tid = 0;
 
     struct dlist_node *next = NULL, *node = NULL;
@@ -733,20 +819,16 @@ static void *modeperf_workerthread(void *arg)
     uint64_t tsus = 0;
     uint32_t burstlimit = mode->args.backlog <= 0 ? SOMAXCONN : mode->args.backlog;
     uint32_t burst = 0;
-    memset(&form, 0, sizeof(form));
     memset(&fion, 0, sizeof(fion));
 
-    if (!UTILDEBUG_VERIFY(mode != NULL))
+    tid = threadpool_getid(&mode->threadpool);
+    logger_printf(LOGGER_LEVEL_INFO,
+                  "Working sockets on thread id %u\n",
+                  tid);
+
+    if (!fionpoll_create(&fion))
     {
         // Do nothing.
-    }
-    else if (!formperf_create(&form, 4096))
-    {
-        // Do nothing.
-    }
-    else if (!fionpoll_create(&fion))
-    {
-        form.ops.form_destroy(&form);
     }
     else if ((recvbuf = UTILMEM_CALLOC(uint8_t,
                                        sizeof(uint8_t),
@@ -755,7 +837,6 @@ static void *modeperf_workerthread(void *arg)
         logger_printf(LOGGER_LEVEL_ERROR,
                       "%s: receive buffer allocation failed\n",
                       __FUNCTION__);
-        form.ops.form_destroy(&form);
     }
     else if ((sendbuf = UTILMEM_CALLOC(uint8_t,
                                        sizeof(uint8_t),
@@ -767,18 +848,15 @@ static void *modeperf_workerthread(void *arg)
 
         UTILMEM_FREE(recvbuf);
         recvbuf = NULL;
-        form.ops.form_destroy(&form);
     }
     else
     {
         exit = false;
-        form.intervalusec = mode->args.intervalusec;
-        tid = threadpool_getid(&mode->threadpool);
         fion.timeoutms = 0;
         fion.pevents = FIONOBJ_PEVENT_IN;
         memset(&list, 0, sizeof(list));
 
-        while ((!exit) && (threadpool_isrunning(&mode->threadpool)))
+        while ((!exit) && (threadobj_isrunning(thread)))
         {
             burst = count;
 
@@ -794,13 +872,18 @@ static void *modeperf_workerthread(void *arg)
                         (list.size <= mode->args.maxcon))
                     {
                         fion.ops.fion_insertfd(&fion, sock->fd);
-                        sock->sid = ++count;
+                mutexobj_lock(&mode->mtxarr[tid]);
+                        mode->workerstats[tid].sid = ++count;
+                mutexobj_unlock(&mode->mtxarr[tid]);
+                        //??sock->sid = ++count;
                         sock->tid = tid;
                         sock->event.timeoutms = 0;
 
                         if (list.size == 1)
                         {
+                mutexobj_lock(&mode->mtxarr[tid]);
                             mode->workerstats[tid].info.startusec = sock->info.startusec;
+                mutexobj_unlock(&mode->mtxarr[tid]);
                         }
                     }
                     else
@@ -824,11 +907,9 @@ static void *modeperf_workerthread(void *arg)
             while (node != NULL)
             {
                 sock = node->val;
-                form.sock = &mode->workerstats[tid];
 
                 // @todo Perform once per iteration?
                 tsus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
-                form.tsus = tsus;
 
                 if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
                 {
@@ -852,15 +933,13 @@ static void *modeperf_workerthread(void *arg)
 
                     if (sendbytes > 0)
                     {
+                mutexobj_lock(&mode->mtxarr[tid]);
                         mode->workerstats[tid].info.send.buflen.sum += sendbytes;
+                mutexobj_unlock(&mode->mtxarr[tid]);
                     }
 
                     if ((sock->state & SOCKOBJ_STATE_CLOSE) == 0)
                     {
-                        formbytes = form.ops.form_body(&form);
-                        // @todo protect against -1 being cast to uint32_t
-                        output_if_std_send(form.dstbuf, formbytes);
-
                         // Prevent thread spin when no bytes are available.
                         if (sendbytes == 0)
                         {
@@ -901,14 +980,13 @@ static void *modeperf_workerthread(void *arg)
 
                     if (recvbytes > 0)
                     {
+                mutexobj_lock(&mode->mtxarr[tid]);
                         mode->workerstats[tid].info.recv.buflen.sum += recvbytes;
+                mutexobj_unlock(&mode->mtxarr[tid]);
                     }
 
                     if ((sock->state & SOCKOBJ_STATE_CLOSE) == 0)
                     {
-                        formbytes = form.ops.form_body(&form);
-                        output_if_std_send(form.dstbuf, formbytes);
-
                         // Prevent thread spin when no bytes are available.
                         if (recvbytes == 0)
                         {
@@ -938,12 +1016,10 @@ static void *modeperf_workerthread(void *arg)
                 {
                     if (list.size == 1)
                     {
+                mutexobj_lock(&mode->mtxarr[tid]);
                         mode->workerstats[tid].info.stopusec = sock->info.stopusec;
+                mutexobj_unlock(&mode->mtxarr[tid]);
                     }
-
-                    form.sock = sock;
-                    formbytes = form.ops.form_foot(&form);
-                    output_if_std_send(form.dstbuf, formbytes);
 
                     utilcpu_getinfo(&info);
                     logger_printf(LOGGER_LEVEL_DEBUG,
@@ -972,15 +1048,9 @@ static void *modeperf_workerthread(void *arg)
 
                     if (list.size == 0)
                     {
-                        mode->workerstats[tid].conf.model = mode->args.arch;
-                        mode->workerstats[tid].sid = count;
-                        mode->workerstats[tid].tid = tid;
-                        form.sock = &mode->workerstats[tid];
-                        formbytes = form.ops.form_foot(&form);
-                        output_if_std_send(form.dstbuf, formbytes);
-                        memset(&mode->workerstats[tid],
-                               0,
-                               sizeof(mode->workerstats[tid]));
+                //mutexobj_lock(&mode->mtxarr[tid]);
+                //        mode->workerstats[tid].sid = count;
+                //mutexobj_unlock(&mode->mtxarr[tid]);
 
                         if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
                         {
@@ -1020,8 +1090,11 @@ static void *modeperf_workerthread(void *arg)
         UTILMEM_FREE(recvbuf);
         UTILMEM_FREE(sendbuf);
         fionpoll_destroy(&fion);
-        form.ops.form_destroy(&form);
     }
+
+    logger_printf(LOGGER_LEVEL_INFO,
+                  "Finished working sockets on thread id %u\n",
+                  tid);
 
     return NULL;
 }
@@ -1045,25 +1118,30 @@ bool modeperf_start(struct modeobj * const mode)
                                       i);
         }
 
+        ret &= threadpool_execute(&mode->priv->threadpool,
+                                  modeperf_reporterthread,
+                                  mode->priv,
+                                  mode->priv->args.threads);
+
         switch (mode->priv->args.arch)
         {
             case SOCKOBJ_MODEL_CLIENT:
                 ret &= threadpool_execute(&mode->priv->threadpool,
-                                          modeperf_connectthread,
+                                          modeperf_connectorthread,
                                           mode->priv,
-                                          mode->priv->args.threads);
+                                          mode->priv->args.threads + 1);
                 break;
             case SOCKOBJ_MODEL_SERVER:
                 ret &= threadpool_execute(&mode->priv->threadpool,
-                                          modeperf_acceptthread,
+                                          modeperf_acceptorthread,
                                           mode->priv,
-                                          mode->priv->args.threads);
+                                          mode->priv->args.threads + 1);
                 break;
             default:
                 break;
         }
 
-        threadpool_wait(&mode->priv->threadpool, mode->priv->args.threads + 1);
+        threadpool_wait(&mode->priv->threadpool, mode->priv->args.threads + 2);
     }
 
     return ret;
