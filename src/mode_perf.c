@@ -674,6 +674,8 @@ static void *modeperf_reporterthread(void *arg)
 {
     struct modeobj_priv *mode = (struct modeobj_priv*)arg;
     struct threadobj *thread = threadpool_getthread(&mode->threadpool);
+    struct sockobj stats;
+    struct formobj form;
     bool exit = false, active = false;
     uint32_t activesocks, configsocks, closedsocks, i;
     int32_t formbytes;
@@ -683,6 +685,13 @@ static void *modeperf_reporterthread(void *arg)
     logger_printf(LOGGER_LEVEL_INFO,
                   "Started reporting sockets on thread id %u\n",
                   threadpool_getid(&mode->threadpool));
+
+    memset(&stats, 0, sizeof(stats));
+    memset(&form, 0, sizeof(form));
+    modeperf_copy(mode, &stats, 0);
+    formperf_create(&form, 4096);
+
+    stats.tid = mode->args.threads;
 
     for (i = 0; i < mode->args.threads; i++)
     {
@@ -715,22 +724,49 @@ static void *modeperf_reporterthread(void *arg)
                       closedsocks,
                       configsocks);
 
+        stats.sid = activesocks;
+
         if ((!active) && (activesocks > 0))
         {
             mutexobj_lock(&mode->mtxarr[0]);
-            formbytes = mode->workerforms[0].ops.form_head(&mode->workerforms[0]);
-            output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
+            if (mode->activesocks[i])
+            {
+                formbytes = mode->workerforms[0].ops.form_head(&mode->workerforms[0]);
+                output_if_std_send(mode->workerforms[0].dstbuf, formbytes);
+            }
             mutexobj_unlock(&mode->mtxarr[0]);
         }
         else if ((active) && (activesocks == 0))
         {
+            tvus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
+            stats.info.recv.buflen.sum = 0;
+            stats.info.send.buflen.sum = 0;
             for (i = 0; i < mode->args.threads; i++)
             {
                 mutexobj_lock(&mode->mtxarr[i]);
+                if ((stats.info.startusec == 0) ||
+                    (stats.info.startusec > mode->workerstats[i].info.startusec))
+                {
+                    if (mode->workerstats[i].info.startusec > 0)
+                    stats.info.startusec = mode->workerstats[i].info.startusec;
+                }
+                stats.info.recv.buflen.sum += mode->workerstats[i].info.recv.buflen.sum;
+                stats.info.send.buflen.sum += mode->workerstats[i].info.send.buflen.sum;
+
                 formbytes = mode->workerforms[i].ops.form_foot(&mode->workerforms[i]);
                 output_if_std_send(mode->workerforms[i].dstbuf, formbytes);
-                memset(&mode->workerstats[i], 0, sizeof(mode->workerstats[i]));
+                memset(&mode->workerstats[i].info, 0, sizeof(mode->workerstats[i].info));
                 mutexobj_unlock(&mode->mtxarr[i]);
+            }
+
+            if (stats.info.startusec > 0)
+            {
+                form.sock = &stats;
+                form.tsus = tvus;
+                form.intervalusec = mode->args.intervalusec;
+                formbytes = form.ops.form_foot(&form);
+                output_if_std_send(form.dstbuf, formbytes);
+                memset(&stats.info, 0, sizeof(stats.info));
             }
         }
 
@@ -739,16 +775,44 @@ static void *modeperf_reporterthread(void *arg)
         if (active)
         {
             tvus = utildate_gettstime(DATE_CLOCK_MONOTONIC, UNIT_TIME_USEC);
+            stats.info.recv.buflen.sum = 0;
+            stats.info.send.buflen.sum = 0;
             for (i = 0; i < mode->args.threads; i++)
             {
                 mutexobj_lock(&mode->mtxarr[i]);
                 if (mode->activesocks[i] > 0)
                 {
-                    mode->workerforms[i].tsus = tvus;
-                    formbytes = mode->workerforms[i].ops.form_body(&mode->workerforms[i]);
-                    output_if_std_send(mode->workerforms[i].dstbuf, formbytes);
+                    if (mode->activesocks[i])
+                    {
+                        mode->workerforms[i].tsus = tvus;
+                        formbytes = mode->workerforms[i].ops.form_body(&mode->workerforms[i]);
+                        output_if_std_send(mode->workerforms[i].dstbuf, formbytes);
+                        if ((stats.info.startusec == 0) ||
+                            (stats.info.startusec > mode->workerstats[i].info.startusec))
+                        {
+                            if (mode->workerstats[i].info.startusec > 0)
+                            stats.info.startusec = mode->workerstats[i].info.startusec;
+                        }
+                        stats.info.recv.buflen.sum += mode->workerstats[i].info.recv.buflen.sum;
+                        stats.info.send.buflen.sum += mode->workerstats[i].info.send.buflen.sum;
+                    }
                 }
                 mutexobj_unlock(&mode->mtxarr[i]);
+            }
+
+            if (stats.info.startusec > 0)
+            {
+                form.sock = &stats;
+                form.tsus = tvus;
+                form.intervalusec = mode->args.intervalusec;
+                formbytes = form.ops.form_body(&form);
+                if ((formbytes > 0) && (formbytes < form.dstlen))
+                {
+                    *(char*)(form.dstbuf + formbytes)     = '\n';
+                    *(char*)(form.dstbuf + formbytes + 1) = '\0';
+                    formbytes++;
+                }
+                output_if_std_send(form.dstbuf, formbytes);
             }
         }
         else
@@ -778,7 +842,7 @@ static void *modeperf_reporterthread(void *arg)
             }
         }
 
-        threadobj_sleepusec(10000);
+        threadobj_sleepusec(1000000);
     }
 
     for (i = 0; i < mode->args.threads; i++)
