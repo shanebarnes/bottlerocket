@@ -111,8 +111,9 @@ int32_t formperf_body(struct formobj * const obj)
                          (obj->dstbuf != NULL) &&
                          (obj->dstlen > 0)))
     {
-        if ((obj->tsus >= obj->timeoutusec) &&
-            (obj->tsus > obj->sock->info.startusec))
+        //if ((obj->tsus >= obj->timeoutusec) &&
+        //    (obj->tsus > obj->sock->info.startusec))
+        if (true)
         {
             diffusec = utildate_gettsdiff(obj->sock->info.startusec,
                                           obj->tsus,
@@ -318,12 +319,14 @@ int32_t formperf_foot(struct formobj * const obj)
         obj->timeoutusec = 0;
         retval = formperf_body(obj);
 
-        if ((retval > 0) && (retval < obj->dstlen))
-        {
-            *(char*)(obj->dstbuf + retval)     = '\n';
-            *(char*)(obj->dstbuf + retval + 1) = '\0';
-            retval++;
-        }
+        // @todo Calculate total duration on difference between startusec and
+        //       stopusec.
+        //if ((retval > 0) && (retval < obj->dstlen))
+        //{
+        //    *(char*)(obj->dstbuf + retval)     = '\n';
+        //    *(char*)(obj->dstbuf + retval + 1) = '\0';
+        //    retval++;
+        //}
     }
 
     return retval;
