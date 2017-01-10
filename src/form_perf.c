@@ -10,7 +10,6 @@
 #include "form_perf.h"
 #include "logger.h"
 #include "sock_tcp.h"
-#include "util_cpu.h"
 #include "util_date.h"
 #include "util_debug.h"
 #include "util_ioctl.h"
@@ -101,7 +100,6 @@ int32_t formperf_body(struct formobj * const obj)
     char rate[16], snap[16];
     char strppi[16]; // packets per interval
     struct socktcp_info info;
-    struct utilcpu_info cpu;
 
     // @todo redirect to udp- or tcp-specific function.
     // udp packets per second, jitter, etc.
@@ -245,11 +243,6 @@ int32_t formperf_body(struct formobj * const obj)
                                   snapbps,
                                   snap,
                                   sizeof(snap));
-#if defined(__linux__)
-            cpu.realtime.tv_sec = (uint32_t)(diffusec / UNIT_TIME_USEC);
-            cpu.realtime.tv_usec = (uint32_t)(diffusec - cpu.realtime.tv_sec * UNIT_TIME_USEC);
-#endif
-            utilcpu_getinfo(&cpu);
 
             retval = utilstring_concat(obj->dstbuf,
                                        obj->dstlen,
@@ -284,7 +277,7 @@ int32_t formperf_body(struct formobj * const obj)
                                        diff.min,
                                        diff.sec,
                                        diff.msec,
-                                       cpu.usage);
+                                       obj->sock->cpu.usage);
 
             obj->timeoutusec += obj->intervalusec;
 
