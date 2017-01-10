@@ -707,6 +707,7 @@ static void *modeperf_reporterthread(void *arg)
         activesocks = 0;
         closedsocks = 0;
         configsocks = 0;
+        stats.cpu.usage = 0;
 
         for (i = 0; i < mode->args.threads; i++)
         {
@@ -714,6 +715,7 @@ static void *modeperf_reporterthread(void *arg)
             activesocks += mode->activesocks[i];
             closedsocks += mode->closedsocks[i];
             configsocks += mode->configsocks[i];
+            stats.cpu.usage += mode->workerstats[i].cpu.usage;
             mutexobj_unlock(&mode->mtxarr[i]);
         }
 
@@ -744,18 +746,23 @@ static void *modeperf_reporterthread(void *arg)
             for (i = 0; i < mode->args.threads; i++)
             {
                 mutexobj_lock(&mode->mtxarr[i]);
-                if ((stats.info.startusec == 0) ||
-                    (stats.info.startusec > mode->workerstats[i].info.startusec))
+                if (mode->workerstats[i].info.startusec > 0)
                 {
-                    if (mode->workerstats[i].info.startusec > 0)
-                    stats.info.startusec = mode->workerstats[i].info.startusec;
-                }
-                stats.info.recv.buflen.sum += mode->workerstats[i].info.recv.buflen.sum;
-                stats.info.send.buflen.sum += mode->workerstats[i].info.send.buflen.sum;
+                    if ((stats.info.startusec == 0) ||
+                        (stats.info.startusec > mode->workerstats[i].info.startusec))
+                    {
+                        if (mode->workerstats[i].info.startusec > 0)
+                        {
+                            stats.info.startusec = mode->workerstats[i].info.startusec;
+                        }
+                    }
+                    stats.info.recv.buflen.sum += mode->workerstats[i].info.recv.buflen.sum;
+                    stats.info.send.buflen.sum += mode->workerstats[i].info.send.buflen.sum;
 
-                formbytes = mode->workerforms[i].ops.form_foot(&mode->workerforms[i]);
-                output_if_std_send(mode->workerforms[i].dstbuf, formbytes);
-                memset(&mode->workerstats[i].info, 0, sizeof(mode->workerstats[i].info));
+                    formbytes = mode->workerforms[i].ops.form_foot(&mode->workerforms[i]);
+                    output_if_std_send(mode->workerforms[i].dstbuf, formbytes);
+                    memset(&mode->workerstats[i].info, 0, sizeof(mode->workerstats[i].info));
+                }
                 mutexobj_unlock(&mode->mtxarr[i]);
             }
 
@@ -782,20 +789,19 @@ static void *modeperf_reporterthread(void *arg)
                 mutexobj_lock(&mode->mtxarr[i]);
                 if (mode->activesocks[i] > 0)
                 {
-                    if (mode->activesocks[i])
+                    mode->workerforms[i].tsus = tvus;
+                    formbytes = mode->workerforms[i].ops.form_body(&mode->workerforms[i]);
+                    output_if_std_send(mode->workerforms[i].dstbuf, formbytes);
+                    if ((stats.info.startusec == 0) ||
+                        (stats.info.startusec > mode->workerstats[i].info.startusec))
                     {
-                        mode->workerforms[i].tsus = tvus;
-                        formbytes = mode->workerforms[i].ops.form_body(&mode->workerforms[i]);
-                        output_if_std_send(mode->workerforms[i].dstbuf, formbytes);
-                        if ((stats.info.startusec == 0) ||
-                            (stats.info.startusec > mode->workerstats[i].info.startusec))
+                        if (mode->workerstats[i].info.startusec > 0)
                         {
-                            if (mode->workerstats[i].info.startusec > 0)
                             stats.info.startusec = mode->workerstats[i].info.startusec;
                         }
-                        stats.info.recv.buflen.sum += mode->workerstats[i].info.recv.buflen.sum;
-                        stats.info.send.buflen.sum += mode->workerstats[i].info.send.buflen.sum;
                     }
+                    stats.info.recv.buflen.sum += mode->workerstats[i].info.recv.buflen.sum;
+                    stats.info.send.buflen.sum += mode->workerstats[i].info.send.buflen.sum;
                 }
                 mutexobj_unlock(&mode->mtxarr[i]);
             }
@@ -936,18 +942,18 @@ static void *modeperf_workerthread(void *arg)
                         (list.size <= mode->args.maxcon))
                     {
                         fion.ops.fion_insertfd(&fion, sock->fd);
-                mutexobj_lock(&mode->mtxarr[tid]);
+                        mutexobj_lock(&mode->mtxarr[tid]);
                         mode->workerstats[tid].sid = ++count;
-                mutexobj_unlock(&mode->mtxarr[tid]);
+                        mutexobj_unlock(&mode->mtxarr[tid]);
                         //??sock->sid = ++count;
                         sock->tid = tid;
                         sock->event.timeoutms = 0;
 
                         if (list.size == 1)
                         {
-                mutexobj_lock(&mode->mtxarr[tid]);
+                            mutexobj_lock(&mode->mtxarr[tid]);
                             mode->workerstats[tid].info.startusec = sock->info.startusec;
-                mutexobj_unlock(&mode->mtxarr[tid]);
+                            mutexobj_unlock(&mode->mtxarr[tid]);
                         }
                     }
                     else
@@ -997,9 +1003,9 @@ static void *modeperf_workerthread(void *arg)
 
                     if (sendbytes > 0)
                     {
-                mutexobj_lock(&mode->mtxarr[tid]);
+                        mutexobj_lock(&mode->mtxarr[tid]);
                         mode->workerstats[tid].info.send.buflen.sum += sendbytes;
-                mutexobj_unlock(&mode->mtxarr[tid]);
+                        mutexobj_unlock(&mode->mtxarr[tid]);
                     }
 
                     if ((sock->state & SOCKOBJ_STATE_CLOSE) == 0)
@@ -1044,9 +1050,9 @@ static void *modeperf_workerthread(void *arg)
 
                     if (recvbytes > 0)
                     {
-                mutexobj_lock(&mode->mtxarr[tid]);
+                        mutexobj_lock(&mode->mtxarr[tid]);
                         mode->workerstats[tid].info.recv.buflen.sum += recvbytes;
-                mutexobj_unlock(&mode->mtxarr[tid]);
+                        mutexobj_unlock(&mode->mtxarr[tid]);
                     }
 
                     if ((sock->state & SOCKOBJ_STATE_CLOSE) == 0)
@@ -1080,9 +1086,9 @@ static void *modeperf_workerthread(void *arg)
                 {
                     if (list.size == 1)
                     {
-                mutexobj_lock(&mode->mtxarr[tid]);
+                        mutexobj_lock(&mode->mtxarr[tid]);
                         mode->workerstats[tid].info.stopusec = sock->info.stopusec;
-                mutexobj_unlock(&mode->mtxarr[tid]);
+                        mutexobj_unlock(&mode->mtxarr[tid]);
                     }
 
                     utilcpu_getinfo(&info);
@@ -1112,9 +1118,7 @@ static void *modeperf_workerthread(void *arg)
 
                     if (list.size == 0)
                     {
-                //mutexobj_lock(&mode->mtxarr[tid]);
-                //        mode->workerstats[tid].sid = count;
-                //mutexobj_unlock(&mode->mtxarr[tid]);
+                        count = 0;
 
                         if (mode->args.arch == SOCKOBJ_MODEL_CLIENT)
                         {
@@ -1149,6 +1153,11 @@ static void *modeperf_workerthread(void *arg)
                 fion.ops.fion_poll(&fion);
                 fion.timeoutms = 0;
             }
+
+            mutexobj_lock(&mode->mtxarr[tid]);
+            mode->workerstats[tid].cpu.startusec = mode->workerstats[tid].info.startusec;
+            utilcpu_getinfo(&mode->workerstats[tid].cpu);
+            mutexobj_unlock(&mode->mtxarr[tid]);
         }
 
         UTILMEM_FREE(recvbuf);
