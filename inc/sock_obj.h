@@ -13,6 +13,7 @@
 #include "fion_obj.h"
 #include "system_types.h"
 #include "token_bucket.h"
+#include "util_cpu.h"
 #include "util_stats.h"
 #include "vector.h"
 
@@ -232,6 +233,7 @@ struct sockobj_info
 
 struct sockobj
 {
+    struct utilcpu_info  cpu;
     struct sockobj_info  info;
     struct sockobj_ops   ops;
     struct fionobj       event;
