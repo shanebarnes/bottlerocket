@@ -9,6 +9,8 @@
 
 #include "logger.h"
 #include "util_cpu.h"
+#include "util_date.h"
+#include "util_debug.h"
 #include "util_unit.h"
 
 #include <errno.h>
@@ -57,14 +59,9 @@ bool utilcpu_getinfo(struct utilcpu_info * const info)
     thread_basic_info_data_t data;
 #elif defined(__linux__)
     struct rusage data;
+    uint64_t      diffusec;
 #endif
-    if (info == NULL)
-    {
-        logger_printf(LOGGER_LEVEL_ERROR,
-                      "%s: parameter validation failed\n",
-                      __FUNCTION__);
-    }
-    else
+    if (UTILDEBUG_VERIFY(info != NULL))
     {
 #if defined(__APPLE__)
         if (thread_info(thread,
@@ -94,6 +91,15 @@ bool utilcpu_getinfo(struct utilcpu_info * const info)
 
         mach_port_deallocate(mach_task_self(), thread);
 #elif defined(__linux__)
+        diffusec = utildate_gettsdiff(info->startusec,
+                                      utildate_gettstime(DATE_CLOCK_MONOTONIC,
+                                                         UNIT_TIME_USEC),
+                                      UNIT_TIME_USEC,
+                                      NULL);
+
+        info->realtime.tv_sec = (uint32_t)(diffusec / UNIT_TIME_USEC);
+        info->realtime.tv_usec = (uint32_t)(diffusec - info->realtime.tv_sec * UNIT_TIME_USEC);
+
         if (getrusage(RUSAGE_THREAD, &data) != 0)
         {
             logger_printf(LOGGER_LEVEL_ERROR,
@@ -113,7 +119,7 @@ bool utilcpu_getinfo(struct utilcpu_info * const info)
             info->usrtime.tv_sec  = data.ru_utime.tv_sec;
             info->usrtime.tv_usec = data.ru_utime.tv_usec;
             info->usage           = utilcpu_calcusage(info);
-            ret = true;
+            ret                   = true;
         }
 #endif
     }
