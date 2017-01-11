@@ -756,6 +756,10 @@ static void *modeperf_reporterthread(void *arg)
                             stats.info.startusec = mode->workerstats[i].info.startusec;
                         }
                     }
+                    if (stats.info.stopusec < mode->workerstats[i].info.stopusec)
+                    {
+                        stats.info.stopusec = mode->workerstats[i].info.stopusec;
+                    }
                     stats.info.recv.buflen.sum += mode->workerstats[i].info.recv.buflen.sum;
                     stats.info.send.buflen.sum += mode->workerstats[i].info.send.buflen.sum;
 
