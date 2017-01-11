@@ -715,6 +715,7 @@ static void *modeperf_reporterthread(void *arg)
             activesocks += mode->activesocks[i];
             closedsocks += mode->closedsocks[i];
             configsocks += mode->configsocks[i];
+            stats.conf.datalimitbyte = mode->args.datalimitbyte * configsocks;
             stats.cpu.usage += mode->workerstats[i].cpu.usage;
             mutexobj_unlock(&mode->mtxarr[i]);
         }
